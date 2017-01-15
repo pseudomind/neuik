@@ -448,7 +448,7 @@ int NEUIK_Container_SetElement(
 		"Argument `cont` does not allow the use of method SetElement().", // [6]
 	};
 
-	if (!neuik_Object_ImplementsClass(elem, neuik__Class_Container))
+	if (!neuik_Object_ImplementsClass(cont, neuik__Class_Container))
 	{
 		eNum = 1;
 		goto out;
