@@ -502,6 +502,18 @@ int NEUIK_MakeImage_FromStock(
 				eNum = 1;
 			}
 			break;
+		case NEUIK_STOCKIMAGE_NEUIK_ICON:
+			if (neuik_GetStockImage_neuik_icon(imgPtr))
+			{
+				eNum = 1;
+			}
+			break;
+		case NEUIK_STOCKIMAGE_NEUIK_LOGO:
+			if (neuik_GetStockImage_neuik_logo(imgPtr))
+			{
+				eNum = 1;
+			}
+			break;
 	}
 
 	if (eNum > 0)

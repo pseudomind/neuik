@@ -134,11 +134,13 @@ int NEUIK_NewWindow(
 {
 	int            eNum       = 0; /* which error to report (if any) */
 	NEUIK_Window * w          = NULL;
+	NEUIK_Image  * icon       = NULL;
 	static char    funcName[] = "NEUIK_NewWindow";
-	static char  * errMsgs[]  = {"",         // [0] no error
-		"Failure to allocate memory.",       // [1]
-		"Failure in NEUIK_NewWindowConfig.", // [2]
-		"Output Argument `wPtr` is NULL.",   // [3]
+	static char  * errMsgs[]  = {"",             // [0] no error
+		"Failure to allocate memory.",           // [1]
+		"Failure in NEUIK_NewWindowConfig.",     // [2]
+		"Output Argument `wPtr` is NULL.",       // [3]
+		"Failure in NEUIK_MakeImage_FromStock.", // [4]
 	};
 
 	if (wPtr == NULL)
@@ -161,6 +163,12 @@ int NEUIK_NewWindow(
 		NULL,
 		&(w->objBase));
 
+	if (NEUIK_MakeImage_FromStock(&icon, NEUIK_STOCKIMAGE_NEUIK_ICON))
+	{
+		eNum = 4;
+		goto out;
+	}
+
 	/* initialize pointers to NULL */
 	w->win         = NULL;
 	w->rend        = NULL;
@@ -170,6 +178,7 @@ int NEUIK_NewWindow(
 	w->elem        = NULL;
 	w->focused     = NULL;
 	w->popups      = NULL;
+	w->icon        = icon;
 
 	/* set default values */
 	w->posX        = -1;
@@ -178,6 +187,7 @@ int NEUIK_NewWindow(
 	w->sizeH       = 240;
 	w->shown       = 1;
 	w->updateTitle = 0;
+	w->updateIcon  = 0;
 	w->doRedraw    = 1;
 
 	w->eHT       = NEUIK_NewEventHandlerTable();
@@ -977,6 +987,10 @@ int NEUIK_Window_Recreate(
 		goto out;
 	}
 
+	if (w->icon != NULL)
+	{
+		if (w->icon->image != NULL) SDL_SetWindowIcon(w->win, w->icon->image);
+	}
 
 	/* Force a full redraw of the contained elements */
 	if (w->elem != NULL) neuik_Element_ForceRedraw(w->elem);
@@ -1157,6 +1171,11 @@ int NEUIK_Window_Create(
 		NEUIK_RaiseError(funcName, SDL_GetError());
 		eNum = 2;
 		goto out;
+	}
+
+	if (w->icon != NULL)
+	{
+		if (w->icon->image != NULL) SDL_SetWindowIcon(w->win, w->icon->image);
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -1874,6 +1893,65 @@ out:
 		eNum = 1;
 	}
 	return eNum;
+}
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Window_SetIcon
+ *
+ *  Description:   Sets the icon for a Window.
+ *
+ *  Returns:       1 if there is an error, 0 otherwise
+ *
+ ******************************************************************************/
+int NEUIK_Window_SetIcon(
+	NEUIK_Window * w,
+	NEUIK_Image  * img)
+{
+	int           eNum       = 0;    /* which error to report (if any) */
+	static char   funcName[] = "NEUIK_Window_SetElement";
+	static char * errMsgs[]  = {"",                       // [0] no error
+		"Argument `w` does not implement Window class.",  // [1]
+		"Argument `img` is not a valid NEUIK_Image.",     // [2]
+		"Failure in `SetWindowPointer`.",                 // [3]
+	};
+
+	if (!neuik_Object_IsClass(w, neuik__Class_Window))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (!neuik_Object_IsClass(img, neuik__Class_Image))
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	if (neuik_Element_SetWindowPointer(img, w))
+	{
+		eNum = 3;
+		goto out;
+	}
+	w->icon = img;
+
+	/*------------------------------------------------------------------------*/
+	/* If the SDL window is already active, set the icon now.                 */
+	/*------------------------------------------------------------------------*/
+	if (w->win != NULL)
+	{
+		if (w->icon->image != NULL) SDL_SetWindowIcon(w->win, w->icon->image);
+	}
+
+
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+
 }
 
 

@@ -21,4 +21,10 @@
 int neuik_GetStockImage_app_crashed(
 	NEUIK_Image ** imgPtr);
 
+int neuik_GetStockImage_neuik_logo(
+	NEUIK_Image ** imgPtr);
+
+int neuik_GetStockImage_neuik_icon(
+	NEUIK_Image ** imgPtr);
+
 #endif /* NEUIK_STOCKIMAGE_INTERNAL_H */

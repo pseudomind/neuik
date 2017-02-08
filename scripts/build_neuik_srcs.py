@@ -51,6 +51,8 @@ SOURCES     = [
 	SRC_DIR + "NEUIK_VGroup.c",
 
 	SRC_DIR + "neuik_StockImage_app_crashed.c",
+	SRC_DIR + "neuik_StockImage_neuik_icon.c",
+	SRC_DIR + "neuik_StockImage_neuik_logo.c",
 
 	SRC_DIR + "MainMenu.c",
 	SRC_DIR + "Menu.c",

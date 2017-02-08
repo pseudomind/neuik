@@ -20,6 +20,7 @@
 #include "MainMenu.h"
 #include "NEUIK_neuik.h"
 #include "NEUIK_Element.h"
+#include "NEUIK_Image.h"
 #include "NEUIK_Event.h"
 #include "NEUIK_structs_basic.h"
 #include "NEUIK_WindowConfig.h"
@@ -39,6 +40,7 @@ typedef struct {
 	NEUIK_Element             elem;
 	NEUIK_Element             focused;
 	NEUIK_Element           * popups;
+	NEUIK_Image             * icon;
 	NEUIK_CallbackTable       eCT;
 	NEUIK_EventHandlerTable   eHT;       /* optional event handler */
 
@@ -49,6 +51,7 @@ typedef struct {
 	int                       shown;     /* whether or not the window is shown */
 	int                       winID;     /* the Window index when registered for event handling */
 
+	int                       updateIcon;
 	int                       updateTitle;
 	int                       doRedraw;
 
@@ -138,8 +141,13 @@ int
 
 int 
 	NEUIK_Window_SetTitle(
-			NEUIK_Window *w, 
-			const char   *title);
+			NEUIK_Window * w,
+			const char   * title);
+
+int
+	NEUIK_Window_SetIcon(
+			NEUIK_Window * w,
+			NEUIK_Image  * img);
 
 int  
 	NEUIK_Window_SetEventHandler(
