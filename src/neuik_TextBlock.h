@@ -182,6 +182,15 @@ int
 			char            * newString);
 
 /*----------------------------------------------------------------------------*/
+/* Effectively deletes the line ending of the specified line and tacks on the */
+/* contents of the following line to the end of the specified line.           */
+/*----------------------------------------------------------------------------*/
+int
+	neuik_TextBlock_MergeLines(
+			neuik_TextBlock * tblk,
+			unsigned int      lineNo);
+
+/*----------------------------------------------------------------------------*/
 /* Refactoring an object allows it to perform housekeeping so that it can     */
 /* perform at it's best.                                                      */
 /*----------------------------------------------------------------------------*/

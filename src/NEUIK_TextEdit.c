@@ -1610,6 +1610,7 @@ int neuik_Element_CaptureEvent__TextEdit(
 		"Failure in function `neuik_TextBlock_GetLineLength`.",          // [6]
 		"Failure in function `neuik_TextBlock_GetLineCount`.",           // [7]
 		"Failure in function `neuik_TextBlock_DeleteChar`.",             // [8]
+		"Failure in function `neuik_TextBlock_MergeLines`.",             // [9]
 	};
 
 
@@ -2373,12 +2374,37 @@ int neuik_Element_CaptureEvent__TextEdit(
 					if (te->cursorPos > 0)
 					{
 						if (neuik_TextBlock_DeleteChar(te->textBlk, 
-							te->cursorLine, te->cursorPos))
+							te->cursorLine, (te->cursorPos-1)))
 						{
 							eNum = 8;
 							goto out;
 						}
 						te->cursorPos -= 1;
+						doRedraw = 1;
+					}
+					else if (te->cursorLine > 0 && te->cursorPos == 0)
+					{
+						/*----------------------------------------------------*/
+						/* The cursor is in the first position of a line that */
+						/* is not the first line. A backspace here will       */
+						/* combine the current line to the preceding line.    */
+						/*----------------------------------------------------*/
+						if (neuik_TextBlock_GetLineLength(te->textBlk,
+							(te->cursorLine - 1), &lineLen))
+						{
+							/* ERR: problem reported from textBlock */
+							eNum = 6;
+							goto out;
+						}
+						if (neuik_TextBlock_MergeLines(te->textBlk,
+							(te->cursorLine - 1)))
+						{
+							/* ERR: problem reported from textBlock */
+							eNum = 9;
+							goto out;
+						}
+						te->cursorLine--;
+						te->cursorPos = lineLen;
 						doRedraw = 1;
 					}
 				}
@@ -2453,11 +2479,44 @@ int neuik_Element_CaptureEvent__TextEdit(
 					/*--------------------------------------------------------*/
 					/* There is no current text highlighting                  */
 					/*--------------------------------------------------------*/
-					if (te->cursorPos < te->textLen)
+
+					if (neuik_TextBlock_GetLineLength(te->textBlk,
+						te->cursorLine, &lineLen))
 					{
-						strcpy(te->text + te->cursorPos, te->text + (te->cursorPos + 1));
-						te->textLen -= 1;
-						doRedraw     = 1;
+						/* ERR: problem reported from textBlock */
+						eNum = 6;
+						goto out;
+					}
+					if (te->cursorPos < lineLen - 1)
+					{
+						/*----------------------------------------------------*/
+						/* Prevent the deletion of the final terminating NULL */
+						/* character.                                         */
+						/*----------------------------------------------------*/
+						if (neuik_TextBlock_DeleteChar(te->textBlk,
+							te->cursorLine, te->cursorPos))
+						{
+							eNum = 8;
+							goto out;
+						}
+						doRedraw = 1;
+					}
+					else if (
+						(te->cursorPos == lineLen) &&
+						(te->textBlk->nLines > te->cursorLine))
+					{
+						/*----------------------------------------------------*/
+						/* The cursor is in the final position of a line that */
+						/* is not the final line. A delete here will combine  */
+						/* the current line to the follwoing line.            */
+						/*----------------------------------------------------*/
+						if (neuik_TextBlock_MergeLines(te->textBlk, te->cursorLine))
+						{
+							/* ERR: problem reported from textBlock */
+							eNum = 9;
+							goto out;
+						}
+						doRedraw = 1;
 					}
 				}
 				else

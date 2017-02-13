@@ -1249,11 +1249,6 @@ int neuik_TextBlock_DeleteChar(
 	}
 	if (byteNo > lineLen)
 	{
-		if (neuik_TextBlock_GetLineLength(tblk, lineNo, &lineLen))
-		{
-			eNum = 2;
-			goto out;
-		}
 		eNum = 3;
 		goto out;
 	}
@@ -1261,13 +1256,6 @@ int neuik_TextBlock_DeleteChar(
 	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
 		tblk, lineNo, byteNo, &aBlock, &position))
 	{
-		if (neuik_TextBlock_GetPositionInLine__noErrChecks(
-			tblk, lineNo, byteNo, &aBlock, &position))
-		{
-			eNum = 4;
-			goto out;
-		}
-
 		eNum = 4;
 		goto out;
 	}
@@ -1286,9 +1274,9 @@ int neuik_TextBlock_DeleteChar(
 		/*--------------------------------------------------------------------*/
 		/* Simply shift over the bytes by one                                 */
 		/*--------------------------------------------------------------------*/
-		for (copyCtr = aBlock->bytesInUse; copyCtr > position; copyCtr--)
+		for (copyCtr = position; copyCtr < aBlock->bytesInUse; copyCtr++)
 		{
-			aBlock->data[copyCtr-1] = aBlock->data[copyCtr];
+			aBlock->data[copyCtr] = aBlock->data[copyCtr+1];
 		}
 		aBlock->data[aBlock->bytesInUse] = '\0';
 		aBlock->bytesInUse--;
@@ -1304,6 +1292,111 @@ int neuik_TextBlock_DeleteChar(
 	}
 	// printf("neuik_TextBlock_InsertChar(): [%u:%u] `%s`\n", 
 	// 	lineNo, byteNo, aBlock->data);
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	return eNum;
+}
+
+
+/*----------------------------------------------------------------------------*/
+/* Effectively deletes the line ending of the specified line and tacks on the */
+/* contents of the following line to the end of the specified line.           */
+/*----------------------------------------------------------------------------*/
+int neuik_TextBlock_MergeLines(
+	neuik_TextBlock * tblk,
+	unsigned int      lineNo)
+{
+	neuik_TextBlockData * aBlock;
+	neuik_TextBlockData * aBlock2;
+	unsigned int          copyCtr;
+	unsigned int          lineLen;
+	unsigned int          lineBreakByte = 0;
+	unsigned int          position;
+	unsigned int          position2;
+	char                  remChar;
+	int                   eNum       = 0; /* which error to report (if any) */
+	static char           funcName[] = "neuik_TextBlock_MergeLines";
+	static char         * errMsgs[]  = {"",                            // [0] no error
+		"Output argument `tblk` is NULL.",                             // [1]
+		"Failure in function `neuik_TextBlock_GetLineLength`.",        // [2]
+		"Invalid (negative) value for argument `lineNo` specified.",   // [3]
+		"Fundamental error in basic function `GetPositionInLine`.",    // [4]
+		"Fundamental error in basic function `GetPositionLineStart`.", // [5]
+	};
+
+	if (tblk == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (lineNo < 0)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Make sure that the user isn't attempting to merge the final line of    */
+	/* the text block.                                                        */
+	/*------------------------------------------------------------------------*/
+	if (lineNo == tblk->nLines)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The final line of text data cannot be merged. Do nothing.          */
+		/*--------------------------------------------------------------------*/
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Get the data block and position within the textblock of the final      */
+	/* character of the specified line.                                       */
+	/*------------------------------------------------------------------------*/
+	if (neuik_TextBlock_GetLineLength(tblk, lineNo, &lineLen))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
+		tblk, lineNo, lineLen, &aBlock, &position))
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the where the data of the subsequent line begins.            */
+	/*------------------------------------------------------------------------*/
+	if (neuik_TextBlock_GetPositionLineStart__noErrChecks(
+			tblk, lineNo+1, &aBlock2, &position2))
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	if (aBlock == aBlock2)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The end of the first line and the start of the second line are     */
+		/* both within the same data block.                                   */
+		/*--------------------------------------------------------------------*/
+		for (;position2 < aBlock->bytesInUse;)
+		{
+			aBlock->data[position] = aBlock->data[position2];
+			position++;
+			position2++;
+		}
+		aBlock->bytesInUse -= (position2 - position);
+		aBlock->nLines--;
+		tblk->nLines--;
+	}
+	else
+	{
+		#pragma message("[TODO] `neuik_TextBlock_MergeLines` OutOfBlock Merge")
+	}
 out:
 	if (eNum > 0)
 	{
