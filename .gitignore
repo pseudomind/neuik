@@ -1,0 +1,7 @@
+/lib/libneuik.a
+/lib/libneuik.so
+/.lock-waf*
+/build/*
+/scripts/*.pyc
+/scripts/.waf-*
+/examples/bin/*
