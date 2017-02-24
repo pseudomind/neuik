@@ -269,10 +269,7 @@ int neuik_TextBlock_SetText(
 	const char      * text)
 {
 	int                   textLen;
-	int                   nNewlines;
 	neuik_TextBlockData * aBlock;
-	unsigned int          position;
-	unsigned int          final;
 	unsigned int          charCtr;
 	unsigned int          writeCtr         = 0;
 	unsigned int          lineCtr          = 1;
@@ -1312,30 +1309,21 @@ int neuik_TextBlock_MergeLines(
 {
 	neuik_TextBlockData * aBlock;
 	neuik_TextBlockData * aBlock2;
-	unsigned int          copyCtr;
 	unsigned int          lineLen;
-	unsigned int          lineBreakByte = 0;
 	unsigned int          position;
 	unsigned int          position2;
-	char                  remChar;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_MergeLines";
 	static char         * errMsgs[]  = {"",                            // [0] no error
 		"Output argument `tblk` is NULL.",                             // [1]
 		"Failure in function `neuik_TextBlock_GetLineLength`.",        // [2]
-		"Invalid (negative) value for argument `lineNo` specified.",   // [3]
-		"Fundamental error in basic function `GetPositionInLine`.",    // [4]
-		"Fundamental error in basic function `GetPositionLineStart`.", // [5]
+		"Fundamental error in basic function `GetPositionInLine`.",    // [3]
+		"Fundamental error in basic function `GetPositionLineStart`.", // [4]
 	};
 
 	if (tblk == NULL)
 	{
 		eNum = 1;
-		goto out;
-	}
-	if (lineNo < 0)
-	{
-		eNum = 3;
 		goto out;
 	}
 
@@ -1363,7 +1351,7 @@ int neuik_TextBlock_MergeLines(
 	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
 		tblk, lineNo, lineLen, &aBlock, &position))
 	{
-		eNum = 4;
+		eNum = 3;
 		goto out;
 	}
 

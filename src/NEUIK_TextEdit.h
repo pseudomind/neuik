@@ -41,14 +41,19 @@ typedef struct {
 		int                    cursorX;       /* px pos of cursor (not considering pan) */
 		int                    selected;
 		int                    wasSelected;
-		unsigned long          highlightBegin;
-		unsigned long          highlightStart;
-		unsigned long          highlightEnd;
+		int                    highlightIsSet;
+		unsigned long          highlightBeginPos;
+		unsigned long          highlightBeginLine;
+		unsigned long          highlightStartPos;
+		unsigned long          highlightStartLine;
+		unsigned long          highlightEndPos;
+		unsigned long          highlightEndLine;
 		int                    panX;          /* px of text pan */
 		int                    panCursor;     /* px pos of cursor (may cause view to move) */
 		int                    isActive;
-		unsigned long          clickOrigin;   /* cursorPos @ start of select click */
-		int                    clickHeld;     /* click being held following select click */
+		unsigned long          clickOrigin;     /* cursorPos @ start of select click */
+		unsigned long          clickOriginLine; /* cursorLine @ start of select click */
+		int                    clickHeld;       /* click being held following select click */
 		int                    needsRedraw;
 		unsigned int           timeLastClick;
 } NEUIK_TextEdit;

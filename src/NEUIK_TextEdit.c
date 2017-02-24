@@ -224,26 +224,30 @@ int neuik_Object_New__TextEdit(
 	/*------------------------------------------------------------------------*/
 	/* All allocations successful                                             */
 	/*------------------------------------------------------------------------*/
-	te->cursorLine     = 0;
-	te->cursorPos      = 0;
-	te->cursorX        = 0;
-	te->selected       = 0;
-	te->wasSelected    = 0;
-	te->highlightBegin = -1;
-	te->highlightStart = -1;
-	te->highlightEnd   = -1;
-	te->panX           = 0;
-	te->panCursor      = 0;
-	te->isActive       = 0;
-	te->clickOrigin    = -1;
-	te->clickHeld      = 0;
-	te->needsRedraw    = 1;
-    te->timeLastClick  = 0;
-	te->cfg            = NULL; 
-	te->cfgPtr         = NULL; 
-	te->textSurf       = NULL;
-	te->textTex        = NULL;
-	te->textRend       = NULL;
+	te->cursorLine         = 0;
+	te->cursorPos          = 0;
+	te->cursorX            = 0;
+	te->selected           = 0;
+	te->wasSelected        = 0;
+	te->highlightIsSet     = 0;
+	te->highlightBeginPos  = 0;
+	te->highlightBeginLine = 0;
+	te->highlightStartPos  = 0;
+	te->highlightStartLine = 0;
+	te->highlightEndPos    = 0;
+	te->highlightEndLine   = 0;
+	te->panX               = 0;
+	te->panCursor          = 0;
+	te->isActive           = 0;
+	te->clickOrigin        = -1;
+	te->clickHeld          = 0;
+	te->needsRedraw        = 1;
+    te->timeLastClick      = 0;
+	te->cfg                = NULL; 
+	te->cfgPtr             = NULL; 
+	te->textSurf           = NULL;
+	te->textTex            = NULL;
+	te->textRend           = NULL;
 
 	if (NEUIK_NewTextEditConfig(&te->cfg))
 	{
@@ -599,12 +603,16 @@ int NEUIK_TextEdit_SetText(
 		strcpy(te->text, text);
 	}
 
-	te->textLen        = textLen;
-	te->highlightBegin = -1;
-	te->highlightStart = -1;
-	te->highlightEnd   = -1;
-	te->clickOrigin    =  0;
-	te->clickHeld      =  0;
+	te->textLen            = textLen;
+	te->highlightIsSet     = 0;
+	te->highlightBeginPos  = 0;
+	te->highlightBeginLine = 0;
+	te->highlightStartPos  = 0;
+	te->highlightStartLine = 0;
+	te->highlightEndPos    = 0;
+	te->highlightEndLine   = 0;
+	te->clickOrigin        = 0;
+	te->clickHeld          = 0;
 	neuik_Element_RequestRedraw((NEUIK_Element)te);
 out:
 	if (eNum > 0)
@@ -1103,6 +1111,10 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	}
 
 	printf("TextEdit_Render [Line:Pos] : [%u:%u]\n", te->cursorLine, te->cursorPos);
+	printf("\tHighlightIsSet : %d\n", te->highlightIsSet);
+	printf("\tHighlightBegin : [%u:%u]\n", te->highlightBeginLine, te->highlightBeginPos);
+	printf("\tHighlightStart : [%u:%u]\n", te->highlightStartLine, te->highlightStartPos);
+	printf("\tHighlightEnd   : [%u:%u]\n", te->highlightEndLine,   te->highlightEndPos);
 
 	/*------------------------------------------------------------------------*/
 	/* check to see if the requested draw size of the element has changed     */
@@ -1286,44 +1298,91 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 				/*----------------------------------------------------------------*/
 				/* Check for and fill in highlight text selection background      */
 				/*----------------------------------------------------------------*/
-				// if (eBase->eSt.hasFocus && te->highlightBegin != -1)
-				// {
-				// 	rect.x = 0;
-				// 	rect.y = (int) ((float)(rSize->h - textH)/2.0);
-				// 	rect.w = textW;
-				// 	rect.h = 1.1*textH;
+				if (eBase->eSt.hasFocus && te->highlightIsSet)
+				{
+					if (lineCtr >= te->highlightStartLine &&
+						lineCtr <= te->highlightEndLine)
+					{
+						rect.x = 0;
+						rect.y = 0;
+						rect.w = textW;
+						rect.h = textHFull;
 
-				// 	textW = 0;
-				// 	textH = 0;
-				// 	/* determine the point of the start of the bgkd highlight */
-				// 	if (te->highlightStart != 0)
-				// 	{
-				// 		tempChar = te->text[te->highlightStart];
-				// 		te->text[te->highlightStart] = '\0';
-				// 		TTF_SizeText(font, te->text, &textW, &textH);
-				// 		te->text[te->highlightStart] = tempChar;
-				// 	}
-				// 	rect.x += textW;
+						textW = 0;
+						textH = 0;
+						/* determine the point of the start of the bgkd highlight */
+						if (lineCtr > te->highlightStartLine)
+						{
+							/*------------------------------------------------*/
+							/* The start of the line will be highlighted      */
+							/*------------------------------------------------*/
+							if (lineCtr < te->highlightEndLine)
+							{
+								/*--------------------------------------------*/
+								/* highlight the entire line                  */
+								/*--------------------------------------------*/
+								TTF_SizeText(font, lineBytes, &textW, &textH);
+							}
+							else if (te->highlightEndPos != 0)
+							{
+								tempChar = lineBytes[1 + te->highlightEndPos];
+								lineBytes[1 + te->highlightEndPos] = '\0';
+								TTF_SizeText(font, lineBytes, &textW, &textH);
+								lineBytes[1 + te->highlightEndPos] = tempChar;
+							}
+							else
+							{
+								/*--------------------------------------------*/
+								/* The highlight ends at the start of line    */
+								/*--------------------------------------------*/
+								TTF_SizeText(font, " ", &textW, &textH);
+							}
+						}
+						else if (lineCtr == te->highlightStartLine)
+						{
+							/*------------------------------------------------*/
+							/* The highlighted block starts on this line      */
+							/*------------------------------------------------*/
+							if (te->highlightStartPos != 0)
+							{
+								tempChar = lineBytes[te->highlightStartPos];
+								lineBytes[te->highlightStartPos] = '\0';
+								TTF_SizeText(font, lineBytes, &textW, &textH);
+								lineBytes[te->highlightStartPos] = tempChar;
+							}
+							rect.x += textW;
 
-				// 	 determine the point of the start of the bgkd highlight 
-				// 	if (te->highlightEnd < te->textLen)
-				// 	{
-				// 		tempChar = te->text[1 + te->highlightEnd];
-				// 		te->text[1 + te->highlightEnd] = '\0';
-				// 		TTF_SizeText(font, te->text + te->highlightStart, &textW, &textH);
-				// 		te->text[1 + te->highlightEnd] = tempChar;
-				// 	}
-				// 	else
-				// 	{
-				// 		TTF_SizeText(font, te->text + te->highlightStart, &textW, &textH);
-				// 	}
-				// 	hlWidth = textW;
-				// 	rect.w = hlWidth;
+							/*------------------------------------------------*/
+							/* determine the point of the start of the bgkd   */
+							/* highlight                                      */
+							/*------------------------------------------------*/
+							lineLen = strlen(lineBytes);
 
-				// 	bgClr = &(aCfg->bgColorHl);
-				// 	SDL_SetRenderDrawColor(te->textRend, bgClr->r, bgClr->g, bgClr->b, 255);
-				// 	SDL_RenderFillRect(te->textRend, &rect);
-				// }
+							if (te->highlightEndLine > lineCtr)
+							{
+								TTF_SizeText(font, 
+									lineBytes + te->highlightStartPos, 
+									&textW, &textH);
+							}
+							else
+							{
+								tempChar = lineBytes[1 + te->highlightEndPos];
+								lineBytes[1 + te->highlightEndPos] = '\0';
+								TTF_SizeText(font, 
+									lineBytes + te->highlightStartPos, 
+									&textW, &textH);
+								lineBytes[1 + te->highlightEndPos] = tempChar;
+							}
+						}
+						hlWidth = textW;
+						rect.w = hlWidth;
+
+						bgClr = &(aCfg->bgColorHl);
+						SDL_SetRenderDrawColor(te->textRend, bgClr->r, bgClr->g, bgClr->b, 255);
+						SDL_RenderFillRect(te->textRend, &rect);
+						bgClr = &(aCfg->bgColor);
+					}
+				}
 
 				/*------------------------------------------------------------*/
 				/* Copy over the previously rendered text.                    */
@@ -1430,108 +1489,41 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 		}
 	}
 
-	if (eBase->eSt.hasFocus)
-	{
-		bgClr = &(aCfg->bgColorSelect);
+	/*------------------------------------------------------------------------*/
+	/* Draw the border in its unselected way                                  */
+	/*------------------------------------------------------------------------*/
+	/* Fill in the outermost pixels using a transparent color                 */
+	/*------------------------------------------------------------------------*/
+	SDL_SetColorKey(surf, SDL_TRUE, 
+		SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
+	SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
 
-		/* Draw the border in its selected way */
+	/* upper border line */
+	SDL_RenderDrawLine(rend, 0, 0, rSize->w - 1, 0); 
+	/* left border line */
+	SDL_RenderDrawLine(rend, 0, 0, 0, rSize->h - 1); 
+	/* right border line */
+	SDL_RenderDrawLine(rend, rSize->w - 1, 0, rSize->w - 1, rSize->h - 1); 
+	/* lower border line */
+	SDL_RenderDrawLine(rend, 0, rSize->h - 1, rSize->w - 1, rSize->h - 1);
 
-		/*------------------------------------------------------------------------*/
-		/* Draw the border around the button.                                     */
-		/*------------------------------------------------------------------------*/
-		SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
+	/*------------------------------------------------------------------------*/
+	/* Draw the border around the TextEdit.                                   */
+	/*------------------------------------------------------------------------*/
+	bClr = &(aCfg->borderColor);
+	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
-		/*------------------------*/
-		/* Outermost Border lines */
-		/*------------------------*/
-		/* upper border line */
-		SDL_RenderDrawLine(rend, 0, 0, rSize->w - 1, 0); 
-		/* left border line */
-		SDL_RenderDrawLine(rend, 0, 0, 0, rSize->h - 1); 
-		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 1, 0, rSize->w - 1, rSize->h - 1); 
-		/* lower border line */
-		SDL_RenderDrawLine(rend, 0, rSize->h - 1, rSize->w - 1, rSize->h - 1);
+	/* upper border line */
+	SDL_RenderDrawLine(rend, 1, 1, rSize->w - 2, 1); 
+	/* left border line */
+	SDL_RenderDrawLine(rend, 1, 1, 1, rSize->h - 2); 
+	/* right border line */
+	SDL_RenderDrawLine(rend, rSize->w - 2, 1, rSize->w - 2, rSize->h - 2); 
 
-		/*---------------------*/
-		/* Middle Border lines */
-		/*---------------------*/
-		/* upper border line */
-		SDL_RenderDrawLine(rend, 1, 1, rSize->w - 2, 1); 
-		/* left border line */
-		SDL_RenderDrawLine(rend, 1, 1, 1, rSize->h - 2); 
-		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 2, 1, rSize->w - 2, rSize->h - 2); 
-		/* lower border line */
-		SDL_RenderDrawLine(rend, 2, rSize->h - 2, rSize->w - 3, rSize->h - 2);
-
-		/*------------------------*/
-		/* Innermost Border lines */
-		/*------------------------*/
-		/* upper border line */
-		SDL_RenderDrawLine(rend, 2, 2, rSize->w - 3, 2); 
-		/* left border line */
-		SDL_RenderDrawLine(rend, 2, 2, 2, rSize->h - 3); 
-		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 3, 2, rSize->w - 3, rSize->h - 3); 
-		/* lower border line */
-		SDL_RenderDrawLine(rend, 3, rSize->h - 3, rSize->w - 3, rSize->h - 3);
-
-		SDL_RenderDrawPoint(rend, 3,            3);
-		SDL_RenderDrawPoint(rend, 3,            rSize->h - 4);
-		SDL_RenderDrawPoint(rend, rSize->w - 4, 3);
-		SDL_RenderDrawPoint(rend, rSize->w - 4, rSize->h - 4);
-
-		/*--------------------------------------------------------------------*/
-		/* Fill in the outermost pixels using a transparent color             */
-		/*--------------------------------------------------------------------*/
-		SDL_SetColorKey(surf, SDL_TRUE, 
-			SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-		SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
-
-		SDL_RenderDrawPoint(rend, 0,            0);
-		SDL_RenderDrawPoint(rend, 0,            rSize->h - 1);
-		SDL_RenderDrawPoint(rend, rSize->w - 1, 0);
-		SDL_RenderDrawPoint(rend, rSize->w - 1, rSize->h - 1);
-	}
-	else
-	{
-		/* Draw the border in its unselected way */
-
-		/*--------------------------------------------------------------------*/
-		/* Fill in the outermost pixels using a transparent color             */
-		/*--------------------------------------------------------------------*/
-		SDL_SetColorKey(surf, SDL_TRUE, 
-			SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-		SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
-
-		/* upper border line */
-		SDL_RenderDrawLine(rend, 0, 0, rSize->w - 1, 0); 
-		/* left border line */
-		SDL_RenderDrawLine(rend, 0, 0, 0, rSize->h - 1); 
-		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 1, 0, rSize->w - 1, rSize->h - 1); 
-		/* lower border line */
-		SDL_RenderDrawLine(rend, 0, rSize->h - 1, rSize->w - 1, rSize->h - 1);
-
-		/*--------------------------------------------------------------------*/
-		/* Draw the border around the TextEdit.                              */
-		/*--------------------------------------------------------------------*/
-		bClr = &(aCfg->borderColor);
-		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-
-		/* upper border line */
-		SDL_RenderDrawLine(rend, 1, 1, rSize->w - 2, 1); 
-		/* left border line */
-		SDL_RenderDrawLine(rend, 1, 1, 1, rSize->h - 2); 
-		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 2, 1, rSize->w - 2, rSize->h - 2); 
-
-		/* lower border line */
-		bClr = &(aCfg->borderColorDark);
-		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-		SDL_RenderDrawLine(rend, 2, rSize->h - 2, rSize->w - 3, rSize->h - 2);
-	}
+	/* lower border line */
+	bClr = &(aCfg->borderColorDark);
+	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
+	SDL_RenderDrawLine(rend, 2, rSize->h - 2, rSize->w - 3, rSize->h - 2);
 
 	/*------------------------------------------------------------------------*/
 	/* Copy the text onto the renderer and update it                          */
@@ -1736,33 +1728,46 @@ int neuik_Element_CaptureEvent__TextEdit(
 			if (!(keyMod & KMOD_SHIFT))
 			{
 				/* The shift-key is NOT being held down */
-				/*----------------------------------------------------------------*/
-				/* If continuing, this textEntry contains text and so the cursor  */
-				/* placement could have been changed.                             */
-				/*----------------------------------------------------------------*/
+				/*------------------------------------------------------------*/
+				/* If continuing, this textEntry contains text and so the     */
+				/* cursor placement could have been changed.                  */
+				/*------------------------------------------------------------*/
 				if (SDL_GetTicks() - te->timeLastClick < NEUIK_DOUBLE_CLICK_TIMEOUT)
 				{
 					if (te->textLen > 0)
 					{
-						te->highlightBegin = 0;
-						te->cursorPos      = te->textLen;
+						// te->highlightIsSet     = 0;
+						// te->highlightBeginPos  = 0;
+						// te->highlightBeginLine = 0;
 
-						te->highlightStart = 0;
-						te->highlightEnd   = te->textLen - 1;
+						if (neuik_TextBlock_GetLineLength(te->textBlk,
+							te->textBlk->nLines, &lineLen))
+						{
+							/* ERR: problem reported from textBlock */
+							eNum = 6;
+							goto out;
+						}
+						#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` DoubleClick")
+
+						// xxxte->cursorPos      = te->textLen;
+
+						// te->highlightStartPos  = 0;
+						// te->highlightStartLine = 0;
+						// xxxte->highlightEnd   = te->textLen - 1;
 					}
 				}
 				else if (te->panCursor == 0 && mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
 				{
 					/* move the cursor position all the way to the start */
 					te->cursorPos      = 0;
-					te->highlightBegin = -1; /* unhighlight text */
+					te->highlightIsSet = 0;
 					neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
 				}
 				else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
 				{
 					/* move the cursor position all the way to the end */
 					te->cursorPos      = te->textLen;
-					te->highlightBegin = -1; /* unhighlight text */
+					te->highlightIsSet = 0;
 					neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 				}
 				else
@@ -1814,7 +1819,7 @@ int neuik_Element_CaptureEvent__TextEdit(
 							if (aChar == '\0') break;
 						}
 						te->text[ctr] = aChar;
-						te->highlightBegin = -1; /* unhighlight text */
+						te->highlightIsSet = 0;
 					}
 					else
 					{
@@ -1830,7 +1835,7 @@ int neuik_Element_CaptureEvent__TextEdit(
 							/* cursor will be after char */
 							te->cursorPos = 1;
 						}
-						te->highlightBegin = -1; /* unhighlight text */
+						te->highlightIsSet = 0;
 					}
 				}
 				te->clickOrigin   = te->cursorPos;
@@ -1839,19 +1844,21 @@ int neuik_Element_CaptureEvent__TextEdit(
 			else
 			{
 				/* The shift-key IS being held down */
-				/*----------------------------------------------------------------*/
-				/* If continuing, this textEntry contains text and so the cursor  */
-				/* placement could have been changed.                             */
-				/*----------------------------------------------------------------*/
+				/*------------------------------------------------------------*/
+				/* If continuing, this textEntry contains text and so the     */
+				/* cursor placement could have been changed.                  */
+				/*------------------------------------------------------------*/
 				if (te->clickOrigin == -1)
 				{
-					if (te->highlightBegin == -1)
+					if (te->highlightIsSet)
 					{
-						te->clickOrigin = te->cursorPos;
+						te->clickOrigin     = te->cursorPos;
+						te->clickOriginLine = te->cursorLine;
 					}
 					else
 					{
-						te->clickOrigin = te->highlightBegin;
+						te->clickOrigin     = te->highlightBeginPos;
+						te->clickOriginLine = te->highlightBeginLine;
 					}
 				}
 				// te->highlightBegin = te->cursorPos;
@@ -1935,16 +1942,39 @@ int neuik_Element_CaptureEvent__TextEdit(
 				}
 
 				/* Set text highlight (if applicable) */
-				te->highlightBegin = te->clickOrigin;
-				if (te->cursorPos < te->clickOrigin)
+				te->highlightBeginPos  = te->clickOrigin;
+				te->highlightBeginLine = te->clickOriginLine;
+
+				if (te->cursorLine < te->clickOriginLine)
 				{
-					te->highlightStart = te->cursorPos;
-					te->highlightEnd   = te->clickOrigin - 1;
+					te->highlightStartPos  = te->cursorPos;
+					te->highlightStartLine = te->cursorLine;
+					te->highlightEndPos    = te->clickOrigin - 1;
+					te->highlightEndLine   = te->clickOriginLine;
+				}
+				else if (te->cursorLine > te->clickOriginLine)
+				{
+					te->highlightStartPos  = te->clickOrigin;
+					te->highlightStartLine = te->clickOriginLine;
+					te->highlightEndPos    = te->cursorPos - 1;
+					te->highlightEndLine   = te->cursorLine;
 				}
 				else
 				{
-					te->highlightStart = te->clickOrigin;
-					te->highlightEnd   = te->cursorPos - 1;
+					if (te->cursorPos < te->clickOrigin)
+					{
+						te->highlightStartPos  = te->cursorPos;
+						te->highlightStartLine = te->cursorLine;
+						te->highlightEndPos    = te->clickOrigin - 1;
+						te->highlightEndLine   = te->clickOriginLine;
+					}
+					else
+					{
+						te->highlightStartPos  = te->clickOrigin;
+						te->highlightStartLine = te->clickOriginLine;
+						te->highlightEndPos    = te->cursorPos - 1;
+						te->highlightEndLine   = te->cursorLine;
+					}
 				}
 			}
 
@@ -2054,13 +2084,13 @@ int neuik_Element_CaptureEvent__TextEdit(
 			{
 				/* move the cursor position all the way to the start */
 				te->cursorPos      = 0;
-				te->highlightBegin = -1; /* unhighlight text */
+				te->highlightIsSet = 0;
 			}
 			else if (mouseMotEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
 			{
 				/* move the cursor position all the way to the end */
 				te->cursorPos      = te->textLen;
-				te->highlightBegin = -1; /* unhighlight text */
+				te->highlightIsSet = 0;
 			}
 			else
 			{
@@ -2112,7 +2142,7 @@ int neuik_Element_CaptureEvent__TextEdit(
 						if (aChar == '\0') break;
 					}
 					te->text[ctr] = aChar;
-					te->highlightBegin = -1; /* unhighlight text */
+					te->highlightIsSet = 0;
 				}
 				else
 				{
@@ -2128,21 +2158,44 @@ int neuik_Element_CaptureEvent__TextEdit(
 						/* cursor will be after char */
 						te->cursorPos = 1;
 					}
-					te->highlightBegin = -1; /* unhighlight text */
+					te->highlightIsSet = 0;
 				}
 			}
 
 			/* Set text highlight (if applicable) */
-			te->highlightBegin = te->clickOrigin;
-			if (te->cursorPos < te->clickOrigin)
+			te->highlightBeginPos  = te->clickOrigin;
+			te->highlightBeginLine = te->clickOriginLine;
+
+			if (te->cursorLine < te->clickOriginLine)
 			{
-				te->highlightStart = te->cursorPos;
-				te->highlightEnd   = te->clickOrigin - 1;
+				te->highlightStartPos  = te->cursorPos;
+				te->highlightStartLine = te->cursorLine;
+				te->highlightEndPos    = te->clickOrigin - 1;
+				te->highlightEndLine   = te->clickOriginLine;
+			}
+			else if (te->cursorLine > te->clickOriginLine)
+			{
+				te->highlightStartPos  = te->clickOrigin;
+				te->highlightStartLine = te->clickOriginLine;
+				te->highlightEndPos    = te->cursorPos - 1;
+				te->highlightEndLine   = te->cursorLine;
 			}
 			else
 			{
-				te->highlightStart = te->clickOrigin;
-				te->highlightEnd   = te->cursorPos - 1;
+				if (te->cursorPos < te->clickOrigin)
+				{
+					te->highlightStartPos  = te->cursorPos;
+					te->highlightStartLine = te->cursorLine;
+					te->highlightEndPos    = te->clickOrigin - 1;
+					te->highlightEndLine   = te->clickOriginLine;
+				}
+				else
+				{
+					te->highlightStartPos  = te->clickOrigin;
+					te->highlightStartLine = te->clickOriginLine;
+					te->highlightEndPos    = te->cursorPos - 1;
+					te->highlightEndLine   = te->cursorLine;
+				}
 			}
 
 			neuik_Element_RequestRedraw((NEUIK_Element)te);
@@ -2155,67 +2208,68 @@ int neuik_Element_CaptureEvent__TextEdit(
 		if (!eBase->eSt.hasFocus) break;
 		textInpEv = (SDL_TextInputEvent*)(e);
 
-		if (te->highlightBegin != -1)
+		if (te->highlightIsSet)
 		{
 			/*----------------------------------------------------------------*/
 			/* Existing text was highlighted when text input was received.    */
 			/* This will result in the highlighted text being replaced.       */
 			/*----------------------------------------------------------------*/
-			if (te->highlightStart == 0)
-			{
-				/*----------------------------------------------------*/
-				/* a block of text will be deleted, (block @ start)   */
-				/*----------------------------------------------------*/
-				if (te->highlightEnd + 1 != te->textLen)
-				{
-					/* we are not deleting the entire contents */
+			#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` TextInput Overwrite")
+			// if (te->highlightStart == 0)
+			// {
+			// 	/*----------------------------------------------------*/
+			// 	/* a block of text will be deleted, (block @ start)   */
+			// 	/*----------------------------------------------------*/
+			// 	if (te->highlightEnd + 1 != te->textLen)
+			// 	{
+			// 		/* we are not deleting the entire contents */
 
-					for (ctr = 0;; ctr++)
-					{
-						aChar = te->text[ctr + te->highlightEnd + 1];
-						te->text[ctr] = aChar;
+			// 		for (ctr = 0;; ctr++)
+			// 		{
+			// 			aChar = te->text[ctr + te->highlightEnd + 1];
+			// 			te->text[ctr] = aChar;
 
-						if (aChar == '\0') break;
-					}
-					te->textLen = strlen(te->text);
-				}
-				else
-				{
-					/* delete entire contents of the string */
-					te->textLen = 0;
-					te->text[0] = '\0';
-				}
-				te->cursorPos = 0;
-			}
-			else if (te->highlightEnd + 1 == te->textLen)
-			{
-				/*----------------------------------------------------*/
-				/* a block of text will be deleted, (block @ end)     */
-				/*----------------------------------------------------*/
-				te->text[te->highlightStart] = '\0';
-				te->textLen   = te->highlightStart;
-				te->cursorPos = te->textLen;
-			}
-			else
-			{
-				/*----------------------------------------------------*/
-				/* a block of text will be deleted, (block in middle) */
-				/*----------------------------------------------------*/
-				te->cursorPos = te->highlightStart;
+			// 			if (aChar == '\0') break;
+			// 		}
+			// 		te->textLen = strlen(te->text);
+			// 	}
+			// 	else
+			// 	{
+			// 		/* delete entire contents of the string */
+			// 		te->textLen = 0;
+			// 		te->text[0] = '\0';
+			// 	}
+			// 	te->cursorPos = 0;
+			// }
+			// else if (te->highlightEnd + 1 == te->textLen)
+			// {
+			// 	/*----------------------------------------------------*/
+			// 	/* a block of text will be deleted, (block @ end)     */
+			// 	/*----------------------------------------------------*/
+			// 	te->text[te->highlightStart] = '\0';
+			// 	te->textLen   = te->highlightStart;
+			// 	te->cursorPos = te->textLen;
+			// }
+			// else
+			// {
+			// 	/*----------------------------------------------------*/
+			// 	/* a block of text will be deleted, (block in middle) */
+			// 	/*----------------------------------------------------*/
+			// 	te->cursorPos = te->highlightStart;
 
-				hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-				for (ctr = te->highlightStart;; ctr++)
-				{
-					aChar = te->text[ctr + hlOffset];
-					te->text[ctr] = aChar;
+			// 	hlOffset = 1 + (te->highlightEnd - te->highlightStart);
+			// 	for (ctr = te->highlightStart;; ctr++)
+			// 	{
+			// 		aChar = te->text[ctr + hlOffset];
+			// 		te->text[ctr] = aChar;
 
-					if (aChar == '\0') break;
-				}
-				te->textLen = strlen(te->text);
-			}
+			// 		if (aChar == '\0') break;
+			// 	}
+			// 	te->textLen = strlen(te->text);
+			// }
 
-			te->cursorPos = te->highlightStart;
-			te->highlightBegin = -1;
+			// te->cursorPos = te->highlightStart;
+			// te->highlightBegin = -1;
 		}
 
 		inpLen = strlen(textInpEv->text);
@@ -2252,19 +2306,35 @@ int neuik_Element_CaptureEvent__TextEdit(
 				if (!(keyMod & KMOD_SHIFT))
 				{
 					/* SHIFT key is not being held down */
-					if (te->highlightBegin != -1)
+					if (te->highlightIsSet)
 					{
 						/* breaking out of a highlight selection */
-						if (te->cursorPos > te->highlightBegin)
-						{
-							/* break out at leftmost side of highlight */
-							te->cursorPos = te->highlightBegin;
-						}
-						te->highlightBegin = -1;
+						te->highlightIsSet = 0;
+						te->cursorLine     = te->highlightStartLine;
+						te->cursorPos      = te->highlightStartPos;
+						doRedraw = 1;
 					}
 					else if (te->cursorPos > 0)
 					{
 						te->cursorPos--;
+						doRedraw = 1;
+					}
+					else if (te->cursorPos == 0 && te->cursorLine > 0)
+					{
+						/*----------------------------------------------------*/
+						/* For lines beyond the first line, attempting to     */
+						/* left should cause the cursor to move to the end of */
+						/* the preceding line.                                */
+						/*----------------------------------------------------*/
+						te->cursorLine--;
+						if (neuik_TextBlock_GetLineLength(te->textBlk,
+							te->cursorLine, &lineLen))
+						{
+							/* ERR: problem reported from textBlock */
+							eNum = 6;
+							goto out;
+						}
+						te->cursorPos = lineLen;
 						doRedraw = 1;
 					}
 					te->clickOrigin = -1;
@@ -2278,21 +2348,31 @@ int neuik_Element_CaptureEvent__TextEdit(
 					{
 						doRedraw = 1;
 
-						if (te->highlightBegin == -1)
+						if (!te->highlightIsSet)
 						{
-							te->highlightBegin = te->cursorPos;
+							te->highlightIsSet     = 1;
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
 						}
 						te->cursorPos--;
 
-						if (te->cursorPos < te->highlightBegin)
+						if (te->cursorLine < te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos < te->highlightBeginPos))
 						{
-							te->highlightStart = te->cursorPos;
-							te->highlightEnd   = te->highlightBegin - 1;
+							/* highlight is expanding to the left */
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos - 1;
 						}
 						else
 						{
-							te->highlightStart = te->highlightBegin;
-							te->highlightEnd   = te->cursorPos - 1;
+							/* highlight is contracting to the left */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos - 1;
 						}
 					}
 				}
@@ -2303,16 +2383,13 @@ int neuik_Element_CaptureEvent__TextEdit(
 				if (!(keyMod & KMOD_SHIFT))
 				{
 					/* SHIFT key is not being held down */
-
-					if (te->highlightBegin != -1)
+					if (te->highlightIsSet)
 					{
 						/* breaking out of a highlight selection */
-						if (te->cursorPos < te->highlightBegin)
-						{
-							/* break out at rightmost side of highlight */
-							te->cursorPos = te->highlightBegin;
-						}
-						te->highlightBegin = -1;
+						te->highlightIsSet = 0;
+						te->cursorLine     = te->highlightEndLine;
+						te->cursorPos      = te->highlightEndPos + 1;
+						doRedraw = 1;
 					}
 					else
 					{
@@ -2332,6 +2409,18 @@ int neuik_Element_CaptureEvent__TextEdit(
 							te->cursorPos++;
 							doRedraw = 1;
 						}
+						else if (te->cursorPos == lineLen && 
+								te->cursorLine < te->textBlk->nLines)
+						{
+							/*------------------------------------------------*/
+							/* For lines before the final line, attempting to */
+							/* right should cause the cursor to move to the   */
+							/* start of the following line.                   */
+							/*------------------------------------------------*/
+							te->cursorLine++;
+							te->cursorPos = 0;
+							doRedraw = 1;
+						}
 					}
 					te->clickOrigin = -1;
 				}
@@ -2340,25 +2429,80 @@ int neuik_Element_CaptureEvent__TextEdit(
 					/* SHIFT key is being held down */
 
 					/* Start highlight selection process */
-					if (te->cursorPos < te->textLen)
+					/*--------------------------------------------------------*/
+					/* Prevent the cursor from moving to a position in excess */
+					/* of the line length.                                    */
+					/*--------------------------------------------------------*/
+					if (neuik_TextBlock_GetLineLength(te->textBlk,
+						te->cursorLine, &lineLen))
 					{
-						if (te->highlightBegin == -1)
+						/* ERR: problem reported from textBlock */
+						eNum = 6;
+						goto out;
+					}
+					if (te->cursorPos < lineLen)
+					{
+						if (!te->highlightIsSet)
 						{
-							te->highlightBegin = te->cursorPos;
+							te->highlightIsSet     = 1;
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
 						}
-
 						te->cursorPos++;
 						doRedraw = 1;
 
-						if (te->cursorPos > te->highlightBegin)
+						if (te->cursorLine > te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos > te->highlightBeginPos))
 						{
-							te->highlightStart = te->highlightBegin;
-							te->highlightEnd   = te->cursorPos - 1;
+							/* highlight is expanding to the right */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos - 1;
 						}
 						else
 						{
-							te->highlightStart = te->cursorPos;
-							te->highlightEnd   = te->highlightBegin - 1;
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos - 1;
+						}
+					}
+					else if (te->cursorPos == lineLen && 
+							te->cursorLine < te->textBlk->nLines)
+					{
+						/*------------------------------------------------*/
+						/* For lines before the final line, attempting to */
+						/* right should cause the cursor to move to the   */
+						/* start of the following line.                   */
+						/*------------------------------------------------*/
+						if (!te->highlightIsSet)
+						{
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
+						}
+
+						te->cursorLine++;
+						te->cursorPos = 0;
+						doRedraw = 1;
+
+						if (te->cursorLine > te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos > te->highlightBeginPos))
+						{
+							/* highlight is expanding to the right */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos - 1;
+						}
+						else
+						{
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos - 1;
 						}
 					}
 				}
@@ -2366,7 +2510,7 @@ int neuik_Element_CaptureEvent__TextEdit(
 				break;
 
 			case SDLK_BACKSPACE:
-				if (te->highlightBegin == -1)
+				if (!te->highlightIsSet)
 				{
 					/*--------------------------------------------------------*/
 					/* There is no current text highlighting                  */
@@ -2410,71 +2554,72 @@ int neuik_Element_CaptureEvent__TextEdit(
 				}
 				else
 				{
+					#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` HL-Backspace")
 					/*--------------------------------------------------------*/
 					/* There is text highlighting within the line             */
 					/*--------------------------------------------------------*/
-					if (te->highlightStart == 0)
-					{
-						/*----------------------------------------------------*/
-						/* a block of text will be deleted, (block @ start)   */
-						/*----------------------------------------------------*/
-						if (te->highlightEnd + 1 != te->textLen)
-						{
-							/* we are not deleting the entire contents */
+					// if (te->highlightStart == 0)
+					// {
+					// 	/*----------------------------------------------------*/
+					// 	/* a block of text will be deleted, (block @ start)   */
+					// 	/*----------------------------------------------------*/
+					// 	if (te->highlightEnd + 1 != te->textLen)
+					// 	{
+					// 		/* we are not deleting the entire contents */
 
-							for (ctr = 0;; ctr++)
-							{
-								aChar = te->text[ctr + te->highlightEnd + 1];
-								te->text[ctr] = aChar;
+					// 		for (ctr = 0;; ctr++)
+					// 		{
+					// 			aChar = te->text[ctr + te->highlightEnd + 1];
+					// 			te->text[ctr] = aChar;
 
-								if (aChar == '\0') break;
-							}
-							te->textLen = strlen(te->text);
-						}
-						else
-						{
-							/* delete entire contents of the string */
-							te->textLen = 0;
-							te->text[0] = '\0';
-						}
-						te->cursorPos      = 0;
-					}
-					else if (te->highlightEnd + 1 == te->textLen)
-					{
-						/*----------------------------------------------------*/
-						/* a block of text will be deleted, (block @ end)     */
-						/*----------------------------------------------------*/
-						te->text[te->highlightStart] = '\0';
-						te->textLen   = te->highlightStart;
-						te->cursorPos = te->textLen;
-					}
-					else
-					{
-						/*----------------------------------------------------*/
-						/* a block of text will be deleted, (block in middle) */
-						/*----------------------------------------------------*/
-						te->cursorPos = te->highlightStart;
+					// 			if (aChar == '\0') break;
+					// 		}
+					// 		te->textLen = strlen(te->text);
+					// 	}
+					// 	else
+					// 	{
+					// 		/* delete entire contents of the string */
+					// 		te->textLen = 0;
+					// 		te->text[0] = '\0';
+					// 	}
+					// 	te->cursorPos      = 0;
+					// }
+					// else if (te->highlightEnd + 1 == te->textLen)
+					// {
+					// 	/*----------------------------------------------------*/
+					// 	/* a block of text will be deleted, (block @ end)     */
+					// 	/*----------------------------------------------------*/
+					// 	te->text[te->highlightStart] = '\0';
+					// 	te->textLen   = te->highlightStart;
+					// 	te->cursorPos = te->textLen;
+					// }
+					// else
+					// {
+					// 	/*----------------------------------------------------*/
+					// 	/* a block of text will be deleted, (block in middle) */
+					// 	/*----------------------------------------------------*/
+					// 	te->cursorPos = te->highlightStart;
 
-						hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-						for (ctr = te->highlightStart;; ctr++)
-						{
-							aChar = te->text[ctr + hlOffset];
-							te->text[ctr] = aChar;
+					// 	hlOffset = 1 + (te->highlightEnd - te->highlightStart);
+					// 	for (ctr = te->highlightStart;; ctr++)
+					// 	{
+					// 		aChar = te->text[ctr + hlOffset];
+					// 		te->text[ctr] = aChar;
 
-							if (aChar == '\0') break;
-						}
-						te->textLen = strlen(te->text);
-					}
+					// 		if (aChar == '\0') break;
+					// 	}
+					// 	te->textLen = strlen(te->text);
+					// }
 
-					te->highlightBegin = -1;
-					doRedraw           = 1;
+					// te->highlightBegin = -1;
+					// doRedraw           = 1;
 				}
 				// neuik_TextEdit_UpdateCursorX(te);
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_DELTETED);
 				break;
 
 			case SDLK_DELETE:
-				if (te->highlightBegin == -1)
+				if (!te->highlightIsSet)
 				{
 					/*--------------------------------------------------------*/
 					/* There is no current text highlighting                  */
@@ -2521,64 +2666,65 @@ int neuik_Element_CaptureEvent__TextEdit(
 				}
 				else
 				{
-					/*--------------------------------------------------------*/
-					/* There is text highlighting within the line             */
-					/*--------------------------------------------------------*/
-					if (te->highlightStart == 0)
-					{
-						/*----------------------------------------------------*/
-						/* a block of text will be deleted, (block @ start)   */
-						/*----------------------------------------------------*/
-						if (te->highlightEnd + 1 != te->textLen)
-						{
-							/* we are not deleting the entire contents */
+					#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` HL-Delete")
+					// /*--------------------------------------------------------*/
+					// /* There is text highlighting within the line             */
+					// /*--------------------------------------------------------*/
+					// if (te->highlightStart == 0)
+					// {
+					// 	/*----------------------------------------------------*/
+					// 	/* a block of text will be deleted, (block @ start)   */
+					// 	/*----------------------------------------------------*/
+					// 	if (te->highlightEnd + 1 != te->textLen)
+					// 	{
+					// 		/* we are not deleting the entire contents */
 
-							for (ctr = 0;; ctr++)
-							{
-								aChar = te->text[ctr + te->highlightEnd + 1];
-								te->text[ctr] = aChar;
+					// 		for (ctr = 0;; ctr++)
+					// 		{
+					// 			aChar = te->text[ctr + te->highlightEnd + 1];
+					// 			te->text[ctr] = aChar;
 
-								if (aChar == '\0') break;
-							}
-							te->textLen = strlen(te->text);
-						}
-						else
-						{
-							/* delete entire contents of the string */
-							te->textLen = 0;
-							te->text[0] = '\0';
-						}
-						te->cursorPos      = 0;
-					}
-					else if (te->highlightEnd + 1 == te->textLen)
-					{
-						/*----------------------------------------------------*/
-						/* a block of text will be deleted, (block @ end)     */
-						/*----------------------------------------------------*/
-						te->text[te->highlightStart] = '\0';
-						te->textLen   = te->highlightStart;
-						te->cursorPos = te->textLen;
-					}
-					else
-					{
-						/*----------------------------------------------------*/
-						/* a block of text will be deleted, (block in middle) */
-						/*----------------------------------------------------*/
-						te->cursorPos = te->highlightStart;
+					// 			if (aChar == '\0') break;
+					// 		}
+					// 		te->textLen = strlen(te->text);
+					// 	}
+					// 	else
+					// 	{
+					// 		/* delete entire contents of the string */
+					// 		te->textLen = 0;
+					// 		te->text[0] = '\0';
+					// 	}
+					// 	te->cursorPos      = 0;
+					// }
+					// else if (te->highlightEnd + 1 == te->textLen)
+					// {
+					// 	/*----------------------------------------------------*/
+					// 	/* a block of text will be deleted, (block @ end)     */
+					// 	/*----------------------------------------------------*/
+					// 	te->text[te->highlightStart] = '\0';
+					// 	te->textLen   = te->highlightStart;
+					// 	te->cursorPos = te->textLen;
+					// }
+					// else
+					// {
+					// 	/*----------------------------------------------------*/
+					// 	/* a block of text will be deleted, (block in middle) */
+					// 	/*----------------------------------------------------*/
+					// 	te->cursorPos = te->highlightStart;
 
-						hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-						for (ctr = te->highlightStart;; ctr++)
-						{
-							aChar = te->text[ctr + hlOffset];
-							te->text[ctr] = aChar;
+					// 	hlOffset = 1 + (te->highlightEnd - te->highlightStart);
+					// 	for (ctr = te->highlightStart;; ctr++)
+					// 	{
+					// 		aChar = te->text[ctr + hlOffset];
+					// 		te->text[ctr] = aChar;
 
-							if (aChar == '\0') break;
-						}
-						te->textLen = strlen(te->text);
-					}
+					// 		if (aChar == '\0') break;
+					// 	}
+					// 	te->textLen = strlen(te->text);
+					// }
 
-					te->highlightBegin = -1;
-					doRedraw           = 1;
+					// te->highlightBegin = -1;
+					// doRedraw           = 1;
 				}
 				// neuik_TextEdit_UpdateCursorX(te);
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_DELTETED);
@@ -2591,7 +2737,7 @@ int neuik_Element_CaptureEvent__TextEdit(
 					if (!(keyMod & KMOD_SHIFT))
 					{
 						/* SHIFT key is not being held down */
-						te->highlightBegin = -1;
+						te->highlightIsSet = 0;
 						te->clickOrigin    = -1;
 						if (te->cursorLine > 0)
 						{
@@ -2602,22 +2748,40 @@ int neuik_Element_CaptureEvent__TextEdit(
 					else
 					{
 						/* SHIFT key IS being held down */
-						if (te->highlightBegin == -1)
+						if (!te->highlightIsSet)
 						{
-							te->highlightBegin = te->cursorPos;
+							te->highlightIsSet     = 1;
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
 						}
-						te->cursorPos = 0;
-						doRedraw = 1;
 
-						if (te->cursorPos < te->highlightBegin)
+						if (te->cursorLine > 0)
 						{
-							te->highlightStart = te->cursorPos;
-							te->highlightEnd   = te->highlightBegin - 1;
+							te->cursorLine--;
 						}
 						else
 						{
-							te->highlightStart = te->highlightBegin;
-							te->highlightEnd   = te->cursorPos - 1;
+							te->cursorPos = 0;
+						}
+						doRedraw = 1;
+
+						if (te->cursorLine < te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos < te->highlightBeginPos))
+						{
+							/* highlight is expanding to the left */
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos - 1;
+						}
+						else
+						{
+							/* highlight is contracting to the left */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos - 1;
 						}
 					}
 				}
@@ -2632,7 +2796,7 @@ int neuik_Element_CaptureEvent__TextEdit(
 					if (!(keyMod & KMOD_SHIFT))
 					{
 						/* SHIFT key is not being held down */
-						te->highlightBegin = -1;
+						te->highlightIsSet = 0;
 						te->clickOrigin    = -1;
 
 						/*----------------------------------------------------*/
@@ -2667,23 +2831,61 @@ int neuik_Element_CaptureEvent__TextEdit(
 					}
 					else
 					{
-						if (te->highlightBegin == -1)
+						if (!te->highlightIsSet)
 						{
-							te->highlightBegin = te->cursorPos;
+							te->highlightIsSet     = 1;
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
 						}
-						te->cursorPos = te->textLen;
-						doRedraw = 1;
 
-						if (te->cursorPos > te->highlightBegin)
+						/*----------------------------------------------------*/
+						/* Prevent the cursor from moving to a line that is   */
+						/* in excess of the number of lines.                  */
+						/*----------------------------------------------------*/
+						if (neuik_TextBlock_GetLineCount(te->textBlk, &lineLen))
 						{
-							te->highlightStart = te->highlightBegin;
-							te->highlightEnd   = te->cursorPos - 1;
+							eNum = 7;
+							goto out;
+						}
+						if (te->cursorLine < lineLen)
+						{
+							te->cursorLine++;
+							doRedraw = 1;
+
+							/*------------------------------------------------*/
+							/* Prevent the cursor from moving to a position   */
+							/* in excess of the line length.                  */
+							/*------------------------------------------------*/
+							if (neuik_TextBlock_GetLineLength(te->textBlk,
+								te->cursorLine, &lineLen))
+							{
+								eNum = 6;
+								goto out;
+							}
+							if (te->cursorPos > lineLen)
+							{
+								te->cursorPos = lineLen - 1;
+							}
+						}
+
+						if (te->cursorLine > te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos > te->highlightBeginPos))
+						{
+							/* highlight is expanding to the right */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos - 1;
 						}
 						else
 						{
-							te->highlightStart = te->cursorPos;
-							te->highlightEnd   = te->highlightBegin - 1;
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos - 1;
 						}
+
 					}
 				}
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
@@ -2730,251 +2932,386 @@ int neuik_Element_CaptureEvent__TextEdit(
 				neuik_Element_RequestRedraw((NEUIK_Element)te);
 				evCaputred = 1;
 				goto out;
+
+			case SDLK_HOME:
+				if (!(keyMod & KMOD_SHIFT))
+				{
+					/* SHIFT key is not being held down */
+					if (te->highlightIsSet)
+					{
+						/* breaking out of a highlight selection */
+						te->cursorPos      = 0;
+						te->highlightIsSet = 0;
+					}
+					else if (te->cursorPos > 0)
+					{
+						te->cursorPos = 0;
+						doRedraw      = 1;
+					}
+					te->clickOrigin = -1;
+				}
+				else
+				{
+					/* SHIFT key is being held down */
+
+					/* Start highlight selection process */
+					if (te->cursorPos > 0)
+					{
+						doRedraw = 1;
+
+						if (!te->highlightIsSet)
+						{
+							te->highlightIsSet     = 1;
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
+						}
+						te->cursorPos = 0;
+
+						// if (te->cursorPos < te->highlightBegin)
+						// {
+						// 	te->highlightStart = te->cursorPos;
+						// 	te->highlightEnd   = te->highlightBegin - 1;
+						// }
+						// else
+						// {
+						// 	te->highlightStart = te->highlightBegin;
+						// 	te->highlightEnd   = te->cursorPos - 1;
+						// }
+						if (te->cursorLine < te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos < te->highlightBeginPos))
+						{
+							/* highlight is expanding to the left */
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos - 1;
+						}
+						else
+						{
+							/* highlight is contracting to the left */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos;
+						}
+					}
+				}
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
+				break;
+
+			case SDLK_END:
+
+				if (neuik_TextBlock_GetLineLength(te->textBlk,
+					te->cursorLine, &lineLen))
+				{
+					/* ERR: problem reported from textBlock */
+					eNum = 6;
+					goto out;
+				}
+
+				if (!(keyMod & KMOD_SHIFT))
+				{
+					/* SHIFT key is not being held down */
+					if (te->highlightIsSet)
+					{
+						/* breaking out of a highlight selection */
+						te->cursorPos      = lineLen;
+						te->highlightIsSet = 0;
+					}
+					else if (te->cursorPos != lineLen)
+					{
+						te->cursorPos = lineLen;
+						doRedraw = 1;
+					}
+					te->clickOrigin = -1;
+				}
+				else
+				{
+					/* SHIFT key is being held down */
+
+					/* Start highlight selection process */
+					if (te->cursorPos < te->textLen)
+					{
+						if (!te->highlightIsSet)
+						{
+							/* highlight was not previously set */
+							te->highlightIsSet = 1;
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
+						}
+
+						te->cursorPos = lineLen;
+						doRedraw      = 1;
+
+						if (te->cursorLine > te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos > te->highlightBeginPos))
+						{
+							/* highlight is expanding to the right */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos - 1;
+						}
+						else
+						{
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos - 1;
+						}
+					}
+				}
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
+				break;
 		}
 
 		if (neuik_KeyShortcut_Copy(keyEv, keyMod))
 		{
-			if (te->highlightBegin != -1)
+			if (te->highlightIsSet)
 			{
-				aChar = te->text[te->highlightEnd + 1];
-				te->text[te->highlightEnd + 1] = '\0';
+				#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` Copy")
+				// aChar = te->text[te->highlightEnd + 1];
+				// te->text[te->highlightEnd + 1] = '\0';
 
-				SDL_SetClipboardText(te->text + te->highlightStart);
-				te->text[te->highlightEnd + 1] = aChar;
+				// SDL_SetClipboardText(te->text + te->highlightStart);
+				// te->text[te->highlightEnd + 1] = aChar;
 			}
 		}
 		else if (neuik_KeyShortcut_Cut(keyEv, keyMod))
 		{
-			if (te->highlightBegin != -1)
+			if (te->highlightIsSet)
 			{
-				aChar = te->text[te->highlightEnd + 1];
-				te->text[te->highlightEnd + 1] = '\0';
+				#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` Cut")
+				// aChar = te->text[te->highlightEnd + 1];
+				// te->text[te->highlightEnd + 1] = '\0';
 
-				SDL_SetClipboardText(te->text + te->highlightStart);
-				te->text[te->highlightEnd + 1] = aChar;
+				// SDL_SetClipboardText(te->text + te->highlightStart);
+				// te->text[te->highlightEnd + 1] = aChar;
 
-				/*--------------------------------------------------------*/
-				/* There is text highlighting within the line             */
-				/*--------------------------------------------------------*/
-				if (te->highlightStart == 0)
-				{
-					/*----------------------------------------------------*/
-					/* a block of text will be deleted, (block @ start)   */
-					/*----------------------------------------------------*/
-					if (te->highlightEnd + 1 != te->textLen)
-					{
-						/* we are not deleting the entire contents */
+				// /*--------------------------------------------------------*/
+				// /* There is text highlighting within the line             */
+				// /*--------------------------------------------------------*/
+				// if (te->highlightStart == 0)
+				// {
+				// 	/*----------------------------------------------------*/
+				// 	/* a block of text will be deleted, (block @ start)   */
+				// 	/*----------------------------------------------------*/
+				// 	if (te->highlightEnd + 1 != te->textLen)
+				// 	{
+				// 		/* we are not deleting the entire contents */
 
-						for (ctr = 0;; ctr++)
-						{
-							aChar = te->text[ctr + te->highlightEnd + 1];
-							te->text[ctr] = aChar;
+				// 		for (ctr = 0;; ctr++)
+				// 		{
+				// 			aChar = te->text[ctr + te->highlightEnd + 1];
+				// 			te->text[ctr] = aChar;
 
-							if (aChar == '\0') break;
-						}
-						te->textLen = strlen(te->text);
-					}
-					else
-					{
-						/* delete entire contents of the string */
-						te->textLen = 0;
-						te->text[0] = '\0';
-					}
-					te->cursorPos      = 0;
-				}
-				else if (te->highlightEnd + 1 == te->textLen)
-				{
-					/*----------------------------------------------------*/
-					/* a block of text will be deleted, (block @ end)     */
-					/*----------------------------------------------------*/
-					te->text[te->highlightStart] = '\0';
-					te->textLen   = te->highlightStart;
-					te->cursorPos = te->textLen;
-				}
-				else
-				{
-					/*----------------------------------------------------*/
-					/* a block of text will be deleted, (block in middle) */
-					/*----------------------------------------------------*/
-					te->cursorPos = te->highlightStart;
+				// 			if (aChar == '\0') break;
+				// 		}
+				// 		te->textLen = strlen(te->text);
+				// 	}
+				// 	else
+				// 	{
+				// 		/* delete entire contents of the string */
+				// 		te->textLen = 0;
+				// 		te->text[0] = '\0';
+				// 	}
+				// 	te->cursorPos      = 0;
+				// }
+				// else if (te->highlightEnd + 1 == te->textLen)
+				// {
+				// 	/*----------------------------------------------------*/
+				// 	/* a block of text will be deleted, (block @ end)     */
+				// 	/*----------------------------------------------------*/
+				// 	te->text[te->highlightStart] = '\0';
+				// 	te->textLen   = te->highlightStart;
+				// 	te->cursorPos = te->textLen;
+				// }
+				// else
+				// {
+				// 	/*----------------------------------------------------*/
+				// 	/* a block of text will be deleted, (block in middle) */
+				// 	/*----------------------------------------------------*/
+				// 	te->cursorPos = te->highlightStart;
 
-					hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-					for (ctr = te->highlightStart;; ctr++)
-					{
-						aChar = te->text[ctr + hlOffset];
-						te->text[ctr] = aChar;
+				// 	hlOffset = 1 + (te->highlightEnd - te->highlightStart);
+				// 	for (ctr = te->highlightStart;; ctr++)
+				// 	{
+				// 		aChar = te->text[ctr + hlOffset];
+				// 		te->text[ctr] = aChar;
 
-						if (aChar == '\0') break;
-					}
-					te->textLen = strlen(te->text);
-				}
+				// 		if (aChar == '\0') break;
+				// 	}
+				// 	te->textLen = strlen(te->text);
+				// }
 
-				te->highlightBegin = -1;
-				doRedraw           = 1;
-				// neuik_TextEdit_UpdateCursorX(te);
+				// te->highlightBegin = -1;
+				// doRedraw           = 1;
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_DELTETED);
 			}
 		}
 		else if (neuik_KeyShortcut_Paste(keyEv, keyMod) && SDL_HasClipboardText())
 		{
-			if (te->highlightBegin != -1)
-			{
-				/*--------------------------------------------------------*/
-				/* There is text highlighting within the line             */
-				/*--------------------------------------------------------*/
-				if (te->highlightStart == 0)
-				{
-					/*----------------------------------------------------*/
-					/* a block of text will be deleted, (block @ start)   */
-					/*----------------------------------------------------*/
-					if (te->highlightEnd + 1 != te->textLen)
-					{
-						/* we are not deleting the entire contents */
+			#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` Paste")
+			// if (te->highlightIsSet)
+			// {
+			// 	/*--------------------------------------------------------*/
+			// 	/* There is text highlighting within the line             */
+			// 	/*--------------------------------------------------------*/
+			// 	if (te->highlightStart == 0)
+			// 	{
+			// 		/*----------------------------------------------------*/
+			// 		/* a block of text will be deleted, (block @ start)   */
+			// 		/*----------------------------------------------------*/
+			// 		if (te->highlightEnd + 1 != te->textLen)
+			// 		{
+			// 			/* we are not deleting the entire contents */
 
-						for (ctr = 0;; ctr++)
-						{
-							aChar = te->text[ctr + te->highlightEnd + 1];
-							te->text[ctr] = aChar;
+			// 			for (ctr = 0;; ctr++)
+			// 			{
+			// 				aChar = te->text[ctr + te->highlightEnd + 1];
+			// 				te->text[ctr] = aChar;
 
-							if (aChar == '\0') break;
-						}
-						te->textLen = strlen(te->text);
-					}
-					else
-					{
-						/* delete entire contents of the string */
-						te->textLen = 0;
-						te->text[0] = '\0';
-					}
-					te->cursorPos      = 0;
-				}
-				else if (te->highlightEnd + 1 == te->textLen)
-				{
-					/*----------------------------------------------------*/
-					/* a block of text will be deleted, (block @ end)     */
-					/*----------------------------------------------------*/
-					te->text[te->highlightStart] = '\0';
-					te->textLen   = te->highlightStart;
-					te->cursorPos = te->textLen;
-				}
-				else
-				{
-					/*----------------------------------------------------*/
-					/* a block of text will be deleted, (block in middle) */
-					/*----------------------------------------------------*/
-					te->cursorPos = te->highlightStart;
+			// 				if (aChar == '\0') break;
+			// 			}
+			// 			te->textLen = strlen(te->text);
+			// 		}
+			// 		else
+			// 		{
+			// 			/* delete entire contents of the string */
+			// 			te->textLen = 0;
+			// 			te->text[0] = '\0';
+			// 		}
+			// 		te->cursorPos      = 0;
+			// 	}
+			// 	else if (te->highlightEnd + 1 == te->textLen)
+			// 	{
+			// 		/*----------------------------------------------------*/
+			// 		/* a block of text will be deleted, (block @ end)     */
+			// 		/*----------------------------------------------------*/
+			// 		te->text[te->highlightStart] = '\0';
+			// 		te->textLen   = te->highlightStart;
+			// 		te->cursorPos = te->textLen;
+			// 	}
+			// 	else
+			// 	{
+			// 		/*----------------------------------------------------*/
+			// 		/* a block of text will be deleted, (block in middle) */
+			// 		/*----------------------------------------------------*/
+			// 		te->cursorPos = te->highlightStart;
 
-					hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-					for (ctr = te->highlightStart;; ctr++)
-					{
-						aChar = te->text[ctr + hlOffset];
-						te->text[ctr] = aChar;
+			// 		hlOffset = 1 + (te->highlightEnd - te->highlightStart);
+			// 		for (ctr = te->highlightStart;; ctr++)
+			// 		{
+			// 			aChar = te->text[ctr + hlOffset];
+			// 			te->text[ctr] = aChar;
 
-						if (aChar == '\0') break;
-					}
-					te->textLen = strlen(te->text);
-				}
+			// 			if (aChar == '\0') break;
+			// 		}
+			// 		te->textLen = strlen(te->text);
+			// 	}
 
-				te->highlightBegin = -1;
-			}
+			// 	te->highlightBegin = -1;
+			// }
 
-			clipText = SDL_GetClipboardText();
-			if (clipText == NULL)
-			{
-				evCaputred = 1;
-				eNum = 2;
-				goto out;
-			}
+			// clipText = SDL_GetClipboardText();
+			// if (clipText == NULL)
+			// {
+			// 	evCaputred = 1;
+			// 	eNum = 2;
+			// 	goto out;
+			// }
 
-			inpLen = strlen(clipText);
-			if (te->cursorPos == te->textLen)
-			{
-				/* cursor is at the end of the current text */
-				if (inpLen + te->textLen < te->textAllocSize)
-				{
-					/* the text buffer will need to be resized to fit this text */
-					newSize = 2 * (inpLen + te->textLen);
-					te->text = (char*)realloc(te->text, newSize*sizeof(char));
-				}
-				strcat(te->text, clipText);
-				te->textLen   += inpLen;
-				te->cursorPos += inpLen;
-			}
-			else if (te->cursorPos == 0)
-			{
-				/* cursor is at the start of the current text */
-				if (inpLen + te->textLen < te->textAllocSize)
-				{
-					/* the text buffer will need to be resized to fit this text */
-					newSize = 2 * (inpLen + te->textLen);
-					te->text = (char*)realloc(te->text, newSize*sizeof(char));
-				}
+			// inpLen = strlen(clipText);
+			// if (te->cursorPos == te->textLen)
+			// {
+			// 	/* cursor is at the end of the current text */
+			// 	if (inpLen + te->textLen < te->textAllocSize)
+			// 	{
+			// 		/* the text buffer will need to be resized to fit this text */
+			// 		newSize = 2 * (inpLen + te->textLen);
+			// 		te->text = (char*)realloc(te->text, newSize*sizeof(char));
+			// 	}
+			// 	strcat(te->text, clipText);
+			// 	te->textLen   += inpLen;
+			// 	te->cursorPos += inpLen;
+			// }
+			// else if (te->cursorPos == 0)
+			// {
+			// 	/* cursor is at the start of the current text */
+			// 	if (inpLen + te->textLen < te->textAllocSize)
+			// 	{
+			// 		/* the text buffer will need to be resized to fit this text */
+			// 		newSize = 2 * (inpLen + te->textLen);
+			// 		te->text = (char*)realloc(te->text, newSize*sizeof(char));
+			// 	}
 
-				/* first move over the old text */
-				for (ctr = te->textLen + inpLen; ctr >= inpLen; ctr--)
-				{
-					te->text[ctr] = te->text[ctr - inpLen];
-				}
+			// 	/* first move over the old text */
+			// 	for (ctr = te->textLen + inpLen; ctr >= inpLen; ctr--)
+			// 	{
+			// 		te->text[ctr] = te->text[ctr - inpLen];
+			// 	}
 
-				/* now copy in the new text */
-				for (ctr = 0;; ctr++)
-				{
-					if (clipText[ctr] == 0) break;
+			// 	/* now copy in the new text */
+			// 	for (ctr = 0;; ctr++)
+			// 	{
+			// 		if (clipText[ctr] == 0) break;
 
-					te->text[ctr] = clipText[ctr];
-				}
-				te->textLen   += inpLen;
-				te->cursorPos += inpLen;
-			}
-			else
-			{
-				/* cursor is somewhere in the middle of the text */
-				if (inpLen + te->textLen < te->textAllocSize)
-				{
-					/* the text buffer will need to be resized to fit this text */
-					newSize = 2 * (inpLen + te->textLen);
-					te->text = (char*)realloc(te->text, newSize*sizeof(char));
-				}
+			// 		te->text[ctr] = clipText[ctr];
+			// 	}
+			// 	te->textLen   += inpLen;
+			// 	te->cursorPos += inpLen;
+			// }
+			// else
+			// {
+			// 	/* cursor is somewhere in the middle of the text */
+			// 	if (inpLen + te->textLen < te->textAllocSize)
+			// 	{
+			// 		/* the text buffer will need to be resized to fit this text */
+			// 		newSize = 2 * (inpLen + te->textLen);
+			// 		te->text = (char*)realloc(te->text, newSize*sizeof(char));
+			// 	}
 
-				/* first move over the old text */
-				stopPos = (te->cursorPos - 1) + inpLen; 
-				for (ctr = te->textLen + inpLen; ctr >= stopPos; ctr--)
-				{
-					te->text[ctr] = te->text[ctr - inpLen];
-				}
+			// 	/* first move over the old text */
+			// 	stopPos = (te->cursorPos - 1) + inpLen; 
+			// 	for (ctr = te->textLen + inpLen; ctr >= stopPos; ctr--)
+			// 	{
+			// 		te->text[ctr] = te->text[ctr - inpLen];
+			// 	}
 
-				/* now copy in the new text */
-				for (ctr = 0;; ctr++)
-				{
-					aPos = te->cursorPos + ctr;
-					if (clipText[ctr] == 0) break;
+			// 	/* now copy in the new text */
+			// 	for (ctr = 0;; ctr++)
+			// 	{
+			// 		aPos = te->cursorPos + ctr;
+			// 		if (clipText[ctr] == 0) break;
 
-					te->text[aPos] = clipText[ctr];
-				}
-				te->textLen   += inpLen;
-				te->cursorPos += inpLen;
-			}
+			// 		te->text[aPos] = clipText[ctr];
+			// 	}
+			// 	te->textLen   += inpLen;
+			// 	te->cursorPos += inpLen;
+			// }
 
-			// neuik_TextEdit_UpdateCursorX(te);
-			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_ADD_REMOVE);
-			neuik_Element_RequestRedraw((NEUIK_Element)te);
-			evCaputred = 1;
-			goto out;
-
+			// // neuik_TextEdit_UpdateCursorX(te);
+			// neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_ADD_REMOVE);
+			// neuik_Element_RequestRedraw((NEUIK_Element)te);
+			// evCaputred = 1;
+			// goto out;
 		}
 		else if (neuik_KeyShortcut_SelectAll(keyEv, keyMod))
 		{
-			if (te->textLen > 0)
-			{
-				te->highlightBegin = 0;
-				te->cursorPos      = te->textLen;
-				// neuik_TextEdit_UpdateCursorX(te);
-				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
+			#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` SelectAll")
+			// if (te->textLen > 0)
+			// {
+			// 	te->highlightBegin = 0;
+			// 	te->cursorPos      = te->textLen;
+			// 	// neuik_TextEdit_UpdateCursorX(te);
+			// 	neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 
-				te->highlightStart = 0;
-				te->highlightEnd   = te->textLen - 1;
-				doRedraw = 1;
-			}
+			// 	te->highlightStart = 0;
+			// 	te->highlightEnd   = te->textLen - 1;
+			// 	doRedraw = 1;
+			// }
 		}
 
 
@@ -3012,11 +3349,15 @@ void neuik_Element_Defocus__TextEdit(
 	SDL_StopTextInput();
 	neuik_Element_RequestRedraw((NEUIK_Element)el);
 	te = (NEUIK_TextEdit*) el;
-	te->highlightBegin = -1;
-	te->highlightStart = -1;
-	te->highlightEnd   = -1;
-	te->clickOrigin    =  0;
-	te->clickHeld      =  0;
+	te->highlightIsSet     = 0;
+	te->highlightBeginLine = 0;
+	te->highlightBeginPos  = 0;
+	te->highlightStartLine = 0;
+	te->highlightStartPos  = 0;
+	te->highlightEndLine   = 0;
+	te->highlightEndPos    = 0;
+	te->clickOrigin        = 0;
+	te->clickHeld          = 0;
 }
 
 
