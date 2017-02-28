@@ -16,6 +16,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "NEUIK_error.h"
 #include "neuik_TextBlock.h"
@@ -1412,7 +1413,6 @@ int neuik_TextBlock_DeleteSection(
 	unsigned int          endOfCopy;
 	unsigned int          startLineLen;
 	unsigned int          endLineLen;
-	unsigned int          lineBreakByte = 0;
 	unsigned int          startPosition;
 	unsigned int          endPosition;
 	char                  remChar;

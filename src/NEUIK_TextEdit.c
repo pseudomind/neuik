@@ -1062,7 +1062,6 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	int                    textH      = 0;
 	int                    textWFull  = 0;
 	int                    textHFull  = 0;
-	int                    normWidth  = 0;
 	int                    hlWidth    = 0;    /* highlight bg Width */
 	int                    eNum       = 0;    /* which error to report (if any) */
 	int                    hasText    = 1;
@@ -1071,7 +1070,6 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	unsigned int           nLines;
 	char                 * lineBytes  = NULL;
 	SDL_Rect               rect;
-	SDL_Rect               srcRect;
 	const NEUIK_Color    * fgClr      = NULL;
 	const NEUIK_Color    * bgClr      = NULL;
 	const NEUIK_Color    * bClr       = NULL; /* border color */
@@ -1112,9 +1110,9 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 
 	printf("TextEdit_Render [Line:Pos] : [%u:%u]\n", te->cursorLine, te->cursorPos);
 	printf("\tHighlightIsSet : %d\n", te->highlightIsSet);
-	printf("\tHighlightBegin : [%u:%u]\n", te->highlightBeginLine, te->highlightBeginPos);
-	printf("\tHighlightStart : [%u:%u]\n", te->highlightStartLine, te->highlightStartPos);
-	printf("\tHighlightEnd   : [%u:%u]\n", te->highlightEndLine,   te->highlightEndPos);
+	printf("\tHighlightBegin : [%lu:%lu]\n", te->highlightBeginLine, te->highlightBeginPos);
+	printf("\tHighlightStart : [%lu:%lu]\n", te->highlightStartLine, te->highlightStartPos);
+	printf("\tHighlightEnd   : [%lu:%lu]\n", te->highlightEndLine,   te->highlightEndPos);
 
 	/*------------------------------------------------------------------------*/
 	/* check to see if the requested draw size of the element has changed     */
@@ -1572,11 +1570,7 @@ int neuik_Element_CaptureEvent__TextEdit(
 	int                    normWidth    = 0;
 	unsigned int           lineLen      = 0;
 	unsigned long          inpLen       = 0; /* length of text input */
-	unsigned long          newSize      = 0; /* realloated text buf size */
-	unsigned long          stopPos;
-	unsigned long          hlOffset;         /* highlight offset (for copy) */
 	unsigned long          oldCursorPos = 0;
-	unsigned long          aPos;
 	unsigned long          ctr;
 	char                   aChar;
 	char                 * clipText     = NULL;
@@ -2209,70 +2203,26 @@ int neuik_Element_CaptureEvent__TextEdit(
 		if (!eBase->eSt.hasFocus) break;
 		textInpEv = (SDL_TextInputEvent*)(e);
 
+		/*--------------------------------------------------------------------*/
+		/* First delete the currently highlighted section (if it exists)      */
+		/*--------------------------------------------------------------------*/
 		if (te->highlightIsSet)
 		{
-			/*----------------------------------------------------------------*/
-			/* Existing text was highlighted when text input was received.    */
-			/* This will result in the highlighted text being replaced.       */
-			/*----------------------------------------------------------------*/
-			#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` TextInput Overwrite")
-			// if (te->highlightStart == 0)
-			// {
-			// 	/*----------------------------------------------------*/
-			// 	/* a block of text will be deleted, (block @ start)   */
-			// 	/*----------------------------------------------------*/
-			// 	if (te->highlightEnd + 1 != te->textLen)
-			// 	{
-			// 		/* we are not deleting the entire contents */
-
-			// 		for (ctr = 0;; ctr++)
-			// 		{
-			// 			aChar = te->text[ctr + te->highlightEnd + 1];
-			// 			te->text[ctr] = aChar;
-
-			// 			if (aChar == '\0') break;
-			// 		}
-			// 		te->textLen = strlen(te->text);
-			// 	}
-			// 	else
-			// 	{
-			// 		/* delete entire contents of the string */
-			// 		te->textLen = 0;
-			// 		te->text[0] = '\0';
-			// 	}
-			// 	te->cursorPos = 0;
-			// }
-			// else if (te->highlightEnd + 1 == te->textLen)
-			// {
-			// 	/*----------------------------------------------------*/
-			// 	/* a block of text will be deleted, (block @ end)     */
-			// 	/*----------------------------------------------------*/
-			// 	te->text[te->highlightStart] = '\0';
-			// 	te->textLen   = te->highlightStart;
-			// 	te->cursorPos = te->textLen;
-			// }
-			// else
-			// {
-			// 	/*----------------------------------------------------*/
-			// 	/* a block of text will be deleted, (block in middle) */
-			// 	/*----------------------------------------------------*/
-			// 	te->cursorPos = te->highlightStart;
-
-			// 	hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-			// 	for (ctr = te->highlightStart;; ctr++)
-			// 	{
-			// 		aChar = te->text[ctr + hlOffset];
-			// 		te->text[ctr] = aChar;
-
-			// 		if (aChar == '\0') break;
-			// 	}
-			// 	te->textLen = strlen(te->text);
-			// }
-
-			// te->cursorPos = te->highlightStart;
-			// te->highlightBegin = -1;
+			if (neuik_TextBlock_DeleteSection(te->textBlk,
+				te->highlightStartLine, te->highlightStartPos, 
+				te->highlightEndLine, te->highlightEndPos))
+			{
+				eNum = 10;
+				goto out;
+			}
+			te->cursorLine     = te->highlightStartLine;
+			te->cursorPos      = te->highlightStartPos;
+			te->highlightIsSet = 0;
 		}
 
+		/*--------------------------------------------------------------------*/
+		/* Now insert the new character(s)                                    */
+		/*--------------------------------------------------------------------*/
 		inpLen = strlen(textInpEv->text);
 		if (strlen(textInpEv->text) == 1)
 		{
@@ -2287,7 +2237,6 @@ int neuik_Element_CaptureEvent__TextEdit(
 		{
 			fprintf(stderr, "[TODO] neuik_Element_CaptureEvent__TextEdit: add chars for inpLen > 1\n");
 		}
-		te->textLen   += inpLen;
 		te->cursorPos += inpLen;
 
 		neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_INSERTED);
