@@ -1397,12 +1397,148 @@ out:
 /*----------------------------------------------------------------------------*/
 /* Delete a number of characters at a position                                */
 /*----------------------------------------------------------------------------*/
-int
-	neuik_TextBlock_DeleteChars(
-			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos,
-			unsigned int      nChars);
+int neuik_TextBlock_DeleteSection(
+	neuik_TextBlock * tblk,
+	unsigned int      startLineNo,
+	unsigned int      startLinePos,
+	unsigned int      endLineNo,
+	unsigned int      endLinePos)
+{
+	neuik_TextBlockData * startBlock;
+	neuik_TextBlockData * endBlock;
+	unsigned int          checkCtr;
+	unsigned int          copyCtr;
+	unsigned int          copyOffset;
+	unsigned int          endOfCopy;
+	unsigned int          startLineLen;
+	unsigned int          endLineLen;
+	unsigned int          lineBreakByte = 0;
+	unsigned int          startPosition;
+	unsigned int          endPosition;
+	char                  remChar;
+	int                   eNum       = 0; /* which error to report (if any) */
+	static char           funcName[] = "neuik_TextBlock_DeleteSection";
+	static char         * errMsgs[]  = {"",                            // [0] no error
+		"Output argument `tblk` is NULL.",                             // [1]
+		"Failure in function `neuik_TextBlock_GetLineLength`.",        // [2]
+		"Argument `startLineNo` has value in excess of line length.",  // [3]
+		"Argument `endLineNo` has value in excess of line length.",    // [4]
+		"Fundamental error in basic function `GetPositionInLine`.",    // [5]
+	};
+
+	if (tblk == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Make sure we aren't attempting to remove a character into a line at a  */
+	/* position that is outside of its scope.                                 */
+	/*------------------------------------------------------------------------*/
+	if (neuik_TextBlock_GetLineLength(tblk, startLineNo, &startLineLen))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (startLinePos > startLineLen)
+	{
+		eNum = 3;
+		goto out;
+	}
+	if (neuik_TextBlock_GetLineLength(tblk, endLineNo, &endLineLen))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (endLinePos > endLineLen)
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
+		tblk, startLineNo, startLinePos, &startBlock, &startPosition))
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
+		tblk, endLineNo, endLinePos, &endBlock, &endPosition))
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	printf("Deleting Section from [%u:%u] to [%u:%u]\n",
+		startLineNo, startLinePos, endLineNo, endLinePos);
+
+	if (startBlock == endBlock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The section being deleted is all contained within a single block   */
+		/*--------------------------------------------------------------------*/
+		if (startLineNo == endLineNo && startLinePos > endLinePos)
+		{
+			/*----------------------------------------------------------------*/
+			/* Nothing is selected, there is nothing to be done.              */
+			/*----------------------------------------------------------------*/
+			goto out;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* The section being deleted is one or more characters                */
+		/*--------------------------------------------------------------------*/
+		copyOffset = 1 + (endPosition - startPosition);
+
+		/*--------------------------------------------------------------------*/
+		/* Check for any captured lineBreaks/newline characters               */
+		/*--------------------------------------------------------------------*/
+		for (checkCtr = startPosition; checkCtr <= endPosition; checkCtr++)
+		{
+			remChar = startBlock->data[checkCtr];
+			if (remChar == '\0')
+			{
+				/*------------------------------------------------------------*/
+				/* Shift over the bytes by one more character                 */
+				/*------------------------------------------------------------*/
+				// copyOffset++;
+				tblk->nLines--;
+				startBlock->nLines--;
+			}
+		}
+
+		endOfCopy  = startBlock->bytesInUse - copyOffset;
+
+		/*--------------------------------------------------------------------*/
+		/* Simply shift over the bytes by one                                 */
+		/*--------------------------------------------------------------------*/
+		for (copyCtr = startPosition; copyCtr <= endOfCopy; copyCtr++)
+		{
+			/*----------------------------------------------------------------*/
+			/* First store the value of the deleted character.                */
+			/*----------------------------------------------------------------*/
+			remChar = startBlock->data[copyCtr];
+			startBlock->data[copyCtr] = startBlock->data[copyCtr+copyOffset];
+		}
+		startBlock->bytesInUse -= copyOffset;
+		startBlock->data[startBlock->bytesInUse] = '\0';
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* The section being deleted spans more than one block                */
+		/*--------------------------------------------------------------------*/
+		#pragma message("[TODO]: `neuik_TextBlock_DeleteSection` Delete over multiple blocks.")
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	return eNum;
+}
 
 /*----------------------------------------------------------------------------*/
 /* Replace a character at the specified position with another                 */

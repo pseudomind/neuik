@@ -1593,16 +1593,17 @@ int neuik_Element_CaptureEvent__TextEdit(
 	NEUIK_TextEditConfig * aCfg       = NULL; /* the active button config */
 	NEUIK_ElementBase    * eBase      = NULL;
 	static char            funcName[] = "neuik_Element_Render__TextEdit";
-	static char          * errMsgs[]  = {"",                             // [0] no error
-		"FontSet_GetFont returned NULL.",                                // [1]
-		"Failed to get text from clipboard.",                            // [2]
-		"Argument `elem` is not of TextEdit class.",                     // [3]
-		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [4]
-		"Failure in function `neuik_TextBlock_InsertChar`.",             // [5]
-		"Failure in function `neuik_TextBlock_GetLineLength`.",          // [6]
-		"Failure in function `neuik_TextBlock_GetLineCount`.",           // [7]
-		"Failure in function `neuik_TextBlock_DeleteChar`.",             // [8]
-		"Failure in function `neuik_TextBlock_MergeLines`.",             // [9]
+	static char          * errMsgs[]  = {"",                             // [ 0] no error
+		"FontSet_GetFont returned NULL.",                                // [ 1]
+		"Failed to get text from clipboard.",                            // [ 2]
+		"Argument `elem` is not of TextEdit class.",                     // [ 3]
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [ 4]
+		"Failure in function `neuik_TextBlock_InsertChar`.",             // [ 5]
+		"Failure in function `neuik_TextBlock_GetLineLength`.",          // [ 6]
+		"Failure in function `neuik_TextBlock_GetLineCount`.",           // [ 7]
+		"Failure in function `neuik_TextBlock_DeleteChar`.",             // [ 8]
+		"Failure in function `neuik_TextBlock_MergeLines`.",             // [ 9]
+		"Failure in function `neuik_TextBlock_DeleteSection`.",          // [10]
 	};
 
 
@@ -2554,67 +2555,21 @@ int neuik_Element_CaptureEvent__TextEdit(
 				}
 				else
 				{
-					#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` HL-Backspace")
 					/*--------------------------------------------------------*/
 					/* There is text highlighting within the line             */
 					/*--------------------------------------------------------*/
-					// if (te->highlightStart == 0)
-					// {
-					// 	/*----------------------------------------------------*/
-					// 	/* a block of text will be deleted, (block @ start)   */
-					// 	/*----------------------------------------------------*/
-					// 	if (te->highlightEnd + 1 != te->textLen)
-					// 	{
-					// 		/* we are not deleting the entire contents */
-
-					// 		for (ctr = 0;; ctr++)
-					// 		{
-					// 			aChar = te->text[ctr + te->highlightEnd + 1];
-					// 			te->text[ctr] = aChar;
-
-					// 			if (aChar == '\0') break;
-					// 		}
-					// 		te->textLen = strlen(te->text);
-					// 	}
-					// 	else
-					// 	{
-					// 		/* delete entire contents of the string */
-					// 		te->textLen = 0;
-					// 		te->text[0] = '\0';
-					// 	}
-					// 	te->cursorPos      = 0;
-					// }
-					// else if (te->highlightEnd + 1 == te->textLen)
-					// {
-					// 	/*----------------------------------------------------*/
-					// 	/* a block of text will be deleted, (block @ end)     */
-					// 	/*----------------------------------------------------*/
-					// 	te->text[te->highlightStart] = '\0';
-					// 	te->textLen   = te->highlightStart;
-					// 	te->cursorPos = te->textLen;
-					// }
-					// else
-					// {
-					// 	/*----------------------------------------------------*/
-					// 	/* a block of text will be deleted, (block in middle) */
-					// 	/*----------------------------------------------------*/
-					// 	te->cursorPos = te->highlightStart;
-
-					// 	hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-					// 	for (ctr = te->highlightStart;; ctr++)
-					// 	{
-					// 		aChar = te->text[ctr + hlOffset];
-					// 		te->text[ctr] = aChar;
-
-					// 		if (aChar == '\0') break;
-					// 	}
-					// 	te->textLen = strlen(te->text);
-					// }
-
-					// te->highlightBegin = -1;
-					// doRedraw           = 1;
+					if (neuik_TextBlock_DeleteSection(te->textBlk,
+						te->highlightStartLine, te->highlightStartPos, 
+						te->highlightEndLine, te->highlightEndPos))
+					{
+						eNum = 10;
+						goto out;
+					}
+					te->cursorLine     = te->highlightStartLine;
+					te->cursorPos      = te->highlightStartPos;
+					te->highlightIsSet = 0;
+					doRedraw           = 1;
 				}
-				// neuik_TextEdit_UpdateCursorX(te);
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_DELTETED);
 				break;
 
@@ -2666,67 +2621,21 @@ int neuik_Element_CaptureEvent__TextEdit(
 				}
 				else
 				{
-					#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` HL-Delete")
-					// /*--------------------------------------------------------*/
-					// /* There is text highlighting within the line             */
-					// /*--------------------------------------------------------*/
-					// if (te->highlightStart == 0)
-					// {
-					// 	/*----------------------------------------------------*/
-					// 	/* a block of text will be deleted, (block @ start)   */
-					// 	/*----------------------------------------------------*/
-					// 	if (te->highlightEnd + 1 != te->textLen)
-					// 	{
-					// 		/* we are not deleting the entire contents */
-
-					// 		for (ctr = 0;; ctr++)
-					// 		{
-					// 			aChar = te->text[ctr + te->highlightEnd + 1];
-					// 			te->text[ctr] = aChar;
-
-					// 			if (aChar == '\0') break;
-					// 		}
-					// 		te->textLen = strlen(te->text);
-					// 	}
-					// 	else
-					// 	{
-					// 		/* delete entire contents of the string */
-					// 		te->textLen = 0;
-					// 		te->text[0] = '\0';
-					// 	}
-					// 	te->cursorPos      = 0;
-					// }
-					// else if (te->highlightEnd + 1 == te->textLen)
-					// {
-					// 	/*----------------------------------------------------*/
-					// 	/* a block of text will be deleted, (block @ end)     */
-					// 	/*----------------------------------------------------*/
-					// 	te->text[te->highlightStart] = '\0';
-					// 	te->textLen   = te->highlightStart;
-					// 	te->cursorPos = te->textLen;
-					// }
-					// else
-					// {
-					// 	/*----------------------------------------------------*/
-					// 	/* a block of text will be deleted, (block in middle) */
-					// 	/*----------------------------------------------------*/
-					// 	te->cursorPos = te->highlightStart;
-
-					// 	hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-					// 	for (ctr = te->highlightStart;; ctr++)
-					// 	{
-					// 		aChar = te->text[ctr + hlOffset];
-					// 		te->text[ctr] = aChar;
-
-					// 		if (aChar == '\0') break;
-					// 	}
-					// 	te->textLen = strlen(te->text);
-					// }
-
-					// te->highlightBegin = -1;
-					// doRedraw           = 1;
+					/*--------------------------------------------------------*/
+					/* There is text highlighting within the line             */
+					/*--------------------------------------------------------*/
+					if (neuik_TextBlock_DeleteSection(te->textBlk,
+						te->highlightStartLine, te->highlightStartPos, 
+						te->highlightEndLine, te->highlightEndPos))
+					{
+						eNum = 10;
+						goto out;
+					}
+					te->cursorLine     = te->highlightStartLine;
+					te->cursorPos      = te->highlightStartPos;
+					te->highlightIsSet = 0;
+					doRedraw           = 1;
 				}
-				// neuik_TextEdit_UpdateCursorX(te);
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_DELTETED);
 				break;
 

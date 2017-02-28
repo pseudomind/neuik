@@ -154,11 +154,12 @@ int
 /* Delete a number of characters at a position                                */
 /*----------------------------------------------------------------------------*/
 int
-	neuik_TextBlock_DeleteChars(
+	neuik_TextBlock_DeleteSection(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos,
-			unsigned int      nChars);
+			unsigned int      startLineNo,
+			unsigned int      startLinePos,
+			unsigned int      endLineNo,
+			unsigned int      endLinePos);
 
 /*----------------------------------------------------------------------------*/
 /* Replace a character at the specified position with another                 */
