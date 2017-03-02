@@ -941,7 +941,7 @@ out:
 
 /*******************************************************************************
  *
- *  Name:          neuik_Element_CaptureEvent__TextEntry_TextInputEvent
+ *  Name:          neuik_Element_CaptureEvent__TextEntry_KeyDownEvent
  *
  *  Description:   Check to see if this event is captured by a NEUIK_TextEntry.
  *
