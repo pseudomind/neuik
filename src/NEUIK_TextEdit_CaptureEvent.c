@@ -33,6 +33,7 @@ static char          * errMsgs[]  = {"",                             // [ 0] no 
 	"Failure in function `neuik_TextBlock_DeleteChar`.",             // [ 8]
 	"Failure in function `neuik_TextBlock_MergeLines`.",             // [ 9]
 	"Failure in function `neuik_TextBlock_DeleteSection`.",          // [10]
+	"Failure in function `neuik_TextBlock_GetLine`.",                // [11]
 };
 
 
@@ -214,16 +215,22 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	int                    evCaptured   = 0;
 	int                    textW        = 0;
 	int                    textH        = 0;
+	int                    textHFull    = 0;
 	int                    charW        = 0;
 	int                    doContinue   = 0;
 	int                    eNum         = 0; /* which error to report (if any) */
 	int                    lastW        = 0; /* position of previous char */
 	int                    normWidth    = 0;
+	int                    yRel         = 0;
+	int                    yPos         = 0;
 	unsigned int           lineLen      = 0;
+	unsigned int           nLines       = 0;
+	unsigned int           clickLine    = 0;
 	unsigned long          oldCursorPos = 0;
-	unsigned long          ctr;
-	char                   aChar;
+	unsigned long          ctr          = 0;
+	char                   aChar        = 0;
 	char                 * clipText     = NULL;
+	char                 * lineBytes    = NULL;
 	TTF_Font             * font         = NULL;
 	SDL_Rect               rect         = {0, 0, 0 ,0};
 	SDL_Keymod             keyMod;
@@ -253,44 +260,29 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	/*------------------------------------------------------------------------*/
 	if (ev->type == SDL_MOUSEBUTTONDOWN)
 	{
-		if (!eBase->eSt.hasFocus)
-		{
-			/*----------------------------------------------------------------*/
-			/* This text entry does not currently have the window focus       */
-			/*----------------------------------------------------------------*/
-			mouseButEv = (SDL_MouseButtonEvent*)(ev);
-			if (mouseButEv->y >= eBase->eSt.rLoc.y && 
-				mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
-			{
-				if (mouseButEv->x >= eBase->eSt.rLoc.x && 
-					mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
-				{
-					/* This mouse click originated within this button */
-					te->selected    = 1;
-					te->wasSelected = 1;
-					neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)te);
-					SDL_StartTextInput();
-					neuik_Element_RequestRedraw((NEUIK_Element)te);
-					evCaptured      = 1;
-				}
-				else
-				{
-					goto out;
-				}
-			}
-		}
+		mouseButEv = (SDL_MouseButtonEvent*)(ev);
 
 		/*--------------------------------------------------------------------*/
-		/* This text entry currently has the window focus                     */
+		/* Check to see if the click was within the bounds of this element    */
 		/*--------------------------------------------------------------------*/
-		mouseButEv = (SDL_MouseButtonEvent*)(ev);
 		if (mouseButEv->y >= eBase->eSt.rLoc.y && 
 			mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 		{
 			if (mouseButEv->x >= eBase->eSt.rLoc.x && 
 				mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 			{
-				/* This mouse click originated within this textEntry */
+				/* This mouse click originated within this textEdit */
+				if (!eBase->eSt.hasFocus)
+				{
+					/*--------------------------------------------------------*/
+					/* This TextEdit did not have the window focus            */
+					/*--------------------------------------------------------*/
+					te->selected    = 1;
+					te->wasSelected = 1;
+					neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)te);
+					SDL_StartTextInput();
+					neuik_Element_RequestRedraw((NEUIK_Element)te);
+				}
 				doContinue = 1;
 				evCaptured = 1;
 			}
@@ -312,47 +304,98 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		rSize = &(eBase->eSt.rSize);
 
 		/*--------------------------------------------------------------------*/
-		/* Get the overall location of the current text                       */
+		/* Determine the line of text in which the click occurred             */
 		/*--------------------------------------------------------------------*/
-		if (te->text != NULL)
+		font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+		if (font == NULL)
 		{
-			if (te->text[0] != '\0')
+			eNum = 1;
+			goto out;
+		}
+		TTF_SizeText(font, " ", &textW, &textH);
+		textHFull = 1.1*textH;
+
+		yPos = 6; /* <-- this is the offset from the top where text begins */
+		if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
+		{
+			eNum = 7;
+			goto out;
+		}
+
+		yRel = mouseButEv->y - eBase->eSt.rLoc.y;
+		clickLine = (yRel - yPos)/textHFull;
+
+		if (clickLine < nLines)
+		{
+			/*----------------------------------------------------------------*/
+			/* Get the overall location of the current text                   */
+			/*----------------------------------------------------------------*/
+			if (neuik_TextBlock_GetLine(te->textBlk, clickLine, &lineBytes))
 			{
-				doContinue = 1;
-				font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-					aCfg->fontBold, aCfg->fontItalic);
-				if (font == NULL) 
-				{
-					eNum = 1;
-					goto out;
-				}
+				eNum = 11;
+				goto out;
+			}
 
-				normWidth = (eBase->eSt.rSize).w - 12; 
-				TTF_SizeText(font, te->text, &textW, &textH);
-				rect.w = textW;
+			te->cursorLine = clickLine;
+			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 
-				if (textW < normWidth) 
+			if (lineBytes != NULL)
+			{
+				if (lineBytes != '\0')
 				{
-					switch (aCfg->textHJustify)
+					doContinue = 1;
+					font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+						aCfg->fontBold, aCfg->fontItalic);
+					if (font == NULL) 
 					{
-						case NEUIK_HJUSTIFY_LEFT:
-							rect.x = 6;
-							break;
+						eNum = 1;
+						goto out;
+					}
 
-						case NEUIK_HJUSTIFY_CENTER:
-							rect.x = (int) ((float)(rSize->w - textW)/2.0);
-							break;
+					normWidth = (eBase->eSt.rSize).w - 12; 
+					TTF_SizeText(font, lineBytes, &textW, &textH);
+					rect.w = textW;
 
-						case NEUIK_HJUSTIFY_RIGHT:
-							rect.x = (int) (rSize->w - textW - 6);
-							break;
+					if (textW < normWidth) 
+					{
+						switch (aCfg->textHJustify)
+						{
+							case NEUIK_HJUSTIFY_LEFT:
+								rect.x = 6;
+								break;
+
+							case NEUIK_HJUSTIFY_CENTER:
+								rect.x = (int) ((float)(rSize->w - textW)/2.0);
+								break;
+
+							case NEUIK_HJUSTIFY_RIGHT:
+								rect.x = (int) (rSize->w - textW - 6);
+								break;
+						}
+					}
+					else
+					{
+						rect.x = 6;
 					}
 				}
-				else
-				{
-					rect.x = 6;
-				}
 			}
+
+		}
+		else
+		{
+			te->cursorLine = nLines - 1;
+
+			if (neuik_TextBlock_GetLineLength(te->textBlk,
+				te->cursorLine, &lineLen))
+			{
+				/* ERR: problem reported from textBlock */
+				eNum = 6;
+				goto out;
+			}
+			te->cursorPos = lineLen;
+			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
+			neuik_Element_RequestRedraw((NEUIK_Element)te);
 		}
 
 		if (!doContinue) goto out;
