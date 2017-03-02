@@ -233,7 +233,8 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	NEUIK_TextEdit       * te         = NULL;
 	NEUIK_TextEditConfig * aCfg       = NULL; /* the active button config */
 	NEUIK_ElementBase    * eBase      = NULL;
-	static char            funcName[] = "neuik_Element_CaptureEvent__TextEdit_MouseEvent";
+	static char            funcName[] = 
+		"neuik_Element_CaptureEvent__TextEdit_MouseEvent";
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_TextEdit))
 	{
@@ -258,9 +259,11 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/* This text entry does not currently have the window focus       */
 			/*----------------------------------------------------------------*/
 			mouseButEv = (SDL_MouseButtonEvent*)(ev);
-			if (mouseButEv->y >= eBase->eSt.rLoc.y && mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+			if (mouseButEv->y >= eBase->eSt.rLoc.y && 
+				mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 			{
-				if (mouseButEv->x >= eBase->eSt.rLoc.x && mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+				if (mouseButEv->x >= eBase->eSt.rLoc.x && 
+					mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 				{
 					/* This mouse click originated within this button */
 					te->selected    = 1;
@@ -269,346 +272,355 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					SDL_StartTextInput();
 					neuik_Element_RequestRedraw((NEUIK_Element)te);
 					evCaptured      = 1;
+				}
+				else
+				{
 					goto out;
 				}
 			}
 		}
-		else
+
+		/*--------------------------------------------------------------------*/
+		/* This text entry currently has the window focus                     */
+		/*--------------------------------------------------------------------*/
+		mouseButEv = (SDL_MouseButtonEvent*)(ev);
+		if (mouseButEv->y >= eBase->eSt.rLoc.y && 
+			mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 		{
-			/*----------------------------------------------------------------*/
-			/* This text entry currently has the window focus                 */
-			/*----------------------------------------------------------------*/
-			mouseButEv = (SDL_MouseButtonEvent*)(ev);
-			if (mouseButEv->y >= eBase->eSt.rLoc.y && mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+			if (mouseButEv->x >= eBase->eSt.rLoc.x && 
+				mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 			{
-				if (mouseButEv->x >= eBase->eSt.rLoc.x && mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
-				{
-					/* This mouse click originated within this textEntry */
-					doContinue = 1;
-					evCaptured = 1;
-				}
+				/* This mouse click originated within this textEntry */
+				doContinue = 1;
+				evCaptured = 1;
 			}
+		}
 
-			if (!doContinue) goto out;
-			doContinue = 0;
-			/*----------------------------------------------------------------*/
-			/* Otherwise, a subsequent click was within the textEntry element */
-			/* For this situation, we want to move the textEdit cursor.       */
-			/*----------------------------------------------------------------*/
+		if (!doContinue) goto out;
+		doContinue = 0;
+		/*--------------------------------------------------------------------*/
+		/* Otherwise, a subsequent click was within the textEntry element     */
+		/* For this situation, we want to move the textEdit cursor.           */
+		/*--------------------------------------------------------------------*/
 
-			/*----------------------------------------------------------------*/
-			/* select the correct textEntry config to use (ptr or internal)   */
-			/*----------------------------------------------------------------*/
-			aCfg = te->cfgPtr;
-			if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
+		/*--------------------------------------------------------------------*/
+		/* select the correct textEntry config to use (ptr or internal)       */
+		/*--------------------------------------------------------------------*/
+		aCfg = te->cfgPtr;
+		if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
 
-			rSize = &(eBase->eSt.rSize);
+		rSize = &(eBase->eSt.rSize);
 
-			/*----------------------------------------------------------------*/
-			/* Get the overall location of the current text                   */
-			/*----------------------------------------------------------------*/
-			if (te->text != NULL)
+		/*--------------------------------------------------------------------*/
+		/* Get the overall location of the current text                       */
+		/*--------------------------------------------------------------------*/
+		if (te->text != NULL)
+		{
+			if (te->text[0] != '\0')
 			{
-				if (te->text[0] != '\0')
+				doContinue = 1;
+				font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+					aCfg->fontBold, aCfg->fontItalic);
+				if (font == NULL) 
 				{
-					doContinue = 1;
-					font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-						aCfg->fontBold, aCfg->fontItalic);
-					if (font == NULL) 
-					{
-						eNum = 1;
-						goto out;
-					}
-
-					normWidth = (eBase->eSt.rSize).w - 12; 
-					TTF_SizeText(font, te->text, &textW, &textH);
-					rect.w = textW;
-
-					if (textW < normWidth) 
-					{
-						switch (aCfg->textHJustify)
-						{
-							case NEUIK_HJUSTIFY_LEFT:
-								rect.x = 6;
-								break;
-
-							case NEUIK_HJUSTIFY_CENTER:
-								rect.x = (int) ((float)(rSize->w - textW)/2.0);
-								break;
-
-							case NEUIK_HJUSTIFY_RIGHT:
-								rect.x = (int) (rSize->w - textW - 6);
-								break;
-						}
-					}
-					else
-					{
-						rect.x = 6;
-					}
+					eNum = 1;
+					goto out;
 				}
-			}
 
-			if (!doContinue) goto out;
+				normWidth = (eBase->eSt.rSize).w - 12; 
+				TTF_SizeText(font, te->text, &textW, &textH);
+				rect.w = textW;
 
-			keyMod = SDL_GetModState();
-			if (!(keyMod & KMOD_SHIFT))
-			{
-				/* The shift-key is NOT being held down */
-				/*------------------------------------------------------------*/
-				/* If continuing, this textEntry contains text and so the     */
-				/* cursor placement could have been changed.                  */
-				/*------------------------------------------------------------*/
-				if (SDL_GetTicks() - te->timeLastClick < NEUIK_DOUBLE_CLICK_TIMEOUT)
+				if (textW < normWidth) 
 				{
-					if (te->textLen > 0)
+					switch (aCfg->textHJustify)
 					{
-						// te->highlightIsSet     = 0;
-						// te->highlightBeginPos  = 0;
-						// te->highlightBeginLine = 0;
+						case NEUIK_HJUSTIFY_LEFT:
+							rect.x = 6;
+							break;
 
-						if (neuik_TextBlock_GetLineLength(te->textBlk,
-							te->textBlk->nLines, &lineLen))
-						{
-							/* ERR: problem reported from textBlock */
-							eNum = 6;
-							goto out;
-						}
-						#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` DoubleClick")
+						case NEUIK_HJUSTIFY_CENTER:
+							rect.x = (int) ((float)(rSize->w - textW)/2.0);
+							break;
 
-						// xxxte->cursorPos      = te->textLen;
-
-						// te->highlightStartPos  = 0;
-						// te->highlightStartLine = 0;
-						// xxxte->highlightEnd   = te->textLen - 1;
+						case NEUIK_HJUSTIFY_RIGHT:
+							rect.x = (int) (rSize->w - textW - 6);
+							break;
 					}
-				}
-				else if (te->panCursor == 0 && mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
-				{
-					/* move the cursor position all the way to the start */
-					te->cursorPos      = 0;
-					te->highlightIsSet = 0;
-					neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
-				}
-				else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
-				{
-					/* move the cursor position all the way to the end */
-					te->cursorPos      = te->textLen;
-					te->highlightIsSet = 0;
-					neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 				}
 				else
 				{
-					/* move the cursor somewhere within the text */
-					if (te->textLen > 1)
-					{
-						oldCursorPos = te->cursorPos;
-						for (ctr = 1;;ctr++)
-						{
-							aChar = te->text[ctr];
-
-							te->text[ctr] = '\0';
-							TTF_SizeText(font, te->text, &textW, &textH);
-							te->text[ctr] = aChar;
-
-							if (mouseButEv->x + te->panCursor <= eBase->eSt.rLoc.x + rect.x + textW)
-							{
-								/* cursor will be before this char */
-								te->cursorPos = ctr - 1;
-								charW = textW - lastW;
-								if (mouseButEv->x + te->panCursor <= eBase->eSt.rLoc.x + rect.x + textW - charW/3)
-								{
-									/* cursor will be before this char */
-									te->cursorPos = ctr - 1;
-								}
-								else
-								{
-									/* cursor will be after char */
-									te->cursorPos = ctr;
-								}
-
-								/*--------------------------------------------*/
-								/* Update the cursor Panning (if necessary)   */
-								/*--------------------------------------------*/
-								if (oldCursorPos > te->cursorPos)
-								{
-									neuik_TextEdit_UpdatePanCursor(te, 
-										CURSORPAN_MOVE_BACK);
-								}
-								else
-								{
-									neuik_TextEdit_UpdatePanCursor(te, 
-										CURSORPAN_MOVE_FORWARD);
-								}
-								break;
-							}
-							lastW = textW;
-							if (aChar == '\0') break;
-						}
-						te->text[ctr] = aChar;
-						te->highlightIsSet = 0;
-					}
-					else
-					{
-						TTF_SizeText(font, te->text, &textW, &textH);
-
-						if (mouseButEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
-						{
-							/* cursor will be before this char */
-							te->cursorPos = 0;
-						}
-						else
-						{
-							/* cursor will be after char */
-							te->cursorPos = 1;
-						}
-						te->highlightIsSet = 0;
-					}
+					rect.x = 6;
 				}
-				te->clickOrigin   = te->cursorPos;
-				te->timeLastClick = SDL_GetTicks();
+			}
+		}
+
+		if (!doContinue) goto out;
+
+		keyMod = SDL_GetModState();
+		if (!(keyMod & KMOD_SHIFT))
+		{
+			/* The shift-key is NOT being held down */
+			/*----------------------------------------------------------------*/
+			/* If continuing, this textEntry contains text and so the         */
+			/* cursor placement could have been changed.                      */
+			/*----------------------------------------------------------------*/
+			if (SDL_GetTicks() - te->timeLastClick < NEUIK_DOUBLE_CLICK_TIMEOUT)
+			{
+				if (te->textLen > 0)
+				{
+					// te->highlightIsSet     = 0;
+					// te->highlightBeginPos  = 0;
+					// te->highlightBeginLine = 0;
+
+					if (neuik_TextBlock_GetLineLength(te->textBlk,
+						te->textBlk->nLines, &lineLen))
+					{
+						/* ERR: problem reported from textBlock */
+						eNum = 6;
+						goto out;
+					}
+					#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` DoubleClick")
+
+					// xxxte->cursorPos      = te->textLen;
+
+					// te->highlightStartPos  = 0;
+					// te->highlightStartLine = 0;
+					// xxxte->highlightEnd   = te->textLen - 1;
+				}
+			}
+			else if (te->panCursor == 0 && 
+				mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
+			{
+				/* move the cursor position all the way to the start */
+				te->cursorPos      = 0;
+				te->highlightIsSet = 0;
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
+			}
+			else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
+			{
+				/* move the cursor position all the way to the end */
+				te->cursorPos      = te->textLen;
+				te->highlightIsSet = 0;
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 			}
 			else
 			{
-				/* The shift-key IS being held down */
-				/*------------------------------------------------------------*/
-				/* If continuing, this textEntry contains text and so the     */
-				/* cursor placement could have been changed.                  */
-				/*------------------------------------------------------------*/
-				if (te->clickOrigin == -1)
+				/* move the cursor somewhere within the text */
+				if (te->textLen > 1)
 				{
-					if (te->highlightIsSet)
+					oldCursorPos = te->cursorPos;
+					for (ctr = 1;;ctr++)
 					{
-						te->clickOrigin     = te->cursorPos;
-						te->clickOriginLine = te->cursorLine;
-					}
-					else
-					{
-						te->clickOrigin     = te->highlightBeginPos;
-						te->clickOriginLine = te->highlightBeginLine;
-					}
-				}
-				// te->highlightBegin = te->cursorPos;
-				if (te->panCursor == 0 && mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
-				{
-					/* move the cursor position all the way to the start */
-					te->cursorPos      = 0;
-					neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
-				}
-				else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
-				{
-					/* move the cursor position all the way to the end */
-					te->cursorPos      = te->textLen;
-					neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
-				}
-				else
-				{
-					/* move the cursor somewhere within the text */
-					if (te->textLen > 1)
-					{
-						oldCursorPos = te->cursorPos;
-						for (ctr = 1;;ctr++)
+						aChar = te->text[ctr];
+
+						te->text[ctr] = '\0';
+						TTF_SizeText(font, te->text, &textW, &textH);
+						te->text[ctr] = aChar;
+
+						if (mouseButEv->x + te->panCursor <= 
+							eBase->eSt.rLoc.x + rect.x + textW)
 						{
-							aChar = te->text[ctr];
-
-							te->text[ctr] = '\0';
-							TTF_SizeText(font, te->text, &textW, &textH);
-							te->text[ctr] = aChar;
-
-							if (mouseButEv->x + te->panCursor <= eBase->eSt.rLoc.x + rect.x + textW)
+							/* cursor will be before this char */
+							te->cursorPos = ctr - 1;
+							charW = textW - lastW;
+							if (mouseButEv->x + te->panCursor <= 
+								eBase->eSt.rLoc.x + rect.x + textW - charW/3)
 							{
 								/* cursor will be before this char */
 								te->cursorPos = ctr - 1;
-								charW = textW - lastW;
-								if (mouseButEv->x + te->panCursor <= eBase->eSt.rLoc.x + rect.x + textW - charW/3)
-								{
-									/* cursor will be before this char */
-									te->cursorPos = ctr - 1;
-								}
-								else
-								{
-									/* cursor will be after char */
-									te->cursorPos = ctr;
-								}
-
-								/*--------------------------------------------*/
-								/* Update the cursor Panning (if necessary)   */
-								/*--------------------------------------------*/
-								if (oldCursorPos > te->cursorPos)
-								{
-									neuik_TextEdit_UpdatePanCursor(te, 
-										CURSORPAN_MOVE_BACK);
-								}
-								else
-								{
-									neuik_TextEdit_UpdatePanCursor(te, 
-										CURSORPAN_MOVE_FORWARD);
-								}
-								break;
 							}
-							lastW = textW;
-							if (aChar == '\0') break;
+							else
+							{
+								/* cursor will be after char */
+								te->cursorPos = ctr;
+							}
+
+							/*------------------------------------------------*/
+							/* Update the cursor Panning (if necessary)       */
+							/*------------------------------------------------*/
+							if (oldCursorPos > te->cursorPos)
+							{
+								neuik_TextEdit_UpdatePanCursor(te, 
+									CURSORPAN_MOVE_BACK);
+							}
+							else
+							{
+								neuik_TextEdit_UpdatePanCursor(te, 
+									CURSORPAN_MOVE_FORWARD);
+							}
+							break;
 						}
-						te->text[ctr] = aChar;
+						lastW = textW;
+						if (aChar == '\0') break;
+					}
+					te->text[ctr] = aChar;
+					te->highlightIsSet = 0;
+				}
+				else
+				{
+					TTF_SizeText(font, te->text, &textW, &textH);
+
+					if (mouseButEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
+					{
+						/* cursor will be before this char */
+						te->cursorPos = 0;
 					}
 					else
 					{
-						TTF_SizeText(font, te->text, &textW, &textH);
+						/* cursor will be after char */
+						te->cursorPos = 1;
+					}
+					te->highlightIsSet = 0;
+				}
+			}
+			te->clickOrigin   = te->cursorPos;
+			te->timeLastClick = SDL_GetTicks();
+		}
+		else
+		{
+			/* The shift-key IS being held down */
+			/*----------------------------------------------------------------*/
+			/* If continuing, this textEntry contains text and so the         */
+			/* cursor placement could have been changed.                      */
+			/*----------------------------------------------------------------*/
+			if (te->clickOrigin == -1)
+			{
+				if (te->highlightIsSet)
+				{
+					te->clickOrigin     = te->cursorPos;
+					te->clickOriginLine = te->cursorLine;
+				}
+				else
+				{
+					te->clickOrigin     = te->highlightBeginPos;
+					te->clickOriginLine = te->highlightBeginLine;
+				}
+			}
+			// te->highlightBegin = te->cursorPos;
+			if (te->panCursor == 0 && 
+				mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
+			{
+				/* move the cursor position all the way to the start */
+				te->cursorPos      = 0;
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
+			}
+			else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
+			{
+				/* move the cursor position all the way to the end */
+				te->cursorPos      = te->textLen;
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
+			}
+			else
+			{
+				/* move the cursor somewhere within the text */
+				if (te->textLen > 1)
+				{
+					oldCursorPos = te->cursorPos;
+					for (ctr = 1;;ctr++)
+					{
+						aChar = te->text[ctr];
 
-						if (mouseButEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
+						te->text[ctr] = '\0';
+						TTF_SizeText(font, te->text, &textW, &textH);
+						te->text[ctr] = aChar;
+
+						if (mouseButEv->x + te->panCursor <= 
+							eBase->eSt.rLoc.x + rect.x + textW)
 						{
 							/* cursor will be before this char */
-							te->cursorPos = 0;
+							te->cursorPos = ctr - 1;
+							charW = textW - lastW;
+							if (mouseButEv->x + te->panCursor <= 
+								eBase->eSt.rLoc.x + rect.x + textW - charW/3)
+							{
+								/* cursor will be before this char */
+								te->cursorPos = ctr - 1;
+							}
+							else
+							{
+								/* cursor will be after char */
+								te->cursorPos = ctr;
+							}
+
+							/*------------------------------------------------*/
+							/* Update the cursor Panning (if necessary)       */
+							/*------------------------------------------------*/
+							if (oldCursorPos > te->cursorPos)
+							{
+								neuik_TextEdit_UpdatePanCursor(te, 
+									CURSORPAN_MOVE_BACK);
+							}
+							else
+							{
+								neuik_TextEdit_UpdatePanCursor(te, 
+									CURSORPAN_MOVE_FORWARD);
+							}
+							break;
 						}
-						else
-						{
-							/* cursor will be after char */
-							te->cursorPos = 1;
-						}
+						lastW = textW;
+						if (aChar == '\0') break;
+					}
+					te->text[ctr] = aChar;
+				}
+				else
+				{
+					TTF_SizeText(font, te->text, &textW, &textH);
+
+					if (mouseButEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
+					{
+						/* cursor will be before this char */
+						te->cursorPos = 0;
+					}
+					else
+					{
+						/* cursor will be after char */
+						te->cursorPos = 1;
 					}
 				}
+			}
 
-				/* Set text highlight (if applicable) */
-				te->highlightBeginPos  = te->clickOrigin;
-				te->highlightBeginLine = te->clickOriginLine;
+			/* Set text highlight (if applicable) */
+			te->highlightBeginPos  = te->clickOrigin;
+			te->highlightBeginLine = te->clickOriginLine;
 
-				if (te->cursorLine < te->clickOriginLine)
+			if (te->cursorLine < te->clickOriginLine)
+			{
+				te->highlightStartPos  = te->cursorPos;
+				te->highlightStartLine = te->cursorLine;
+				te->highlightEndPos    = te->clickOrigin - 1;
+				te->highlightEndLine   = te->clickOriginLine;
+			}
+			else if (te->cursorLine > te->clickOriginLine)
+			{
+				te->highlightStartPos  = te->clickOrigin;
+				te->highlightStartLine = te->clickOriginLine;
+				te->highlightEndPos    = te->cursorPos - 1;
+				te->highlightEndLine   = te->cursorLine;
+			}
+			else
+			{
+				if (te->cursorPos < te->clickOrigin)
 				{
 					te->highlightStartPos  = te->cursorPos;
 					te->highlightStartLine = te->cursorLine;
 					te->highlightEndPos    = te->clickOrigin - 1;
 					te->highlightEndLine   = te->clickOriginLine;
 				}
-				else if (te->cursorLine > te->clickOriginLine)
+				else
 				{
 					te->highlightStartPos  = te->clickOrigin;
 					te->highlightStartLine = te->clickOriginLine;
 					te->highlightEndPos    = te->cursorPos - 1;
 					te->highlightEndLine   = te->cursorLine;
 				}
-				else
-				{
-					if (te->cursorPos < te->clickOrigin)
-					{
-						te->highlightStartPos  = te->cursorPos;
-						te->highlightStartLine = te->cursorLine;
-						te->highlightEndPos    = te->clickOrigin - 1;
-						te->highlightEndLine   = te->clickOriginLine;
-					}
-					else
-					{
-						te->highlightStartPos  = te->clickOrigin;
-						te->highlightStartLine = te->clickOriginLine;
-						te->highlightEndPos    = te->cursorPos - 1;
-						te->highlightEndLine   = te->cursorLine;
-					}
-				}
 			}
-
-			neuik_Element_RequestRedraw((NEUIK_Element)te);
-			evCaptured = 1;
-
-			te->clickHeld   = 1;
 		}
+
+		neuik_Element_RequestRedraw((NEUIK_Element)te);
+		evCaptured = 1;
+
+		te->clickHeld = 1;
 	}
 	else if (ev->type == SDL_MOUSEBUTTONUP)
 	{

@@ -239,9 +239,11 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 			/* This text entry does not currently have the window focus       */
 			/*----------------------------------------------------------------*/
 			mouseButEv = (SDL_MouseButtonEvent*)(ev);
-			if (mouseButEv->y >= eBase->eSt.rLoc.y && mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+			if (mouseButEv->y >= eBase->eSt.rLoc.y && 
+				mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 			{
-				if (mouseButEv->x >= eBase->eSt.rLoc.x && mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+				if (mouseButEv->x >= eBase->eSt.rLoc.x && 
+					mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 				{
 					/* This mouse click originated within this button */
 					te->selected    = 1;
@@ -262,9 +264,11 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 		/* This text entry currently has the window focus                     */
 		/*--------------------------------------------------------------------*/
 		mouseButEv = (SDL_MouseButtonEvent*)(ev);
-		if (mouseButEv->y >= eBase->eSt.rLoc.y && mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+		if (mouseButEv->y >= eBase->eSt.rLoc.y && 
+			mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 		{
-			if (mouseButEv->x >= eBase->eSt.rLoc.x && mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+			if (mouseButEv->x >= eBase->eSt.rLoc.x && 
+				mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 			{
 				/* This mouse click originated within this textEntry */
 				doContinue = 1;
