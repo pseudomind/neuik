@@ -839,7 +839,7 @@ int neuik_TextBlock_GetLineLength__noErrChecks(
 		/* Once lineCtr == lineNo, we have found the start of the desired     */
 		/* line.                                                              */
 		/*--------------------------------------------------------------------*/
-		for (; position <= final; position++)
+		for (; position < final; position++)
 		{
 			(*length)++;
 			if (data->data[position] == '\n' || data->data[position] == '\r')
@@ -849,7 +849,7 @@ int neuik_TextBlock_GetLineLength__noErrChecks(
 				/* Don't include the line break/newline characters in the     */
 				/* line length.                                               */
 				/*------------------------------------------------------------*/
-				(*length)--;
+				if (*length > 0) (*length)--;
 				goto out;
 			}
 		}

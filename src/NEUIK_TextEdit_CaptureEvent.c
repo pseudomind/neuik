@@ -408,9 +408,11 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				eNum = 6;
 				goto out;
 			}
+
 			te->cursorPos = lineLen;
-			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
+			// neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 			neuik_Element_RequestRedraw((NEUIK_Element)te);
+
 		}
 
 		if (!doContinue) goto out;
@@ -807,6 +809,7 @@ out:
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 	}
+	if (lineBytes != NULL) free(lineBytes);
 
 	return evCaptured;
 }
@@ -879,6 +882,8 @@ int neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 		if (neuik_TextBlock_InsertChar(te->textBlk, 
 			te->cursorLine, te->cursorPos, textInpEv->text[0]))
 		{
+			printf("InsertChar `%c` at [%u:%u]\n", textInpEv->text[0],
+				te->cursorLine, te->cursorPos);
 			eNum = 5;
 			goto out;
 		}
@@ -920,6 +925,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	int                 doRedraw   = 0;
 	int                 eNum       = 0; /* which error to report (if any) */
 	unsigned int        lineLen    = 0;
+	unsigned int        nLines     = 0;
 	char              * clipText   = NULL;
 	SDL_Keymod          keyMod;
 	SDL_KeyboardEvent * keyEv;
@@ -1855,20 +1861,39 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	}
 	else if (neuik_KeyShortcut_SelectAll(keyEv, keyMod))
 	{
-		#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` SelectAll")
-		// if (te->textLen > 0)
-		// {
-		// 	te->highlightBegin = 0;
-		// 	te->cursorPos      = te->textLen;
-		// 	// neuik_TextEdit_UpdateCursorX(te);
-		// 	neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
+		/*--------------------------------------------------------------------*/
+		/* Get the total number of lines and the length of the final line.    */
+		/*--------------------------------------------------------------------*/
+		if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
+		{
+			eNum = 7;
+			goto out;
+		}
+		if (neuik_TextBlock_GetLineLength(te->textBlk,
+			nLines - 1, &lineLen))
+		{
+			/* ERR: problem reported from textBlock */
+			eNum = 6;
+			goto out;
+		}
 
-		// 	te->highlightStart = 0;
-		// 	te->highlightEnd   = te->textLen - 1;
-		// 	doRedraw = 1;
-		// }
+		/*--------------------------------------------------------------------*/
+		/* Only actually highlight the text if there is some text.            */
+		/*--------------------------------------------------------------------*/
+		if (!(nLines == 1 && lineLen == 0))
+		{
+			te->highlightIsSet = 1;
+			te->cursorLine     = nLines - 1;
+			te->cursorPos      = lineLen;
+			te->highlightBeginLine = 0;
+			te->highlightBeginPos  = 0;
+			te->highlightStartLine = te->highlightBeginLine;
+			te->highlightStartPos  = te->highlightBeginPos;
+			te->highlightEndLine   = te->cursorLine;
+			te->highlightEndPos    = te->cursorPos - 1;
+			doRedraw = 1;
+		}
 	}
-
 
 	if (doRedraw) neuik_Element_RequestRedraw((NEUIK_Element)te);
 	evCaptured = 1;
