@@ -223,13 +223,13 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	int                    normWidth    = 0;
 	int                    yRel         = 0;
 	int                    yPos         = 0;
+	int                    shift_held   = 0;
 	unsigned int           lineLen      = 0;
 	unsigned int           nLines       = 0;
 	unsigned int           clickLine    = 0;
 	unsigned long          oldCursorPos = 0;
 	unsigned long          ctr          = 0;
 	char                   aChar        = 0;
-	char                 * clipText     = NULL;
 	char                 * lineBytes    = NULL;
 	TTF_Font             * font         = NULL;
 	SDL_Rect               rect         = {0, 0, 0 ,0};
@@ -254,6 +254,30 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		eNum = 4;
 		goto out;
 	}
+
+	/*------------------------------------------------------------------------*/
+	/* select the correct element config to use (pointer or internal)         */
+	/*------------------------------------------------------------------------*/
+	aCfg = te->cfgPtr;
+	if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
+
+	font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+		aCfg->fontBold, aCfg->fontItalic);
+	if (font == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Check if the shift-key is being held. This will be used later on.      */
+	/*------------------------------------------------------------------------*/
+	keyMod = SDL_GetModState();
+	if (keyMod & KMOD_SHIFT)
+	{
+		shift_held = 1;
+	}
+
 
 	/*------------------------------------------------------------------------*/
 	/* Redirect the MouseEvent to the appropriate handling section            */
@@ -290,29 +314,27 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 		if (!doContinue) goto out;
 		doContinue = 0;
-		/*--------------------------------------------------------------------*/
-		/* Otherwise, a subsequent click was within the textEntry element     */
-		/* For this situation, we want to move the textEdit cursor.           */
-		/*--------------------------------------------------------------------*/
-
-		/*--------------------------------------------------------------------*/
-		/* select the correct textEntry config to use (ptr or internal)       */
-		/*--------------------------------------------------------------------*/
-		aCfg = te->cfgPtr;
-		if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
 
 		rSize = &(eBase->eSt.rSize);
 
 		/*--------------------------------------------------------------------*/
+		/* If this is the start of text selection highlighting, then save the */
+		/* old position as the beginning of the highlight selection.          */
+		/*--------------------------------------------------------------------*/
+		if (shift_held && !te->highlightIsSet)
+		{
+			te->highlightIsSet     = 1;
+			te->highlightBeginLine = te->cursorLine;
+			te->highlightBeginPos  = te->cursorPos;
+		}
+		else if (!(shift_held && te->highlightIsSet))
+		{
+			te->highlightIsSet = 0;
+		}
+
+		/*--------------------------------------------------------------------*/
 		/* Determine the line of text in which the click occurred             */
 		/*--------------------------------------------------------------------*/
-		font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-			aCfg->fontBold, aCfg->fontItalic);
-		if (font == NULL)
-		{
-			eNum = 1;
-			goto out;
-		}
 		TTF_SizeText(font, " ", &textW, &textH);
 		textHFull = 1.1*textH;
 
@@ -345,13 +367,6 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				if (lineBytes != '\0')
 				{
 					doContinue = 1;
-					font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-						aCfg->fontBold, aCfg->fontItalic);
-					if (font == NULL) 
-					{
-						eNum = 1;
-						goto out;
-					}
 
 					normWidth = (eBase->eSt.rSize).w - 12; 
 					TTF_SizeText(font, lineBytes, &textW, &textH);
@@ -400,263 +415,133 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 		if (!doContinue) goto out;
 
-		keyMod = SDL_GetModState();
-		if (!(keyMod & KMOD_SHIFT))
+		/*--------------------------------------------------------------------*/
+		/* If continuing, this textEntry contains text and so the cursor      */
+		/* cursor placement may have been changed.                            */
+		/*--------------------------------------------------------------------*/
+		if (SDL_GetTicks() - te->timeLastClick < NEUIK_DOUBLE_CLICK_TIMEOUT &&
+			!te->highlightIsSet)
 		{
-			/* The shift-key is NOT being held down */
 			/*----------------------------------------------------------------*/
-			/* If continuing, this textEntry contains text and so the         */
-			/* cursor placement could have been changed.                      */
+			/* React to a double-click event                                  */
 			/*----------------------------------------------------------------*/
-			if (SDL_GetTicks() - te->timeLastClick < NEUIK_DOUBLE_CLICK_TIMEOUT)
+			if (te->textLen > 0)
 			{
-				if (te->textLen > 0)
+				if (neuik_TextBlock_GetLineLength(te->textBlk,
+					te->textBlk->nLines, &lineLen))
 				{
-					// te->highlightIsSet     = 0;
-					// te->highlightBeginPos  = 0;
-					// te->highlightBeginLine = 0;
-
-					if (neuik_TextBlock_GetLineLength(te->textBlk,
-						te->textBlk->nLines, &lineLen))
-					{
-						/* ERR: problem reported from textBlock */
-						eNum = 6;
-						goto out;
-					}
-					#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` DoubleClick")
-
-					// xxxte->cursorPos      = te->textLen;
-
-					// te->highlightStartPos  = 0;
-					// te->highlightStartLine = 0;
-					// xxxte->highlightEnd   = te->textLen - 1;
+					/* ERR: problem reported from textBlock */
+					eNum = 6;
+					goto out;
 				}
+				#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` DoubleClick")
 			}
-			else if (te->panCursor == 0 && 
-				mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
-			{
-				/* move the cursor position all the way to the start */
-				te->cursorPos      = 0;
-				te->highlightIsSet = 0;
-				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
-			}
-			else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
-			{
-				/* move the cursor position all the way to the end */
-				te->cursorPos      = te->textLen;
-				te->highlightIsSet = 0;
-				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
-			}
-			else
-			{
-				/* move the cursor somewhere within the text */
-				if (te->textLen > 1)
-				{
-					oldCursorPos = te->cursorPos;
-					for (ctr = 1;;ctr++)
-					{
-						aChar = te->text[ctr];
-
-						te->text[ctr] = '\0';
-						TTF_SizeText(font, te->text, &textW, &textH);
-						te->text[ctr] = aChar;
-
-						if (mouseButEv->x + te->panCursor <= 
-							eBase->eSt.rLoc.x + rect.x + textW)
-						{
-							/* cursor will be before this char */
-							te->cursorPos = ctr - 1;
-							charW = textW - lastW;
-							if (mouseButEv->x + te->panCursor <= 
-								eBase->eSt.rLoc.x + rect.x + textW - charW/3)
-							{
-								/* cursor will be before this char */
-								te->cursorPos = ctr - 1;
-							}
-							else
-							{
-								/* cursor will be after char */
-								te->cursorPos = ctr;
-							}
-
-							/*------------------------------------------------*/
-							/* Update the cursor Panning (if necessary)       */
-							/*------------------------------------------------*/
-							if (oldCursorPos > te->cursorPos)
-							{
-								neuik_TextEdit_UpdatePanCursor(te, 
-									CURSORPAN_MOVE_BACK);
-							}
-							else
-							{
-								neuik_TextEdit_UpdatePanCursor(te, 
-									CURSORPAN_MOVE_FORWARD);
-							}
-							break;
-						}
-						lastW = textW;
-						if (aChar == '\0') break;
-					}
-					te->text[ctr] = aChar;
-					te->highlightIsSet = 0;
-				}
-				else
-				{
-					TTF_SizeText(font, te->text, &textW, &textH);
-
-					if (mouseButEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
-					{
-						/* cursor will be before this char */
-						te->cursorPos = 0;
-					}
-					else
-					{
-						/* cursor will be after char */
-						te->cursorPos = 1;
-					}
-					te->highlightIsSet = 0;
-				}
-			}
-			te->clickOrigin   = te->cursorPos;
-			te->timeLastClick = SDL_GetTicks();
+		}
+		else if (te->panCursor == 0 && 
+			mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
+		{
+			/* move the cursor position all the way to the start */
+			te->cursorPos      = 0;
+			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
+		}
+		else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
+		{
+			/* move the cursor position all the way to the end */
+			te->cursorPos      = te->textLen;
+			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 		}
 		else
 		{
-			/* The shift-key IS being held down */
-			/*----------------------------------------------------------------*/
-			/* If continuing, this textEntry contains text and so the         */
-			/* cursor placement could have been changed.                      */
-			/*----------------------------------------------------------------*/
-			if (te->clickOrigin == -1)
+			/* move the cursor somewhere within the text */
+			if (te->textLen > 1)
 			{
-				if (te->highlightIsSet)
+				oldCursorPos = te->cursorPos;
+				for (ctr = 1;;ctr++)
 				{
-					te->clickOrigin     = te->cursorPos;
-					te->clickOriginLine = te->cursorLine;
-				}
-				else
-				{
-					te->clickOrigin     = te->highlightBeginPos;
-					te->clickOriginLine = te->highlightBeginLine;
-				}
-			}
-			// te->highlightBegin = te->cursorPos;
-			if (te->panCursor == 0 && 
-				mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
-			{
-				/* move the cursor position all the way to the start */
-				te->cursorPos      = 0;
-				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
-			}
-			else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
-			{
-				/* move the cursor position all the way to the end */
-				te->cursorPos      = te->textLen;
-				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
-			}
-			else
-			{
-				/* move the cursor somewhere within the text */
-				if (te->textLen > 1)
-				{
-					oldCursorPos = te->cursorPos;
-					for (ctr = 1;;ctr++)
+					aChar = te->text[ctr];
+
+					te->text[ctr] = '\0';
+					TTF_SizeText(font, te->text, &textW, &textH);
+					te->text[ctr] = aChar;
+
+					if (mouseButEv->x + te->panCursor <= 
+						eBase->eSt.rLoc.x + rect.x + textW)
 					{
-						aChar = te->text[ctr];
-
-						te->text[ctr] = '\0';
-						TTF_SizeText(font, te->text, &textW, &textH);
-						te->text[ctr] = aChar;
-
+						/* cursor will be before this char */
+						te->cursorPos = ctr - 1;
+						charW = textW - lastW;
 						if (mouseButEv->x + te->panCursor <= 
-							eBase->eSt.rLoc.x + rect.x + textW)
+							eBase->eSt.rLoc.x + rect.x + textW - charW/3)
 						{
 							/* cursor will be before this char */
 							te->cursorPos = ctr - 1;
-							charW = textW - lastW;
-							if (mouseButEv->x + te->panCursor <= 
-								eBase->eSt.rLoc.x + rect.x + textW - charW/3)
-							{
-								/* cursor will be before this char */
-								te->cursorPos = ctr - 1;
-							}
-							else
-							{
-								/* cursor will be after char */
-								te->cursorPos = ctr;
-							}
-
-							/*------------------------------------------------*/
-							/* Update the cursor Panning (if necessary)       */
-							/*------------------------------------------------*/
-							if (oldCursorPos > te->cursorPos)
-							{
-								neuik_TextEdit_UpdatePanCursor(te, 
-									CURSORPAN_MOVE_BACK);
-							}
-							else
-							{
-								neuik_TextEdit_UpdatePanCursor(te, 
-									CURSORPAN_MOVE_FORWARD);
-							}
-							break;
 						}
-						lastW = textW;
-						if (aChar == '\0') break;
+						else
+						{
+							/* cursor will be after char */
+							te->cursorPos = ctr;
+						}
+
+						/*------------------------------------------------*/
+						/* Update the cursor Panning (if necessary)       */
+						/*------------------------------------------------*/
+						if (oldCursorPos > te->cursorPos)
+						{
+							neuik_TextEdit_UpdatePanCursor(te, 
+								CURSORPAN_MOVE_BACK);
+						}
+						else
+						{
+							neuik_TextEdit_UpdatePanCursor(te, 
+								CURSORPAN_MOVE_FORWARD);
+						}
+						break;
 					}
-					te->text[ctr] = aChar;
+					lastW = textW;
+					if (aChar == '\0') break;
 				}
-				else
-				{
-					TTF_SizeText(font, te->text, &textW, &textH);
-
-					if (mouseButEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
-					{
-						/* cursor will be before this char */
-						te->cursorPos = 0;
-					}
-					else
-					{
-						/* cursor will be after char */
-						te->cursorPos = 1;
-					}
-				}
-			}
-
-			/* Set text highlight (if applicable) */
-			te->highlightBeginPos  = te->clickOrigin;
-			te->highlightBeginLine = te->clickOriginLine;
-
-			if (te->cursorLine < te->clickOriginLine)
-			{
-				te->highlightStartPos  = te->cursorPos;
-				te->highlightStartLine = te->cursorLine;
-				te->highlightEndPos    = te->clickOrigin - 1;
-				te->highlightEndLine   = te->clickOriginLine;
-			}
-			else if (te->cursorLine > te->clickOriginLine)
-			{
-				te->highlightStartPos  = te->clickOrigin;
-				te->highlightStartLine = te->clickOriginLine;
-				te->highlightEndPos    = te->cursorPos - 1;
-				te->highlightEndLine   = te->cursorLine;
+				te->text[ctr] = aChar;
 			}
 			else
 			{
-				if (te->cursorPos < te->clickOrigin)
+				TTF_SizeText(font, te->text, &textW, &textH);
+
+				if (mouseButEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
 				{
-					te->highlightStartPos  = te->cursorPos;
-					te->highlightStartLine = te->cursorLine;
-					te->highlightEndPos    = te->clickOrigin - 1;
-					te->highlightEndLine   = te->clickOriginLine;
+					/* cursor will be before this char */
+					te->cursorPos = 0;
 				}
 				else
 				{
-					te->highlightStartPos  = te->clickOrigin;
-					te->highlightStartLine = te->clickOriginLine;
-					te->highlightEndPos    = te->cursorPos - 1;
-					te->highlightEndLine   = te->cursorLine;
+					/* cursor will be after char */
+					te->cursorPos = 1;
 				}
+			}
+		}
+		te->clickOrigin   = te->cursorPos;
+		te->timeLastClick = SDL_GetTicks();
+
+		if (te->highlightIsSet) {
+			/*----------------------------------------------------------------*/
+			/* Update the highlight selections .  */
+			/*----------------------------------------------------------------*/
+			if (te->cursorLine < te->highlightBeginLine ||
+					(te->cursorLine == te->highlightBeginLine &&
+					 te->cursorPos < te->highlightBeginPos))
+			{
+				/* highlight is expanding/contracting to the above/left */
+				te->highlightStartLine = te->cursorLine;
+				te->highlightStartPos  = te->cursorPos;
+				te->highlightEndLine   = te->highlightBeginLine;
+				te->highlightEndPos    = te->highlightBeginPos - 1;
+			}
+			else
+			{
+				/* highlight is expanding/contracting to the below/right */
+				te->highlightStartLine = te->highlightBeginLine;
+				te->highlightStartPos  = te->highlightBeginPos;
+				te->highlightEndLine   = te->cursorLine;
+				te->highlightEndPos    = te->cursorPos - 1;
 			}
 		}
 
@@ -676,7 +561,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			evCaptured    =  1;
 		}
 	}
-	else if (ev->type == SDL_MOUSEBUTTONDOWN)
+	else if (ev->type == SDL_MOUSEMOTION)
 	{
 		if (eBase->eSt.hasFocus && te->clickHeld)
 		{
@@ -685,9 +570,11 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/* button is still being held down. **Drag Select**               */
 			/*----------------------------------------------------------------*/
 			mouseMotEv = (SDL_MouseMotionEvent*)(ev);
-			if (mouseMotEv->y >= eBase->eSt.rLoc.y && mouseMotEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+			if (mouseMotEv->y >= eBase->eSt.rLoc.y && 
+				mouseMotEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 			{
-				if (mouseMotEv->x >= eBase->eSt.rLoc.x && mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+				if (mouseMotEv->x >= eBase->eSt.rLoc.x && 
+					mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 				{
 					/* This mouse click originated within this button */
 					doContinue = 1;
@@ -697,62 +584,102 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 			if (!doContinue) goto out;
 			doContinue = 0;
-			/*----------------------------------------------------------------*/
-			/* Otherwise, a subsequent click was within the textEntry element */
-			/* For this situation, we want to move the textEdit cursor.       */
-			/*----------------------------------------------------------------*/
-
-			/*----------------------------------------------------------------*/
-			/* select the correct button config to use (pointer or internal)  */
-			/*----------------------------------------------------------------*/
-			aCfg = te->cfgPtr;
-			if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
 
 			rSize = &(eBase->eSt.rSize);
 
 			/*----------------------------------------------------------------*/
-			/* Get the overall location of the current text                   */
+			/* Determine the line of text in which the click occurred         */
 			/*----------------------------------------------------------------*/
-			if (te->text != NULL)
+			TTF_SizeText(font, " ", &textW, &textH);
+			textHFull = 1.1*textH;
+
+			yPos = 6; /* <-- this is the offset from the top where text begins */
+			if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
 			{
-				if (te->text[0] != '\0')
+				eNum = 7;
+				goto out;
+			}
+
+			yRel = mouseMotEv->y - eBase->eSt.rLoc.y;
+			clickLine = (yRel - yPos)/textHFull;
+
+			/*----------------------------------------------------------------*/
+			/* If this is the start of text selection highlighting, then save */
+			/* the old position as the beginning of the highlight selection.  */
+			/*----------------------------------------------------------------*/
+			if (!te->highlightIsSet)
+			{
+				te->highlightIsSet     = 1;
+				te->highlightBeginLine = te->cursorLine;
+				te->highlightBeginPos  = te->cursorPos;
+			}
+
+			/*----------------------------------------------------------------*/
+			/* Determine the new cursor position.                             */
+			/*----------------------------------------------------------------*/
+			if (clickLine < nLines)
+			{
+				/*------------------------------------------------------------*/
+				/* Get the overall location of the current text               */
+				/*------------------------------------------------------------*/
+				if (neuik_TextBlock_GetLine(te->textBlk, clickLine, &lineBytes))
 				{
-					doContinue = 1;
-					font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-						aCfg->fontBold, aCfg->fontItalic);
-					if (font == NULL) 
+					eNum = 11;
+					goto out;
+				}
+
+				te->cursorLine = clickLine;
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
+
+				if (lineBytes != NULL)
+				{
+					if (lineBytes != '\0')
 					{
-						eNum = 1;
-						goto out;
-					}
+						doContinue = 1;
 
+						normWidth = (eBase->eSt.rSize).w - 12; 
+						TTF_SizeText(font, lineBytes, &textW, &textH);
+						rect.w = textW;
 
-					normWidth = (eBase->eSt.rSize).w - 12; 
-					TTF_SizeText(font, te->text, &textW, &textH);
-					rect.w = textW;
-
-					if (textW < normWidth) 
-					{
-						switch (aCfg->textHJustify)
+						if (textW < normWidth) 
 						{
-							case NEUIK_HJUSTIFY_LEFT:
-								rect.x = 6;
-								break;
+							switch (aCfg->textHJustify)
+							{
+								case NEUIK_HJUSTIFY_LEFT:
+									rect.x = 6;
+									break;
 
-							case NEUIK_HJUSTIFY_CENTER:
-								rect.x = (int) ((float)(rSize->w - textW)/2.0);
-								break;
+								case NEUIK_HJUSTIFY_CENTER:
+									rect.x = (int) ((float)(rSize->w - textW)/2.0);
+									break;
 
-							case NEUIK_HJUSTIFY_RIGHT:
-								rect.x = (int) (rSize->w - textW - 6);
-								break;
+								case NEUIK_HJUSTIFY_RIGHT:
+									rect.x = (int) (rSize->w - textW - 6);
+									break;
+							}
+						}
+						else
+						{
+							rect.x = 6;
 						}
 					}
-					else
-					{
-						rect.x = 6;
-					}
 				}
+
+			}
+			else
+			{
+				te->cursorLine = nLines - 1;
+
+				if (neuik_TextBlock_GetLineLength(te->textBlk,
+					te->cursorLine, &lineLen))
+				{
+					/* ERR: problem reported from textBlock */
+					eNum = 6;
+					goto out;
+				}
+				te->cursorPos = lineLen;
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
+				neuik_Element_RequestRedraw((NEUIK_Element)te);
 			}
 
 			if (!doContinue) goto out;
@@ -760,17 +687,24 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/* If continuing, this textEntry contains text and so the cursor  */
 			/* placement could have been changed.                             */
 			/*----------------------------------------------------------------*/
-			if (te->panCursor == 0 && mouseMotEv->x <= eBase->eSt.rLoc.x + rect.x)
+			if (te->panCursor == 0 && 
+				mouseMotEv->x <= eBase->eSt.rLoc.x + rect.x)
 			{
 				/* move the cursor position all the way to the start */
 				te->cursorPos      = 0;
-				te->highlightIsSet = 0;
 			}
-			else if (mouseMotEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
+			else if (mouseMotEv->x >= 
+				eBase->eSt.rLoc.x + rect.x + rect.w)
 			{
 				/* move the cursor position all the way to the end */
-				te->cursorPos      = te->textLen;
-				te->highlightIsSet = 0;
+				if (neuik_TextBlock_GetLineLength(te->textBlk,
+					te->cursorLine, &lineLen))
+				{
+					/* ERR: problem reported from textBlock */
+					eNum = 6;
+					goto out;
+				}
+				te->cursorPos = lineLen;
 			}
 			else
 			{
@@ -787,12 +721,14 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 						TTF_SizeText(font, te->text, &textW, &textH);
 						te->text[ctr] = aChar;
 
-						if (mouseMotEv->x + te->panCursor <= eBase->eSt.rLoc.x + rect.x + textW)
+						if (mouseMotEv->x + te->panCursor <= 
+							eBase->eSt.rLoc.x + rect.x + textW)
 						{
 							/* cursor will be before this char */
 							te->cursorPos = ctr - 1;
 							charW = textW - lastW;
-							if (mouseMotEv->x + te->panCursor <= eBase->eSt.rLoc.x + rect.x + textW - charW/3)
+							if (mouseMotEv->x + te->panCursor <= 
+								eBase->eSt.rLoc.x + rect.x + textW - charW/3)
 							{
 								/* cursor will be before this char */
 								te->cursorPos = ctr - 1;
@@ -822,7 +758,6 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 						if (aChar == '\0') break;
 					}
 					te->text[ctr] = aChar;
-					te->highlightIsSet = 0;
 				}
 				else
 				{
@@ -838,44 +773,29 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 						/* cursor will be after char */
 						te->cursorPos = 1;
 					}
-					te->highlightIsSet = 0;
 				}
 			}
 
-			/* Set text highlight (if applicable) */
-			te->highlightBeginPos  = te->clickOrigin;
-			te->highlightBeginLine = te->clickOriginLine;
-
-			if (te->cursorLine < te->clickOriginLine)
+			/*----------------------------------------------------------------*/
+			/* Update the highlight selections .  */
+			/*----------------------------------------------------------------*/
+			if (te->cursorLine < te->highlightBeginLine ||
+					(te->cursorLine == te->highlightBeginLine &&
+					 te->cursorPos < te->highlightBeginPos))
 			{
-				te->highlightStartPos  = te->cursorPos;
+				/* highlight is expanding/contracting to the above/left */
 				te->highlightStartLine = te->cursorLine;
-				te->highlightEndPos    = te->clickOrigin - 1;
-				te->highlightEndLine   = te->clickOriginLine;
-			}
-			else if (te->cursorLine > te->clickOriginLine)
-			{
-				te->highlightStartPos  = te->clickOrigin;
-				te->highlightStartLine = te->clickOriginLine;
-				te->highlightEndPos    = te->cursorPos - 1;
-				te->highlightEndLine   = te->cursorLine;
+				te->highlightStartPos  = te->cursorPos;
+				te->highlightEndLine   = te->highlightBeginLine;
+				te->highlightEndPos    = te->highlightBeginPos - 1;
 			}
 			else
 			{
-				if (te->cursorPos < te->clickOrigin)
-				{
-					te->highlightStartPos  = te->cursorPos;
-					te->highlightStartLine = te->cursorLine;
-					te->highlightEndPos    = te->clickOrigin - 1;
-					te->highlightEndLine   = te->clickOriginLine;
-				}
-				else
-				{
-					te->highlightStartPos  = te->clickOrigin;
-					te->highlightStartLine = te->clickOriginLine;
-					te->highlightEndPos    = te->cursorPos - 1;
-					te->highlightEndLine   = te->cursorLine;
-				}
+				/* highlight is expanding/contracting to the below/right */
+				te->highlightStartLine = te->highlightBeginLine;
+				te->highlightStartPos  = te->highlightBeginPos;
+				te->highlightEndLine   = te->cursorLine;
+				te->highlightEndPos    = te->cursorPos - 1;
 			}
 
 			neuik_Element_RequestRedraw((NEUIK_Element)te);
@@ -887,7 +807,6 @@ out:
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 	}
-	if (clipText != NULL) free(clipText);
 
 	return evCaptured;
 }
