@@ -34,6 +34,7 @@ static char          * errMsgs[]  = {"",                             // [ 0] no 
 	"Failure in function `neuik_TextBlock_MergeLines`.",             // [ 9]
 	"Failure in function `neuik_TextBlock_DeleteSection`.",          // [10]
 	"Failure in function `neuik_TextBlock_GetLine`.",                // [11]
+	"Failure in function `neuik_TextBlock_GetSection`.",             // [12]
 };
 
 
@@ -1632,83 +1633,53 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	{
 		if (te->highlightIsSet)
 		{
-			#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` Copy")
-			// aChar = te->text[te->highlightEnd + 1];
-			// te->text[te->highlightEnd + 1] = '\0';
-
-			// SDL_SetClipboardText(te->text + te->highlightStart);
-			// te->text[te->highlightEnd + 1] = aChar;
+			/*----------------------------------------------------------------*/
+			/* There is text highlighting within the line                     */
+			/*----------------------------------------------------------------*/
+			if (neuik_TextBlock_GetSection(te->textBlk,
+				te->highlightStartLine, te->highlightStartPos, 
+				te->highlightEndLine, te->highlightEndPos,
+				&clipText))
+			{
+				eNum = 12;
+				goto out;
+			}
+			SDL_SetClipboardText(clipText);
 		}
 	}
 	else if (neuik_KeyShortcut_Cut(keyEv, keyMod))
 	{
 		if (te->highlightIsSet)
 		{
-			#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` Cut")
-			// aChar = te->text[te->highlightEnd + 1];
-			// te->text[te->highlightEnd + 1] = '\0';
+			/*----------------------------------------------------------------*/
+			/* Copy the section of highlighted text and store it in the       */
+			/* system clipboard.                                              */
+			/*----------------------------------------------------------------*/
+			if (neuik_TextBlock_GetSection(te->textBlk,
+				te->highlightStartLine, te->highlightStartPos, 
+				te->highlightEndLine, te->highlightEndPos,
+				&clipText))
+			{
+				eNum = 12;
+				goto out;
+			}
+			SDL_SetClipboardText(clipText);
 
-			// SDL_SetClipboardText(te->text + te->highlightStart);
-			// te->text[te->highlightEnd + 1] = aChar;
+			/*----------------------------------------------------------------*/
+			/* Delete the section of highlighted text                         */
+			/*----------------------------------------------------------------*/
+			if (neuik_TextBlock_DeleteSection(te->textBlk,
+				te->highlightStartLine, te->highlightStartPos, 
+				te->highlightEndLine, te->highlightEndPos))
+			{
+				eNum = 10;
+				goto out;
+			}
+			te->cursorLine     = te->highlightStartLine;
+			te->cursorPos      = te->highlightStartPos;
+			te->highlightIsSet = 0;
+			doRedraw           = 1;
 
-			// /*--------------------------------------------------------*/
-			// /* There is text highlighting within the line             */
-			// /*--------------------------------------------------------*/
-			// if (te->highlightStart == 0)
-			// {
-			// 	/*----------------------------------------------------*/
-			// 	/* a block of text will be deleted, (block @ start)   */
-			// 	/*----------------------------------------------------*/
-			// 	if (te->highlightEnd + 1 != te->textLen)
-			// 	{
-			// 		/* we are not deleting the entire contents */
-
-			// 		for (ctr = 0;; ctr++)
-			// 		{
-			// 			aChar = te->text[ctr + te->highlightEnd + 1];
-			// 			te->text[ctr] = aChar;
-
-			// 			if (aChar == '\0') break;
-			// 		}
-			// 		te->textLen = strlen(te->text);
-			// 	}
-			// 	else
-			// 	{
-			// 		/* delete entire contents of the string */
-			// 		te->textLen = 0;
-			// 		te->text[0] = '\0';
-			// 	}
-			// 	te->cursorPos      = 0;
-			// }
-			// else if (te->highlightEnd + 1 == te->textLen)
-			// {
-			// 	/*----------------------------------------------------*/
-			// 	/* a block of text will be deleted, (block @ end)     */
-			// 	/*----------------------------------------------------*/
-			// 	te->text[te->highlightStart] = '\0';
-			// 	te->textLen   = te->highlightStart;
-			// 	te->cursorPos = te->textLen;
-			// }
-			// else
-			// {
-			// 	/*----------------------------------------------------*/
-			// 	/* a block of text will be deleted, (block in middle) */
-			// 	/*----------------------------------------------------*/
-			// 	te->cursorPos = te->highlightStart;
-
-			// 	hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-			// 	for (ctr = te->highlightStart;; ctr++)
-			// 	{
-			// 		aChar = te->text[ctr + hlOffset];
-			// 		te->text[ctr] = aChar;
-
-			// 		if (aChar == '\0') break;
-			// 	}
-			// 	te->textLen = strlen(te->text);
-			// }
-
-			// te->highlightBegin = -1;
-			// doRedraw           = 1;
 			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_DELTETED);
 		}
 	}

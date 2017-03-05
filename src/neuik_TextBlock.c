@@ -1043,6 +1043,156 @@ out:
 }
 
 /*----------------------------------------------------------------------------*/
+/* Get a copy of the specified textSection from a TextBlock                   */
+/*----------------------------------------------------------------------------*/
+int neuik_TextBlock_GetSection(
+	neuik_TextBlock  * tblk,
+	unsigned int       startLineNo,
+	unsigned int       startLinePos,
+	unsigned int       endLineNo,
+	unsigned int       endLinePos,
+	char            ** secData)
+{
+	neuik_TextBlockData * startBlock;
+	neuik_TextBlockData * endBlock;
+	unsigned int          copyCtr;
+	unsigned int          writeCtr;
+	unsigned int          copySize;
+	unsigned int          endOfCopy;
+	unsigned int          startLineLen;
+	unsigned int          endLineLen;
+	unsigned int          startPosition;
+	unsigned int          endPosition;
+	char                  copyChar;
+	char                * writeStr = NULL;
+	int                   eNum       = 0; /* which error to report (if any) */
+	static char           funcName[] = "neuik_TextBlock_GetSection";
+	static char         * errMsgs[]  = {"",                            // [0] no error
+		"Output argument `tblk` is NULL.",                             // [1]
+		"Failure in function `neuik_TextBlock_GetLineLength`.",        // [2]
+		"Argument `startLineNo` has value in excess of line length.",  // [3]
+		"Argument `endLineNo` has value in excess of line length.",    // [4]
+		"Fundamental error in basic function `GetPositionInLine`.",    // [5]
+		"Output argument `secData` is NULL.",                          // [6]
+		"Requested Line not in TextBlock.",                            // [7]
+		"Failure to allocate memory.",                                 // [8]
+	};
+
+	if (tblk == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (secData == NULL)
+	{
+		eNum = 6;
+		goto out;
+	}
+	if (startLineNo > tblk->nLines || endLineNo > tblk->nLines)
+	{
+		eNum = 7;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Make sure we weren't given an impossible start or end location.        */
+	/*------------------------------------------------------------------------*/
+	if (neuik_TextBlock_GetLineLength(tblk, startLineNo, &startLineLen))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (startLinePos > startLineLen)
+	{
+		eNum = 3;
+		goto out;
+	}
+	if (neuik_TextBlock_GetLineLength(tblk, endLineNo, &endLineLen))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (endLinePos > endLineLen)
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
+		tblk, startLineNo, startLinePos, &startBlock, &startPosition))
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
+		tblk, endLineNo, endLinePos, &endBlock, &endPosition))
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the overall size of the string that is to be returned        */
+	/*------------------------------------------------------------------------*/
+	if (startBlock == endBlock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The section being copied is all contained within a single block    */
+		/*--------------------------------------------------------------------*/
+		if (startLineNo == endLineNo && startLinePos > endLinePos)
+		{
+			/*----------------------------------------------------------------*/
+			/* Nothing is selected, there is nothing to be done.              */
+			/*----------------------------------------------------------------*/
+			goto out;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* The section being copied is one or more characters                 */
+		/*--------------------------------------------------------------------*/
+		copySize = 1 + (endPosition - startPosition);
+
+		(*secData) = (char *)malloc((copySize+1)*sizeof(char));
+		writeStr = *secData;
+		if (writeStr == NULL)
+		{
+			eNum = 8;
+			goto out;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Copy over the data one byte at a time                              */
+		/*--------------------------------------------------------------------*/
+		writeCtr = 0;
+		for (copyCtr = startPosition; copyCtr <= endPosition; copyCtr++)
+		{
+			copyChar = startBlock->data[copyCtr];
+			if (copyChar != '\0')
+			{
+				writeStr[writeCtr] = copyChar;
+				writeCtr++;
+			}
+		}
+		writeStr[copySize] = '\0';
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* The section being deleted spans more than one block                */
+		/*--------------------------------------------------------------------*/
+		#pragma message("[TODO]: `neuik_TextBlock_GetSection` Get over multiple blocks.")
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	return eNum;
+}
+
+
+/*----------------------------------------------------------------------------*/
 /* Replace an actual line of data with another                                */
 /*----------------------------------------------------------------------------*/
 int
@@ -1396,7 +1546,7 @@ out:
 }
 
 /*----------------------------------------------------------------------------*/
-/* Delete a number of characters at a position                                */
+/* Delete a section of data                                                   */
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_DeleteSection(
 	neuik_TextBlock * tblk,

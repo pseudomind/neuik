@@ -87,6 +87,18 @@ int
 			char           ** lineData);
 
 /*----------------------------------------------------------------------------*/
+/* Get a copy of the specified textSection from a TextBlock                   */
+/*----------------------------------------------------------------------------*/
+int
+	neuik_TextBlock_GetSection(
+			neuik_TextBlock * tblk,
+			unsigned int      startLineNo,
+			unsigned int      startLinePos,
+			unsigned int      endLineNo,
+			unsigned int      endLinePos,
+			char           ** secData);
+
+/*----------------------------------------------------------------------------*/
 /* Replace an actual line of data with another                                */
 /*----------------------------------------------------------------------------*/
 int
