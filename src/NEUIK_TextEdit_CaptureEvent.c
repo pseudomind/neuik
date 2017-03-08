@@ -35,6 +35,7 @@ static char          * errMsgs[]  = {"",                             // [ 0] no 
 	"Failure in function `neuik_TextBlock_DeleteSection`.",          // [10]
 	"Failure in function `neuik_TextBlock_GetLine`.",                // [11]
 	"Failure in function `neuik_TextBlock_GetSection`.",             // [12]
+	"Failure in function `neuik_TextBlock_InsertText`.",             // [13]
 };
 
 
@@ -1685,150 +1686,46 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	}
 	else if (neuik_KeyShortcut_Paste(keyEv, keyMod) && SDL_HasClipboardText())
 	{
-		#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` Paste")
-		// if (te->highlightIsSet)
-		// {
-		// 	/*--------------------------------------------------------*/
-		// 	/* There is text highlighting within the line             */
-		// 	/*--------------------------------------------------------*/
-		// 	if (te->highlightStart == 0)
-		// 	{
-		// 		/*----------------------------------------------------*/
-		// 		/* a block of text will be deleted, (block @ start)   */
-		// 		/*----------------------------------------------------*/
-		// 		if (te->highlightEnd + 1 != te->textLen)
-		// 		{
-		// 			/* we are not deleting the entire contents */
+		if (te->highlightIsSet)
+		{
+			/*----------------------------------------------------------------*/
+			/* Delete the section of highlighted text                         */
+			/*----------------------------------------------------------------*/
+			if (neuik_TextBlock_DeleteSection(te->textBlk,
+				te->highlightStartLine, te->highlightStartPos, 
+				te->highlightEndLine, te->highlightEndPos))
+			{
+				eNum = 10;
+				goto out;
+			}
+			te->cursorLine     = te->highlightStartLine;
+			te->cursorPos      = te->highlightStartPos;
+			te->highlightIsSet = 0;
+			doRedraw           = 1;
+		}
 
-		// 			for (ctr = 0;; ctr++)
-		// 			{
-		// 				aChar = te->text[ctr + te->highlightEnd + 1];
-		// 				te->text[ctr] = aChar;
+		/*--------------------------------------------------------------------*/
+		/* Get a copy of the text within the clipboard buffer                 */
+		/*--------------------------------------------------------------------*/
+		clipText = SDL_GetClipboardText();
+		if (clipText == NULL)
+		{
+			evCaptured = 1;
+			eNum = 2;
+			goto out;
+		}
 
-		// 				if (aChar == '\0') break;
-		// 			}
-		// 			te->textLen = strlen(te->text);
-		// 		}
-		// 		else
-		// 		{
-		// 			/* delete entire contents of the string */
-		// 			te->textLen = 0;
-		// 			te->text[0] = '\0';
-		// 		}
-		// 		te->cursorPos      = 0;
-		// 	}
-		// 	else if (te->highlightEnd + 1 == te->textLen)
-		// 	{
-		// 		/*----------------------------------------------------*/
-		// 		/* a block of text will be deleted, (block @ end)     */
-		// 		/*----------------------------------------------------*/
-		// 		te->text[te->highlightStart] = '\0';
-		// 		te->textLen   = te->highlightStart;
-		// 		te->cursorPos = te->textLen;
-		// 	}
-		// 	else
-		// 	{
-		// 		/*----------------------------------------------------*/
-		// 		/* a block of text will be deleted, (block in middle) */
-		// 		/*----------------------------------------------------*/
-		// 		te->cursorPos = te->highlightStart;
+		if (neuik_TextBlock_InsertText(te->textBlk,
+			te->cursorLine, te->cursorPos, clipText,
+			&te->cursorLine, &te->cursorPos))
+		{
+			eNum = 13;
+			goto out;
+		}
 
-		// 		hlOffset = 1 + (te->highlightEnd - te->highlightStart);
-		// 		for (ctr = te->highlightStart;; ctr++)
-		// 		{
-		// 			aChar = te->text[ctr + hlOffset];
-		// 			te->text[ctr] = aChar;
-
-		// 			if (aChar == '\0') break;
-		// 		}
-		// 		te->textLen = strlen(te->text);
-		// 	}
-
-		// 	te->highlightBegin = -1;
-		// }
-
-		// clipText = SDL_GetClipboardText();
-		// if (clipText == NULL)
-		// {
-		// 	evCaptured = 1;
-		// 	eNum = 2;
-		// 	goto out;
-		// }
-
-		// inpLen = strlen(clipText);
-		// if (te->cursorPos == te->textLen)
-		// {
-		// 	/* cursor is at the end of the current text */
-		// 	if (inpLen + te->textLen < te->textAllocSize)
-		// 	{
-		// 		/* the text buffer will need to be resized to fit this text */
-		// 		newSize = 2 * (inpLen + te->textLen);
-		// 		te->text = (char*)realloc(te->text, newSize*sizeof(char));
-		// 	}
-		// 	strcat(te->text, clipText);
-		// 	te->textLen   += inpLen;
-		// 	te->cursorPos += inpLen;
-		// }
-		// else if (te->cursorPos == 0)
-		// {
-		// 	/* cursor is at the start of the current text */
-		// 	if (inpLen + te->textLen < te->textAllocSize)
-		// 	{
-		// 		/* the text buffer will need to be resized to fit this text */
-		// 		newSize = 2 * (inpLen + te->textLen);
-		// 		te->text = (char*)realloc(te->text, newSize*sizeof(char));
-		// 	}
-
-		// 	/* first move over the old text */
-		// 	for (ctr = te->textLen + inpLen; ctr >= inpLen; ctr--)
-		// 	{
-		// 		te->text[ctr] = te->text[ctr - inpLen];
-		// 	}
-
-		// 	/* now copy in the new text */
-		// 	for (ctr = 0;; ctr++)
-		// 	{
-		// 		if (clipText[ctr] == 0) break;
-
-		// 		te->text[ctr] = clipText[ctr];
-		// 	}
-		// 	te->textLen   += inpLen;
-		// 	te->cursorPos += inpLen;
-		// }
-		// else
-		// {
-		// 	/* cursor is somewhere in the middle of the text */
-		// 	if (inpLen + te->textLen < te->textAllocSize)
-		// 	{
-		// 		/* the text buffer will need to be resized to fit this text */
-		// 		newSize = 2 * (inpLen + te->textLen);
-		// 		te->text = (char*)realloc(te->text, newSize*sizeof(char));
-		// 	}
-
-		// 	/* first move over the old text */
-		// 	stopPos = (te->cursorPos - 1) + inpLen; 
-		// 	for (ctr = te->textLen + inpLen; ctr >= stopPos; ctr--)
-		// 	{
-		// 		te->text[ctr] = te->text[ctr - inpLen];
-		// 	}
-
-		// 	/* now copy in the new text */
-		// 	for (ctr = 0;; ctr++)
-		// 	{
-		// 		aPos = te->cursorPos + ctr;
-		// 		if (clipText[ctr] == 0) break;
-
-		// 		te->text[aPos] = clipText[ctr];
-		// 	}
-		// 	te->textLen   += inpLen;
-		// 	te->cursorPos += inpLen;
-		// }
-
-		// // neuik_TextEdit_UpdateCursorX(te);
-		// neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_ADD_REMOVE);
-		// neuik_Element_RequestRedraw((NEUIK_Element)te);
-		// evCaptured = 1;
-		// goto out;
+		neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_ADD_REMOVE);
+		neuik_Element_RequestRedraw((NEUIK_Element)te);
+		evCaptured = 1;
 	}
 	else if (neuik_KeyShortcut_SelectAll(keyEv, keyMod))
 	{

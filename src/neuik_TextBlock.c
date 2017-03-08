@@ -1169,11 +1169,10 @@ int neuik_TextBlock_GetSection(
 			copyChar = startBlock->data[copyCtr];
 			if (copyChar != '\0')
 			{
-				writeStr[writeCtr] = copyChar;
-				writeCtr++;
+				writeStr[writeCtr++] = copyChar;
 			}
 		}
-		writeStr[copySize] = '\0';
+		writeStr[writeCtr++] = '\0';
 	}
 	else
 	{
@@ -1279,13 +1278,6 @@ int neuik_TextBlock_InsertChar(
 	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
 		tblk, lineNo, byteNo, &aBlock, &position))
 	{
-		if (neuik_TextBlock_GetPositionInLine__noErrChecks(
-			tblk, lineNo, byteNo, &aBlock, &position))
-		{
-			eNum = 4;
-			goto out;
-		}
-
 		eNum = 4;
 		goto out;
 	}
@@ -1348,14 +1340,258 @@ out:
 }
 
 /*----------------------------------------------------------------------------*/
-/* Insert multiple characters at the specified position                       */
+/* Insert a string of characters at the specified position                    */
 /*----------------------------------------------------------------------------*/
-int
-	neuik_TextBlock_InsertChars(
-			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos,
-			char            * newString);
+int neuik_TextBlock_InsertText(
+	neuik_TextBlock * tblk,
+	unsigned int      lineNo,       /* line in which to insert text */
+	unsigned int      linePos,      /* position within the line to insert */
+	const char      * text,         /* text section to be inserted */
+	unsigned int    * finalLineNo,  /* line where resulting insert completed */
+	unsigned int    * finalLinePos) /* line position where insert completed */
+{
+	int                   textLen;
+	neuik_TextBlockData * aBlock;
+	unsigned int          copyCtr;
+	unsigned int          copyOffset;
+	unsigned int          charCtr;
+	unsigned int          lineLen;
+	unsigned int          position;
+	unsigned int          startPosition;
+	unsigned int          endPosition;
+	unsigned int          startOfCopy;
+	unsigned int          endOfCopy;
+	unsigned int          writeCtr         = 0;
+	unsigned int          posCtr           = 0;
+	unsigned int          lineCtr          = 0;
+	unsigned int          nBlocksRequried  = 0;
+	unsigned int          maxInitBlockFill = (unsigned int)(
+		(1.0 - DefaultBlockFracitonFree) * (double)(DefaultBlockSize));
+	int                   eNum       = 0; /* which error to report (if any) */
+	static char           funcName[] = "neuik_TextBlock_InsertText";
+	static char         * errMsgs[]  = {"",                            // [0] no error
+		"Output argument `tblk` is NULL.",                             // [1]
+		"Argument `text` is NULL.",                                    // [2]
+		"Failure in function `neuik_TextBlock_AppendDataBlock`.",      // [3]
+		"Failure in function `neuik_TextBlock_GetLineLength`.",        // [4]
+		"Argument `linePos` has value in excess of line length.",      // [5]
+		"Fundamental error in basic function `GetPositionLineStart`.", // [6]
+	};
+
+	if (tblk == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (text == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Make sure we aren't attempting to insert text into a line at a         */
+	/* position that is outside of its scope.                                 */
+	/*------------------------------------------------------------------------*/
+	if (neuik_TextBlock_GetLineLength(tblk, lineNo, &lineLen))
+	{
+		eNum = 4;
+		goto out;
+	}
+	if (linePos > lineLen)
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
+		tblk, lineNo, linePos, &aBlock, &startPosition))
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the length of the text to insert.                            */
+	/*------------------------------------------------------------------------*/
+	textLen = strlen(text);
+	if (textLen == 0)
+	{
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Count the number of (`\r`,`\n`, and `\r\n`) combos in the text and add */
+	/* in the extra required space for line terminating `\0` chars.           */
+	/*------------------------------------------------------------------------*/
+	if (textLen > 1)
+	{
+		for (charCtr = 1; charCtr < textLen; charCtr++)
+		{
+			if (text[charCtr-1] == '\r' && text[charCtr-1] == '\n')
+			{
+				/*------------------------------------------------------------*/
+				/* This is a CR-LF line ending (m$-windows-style)             */
+				/*------------------------------------------------------------*/
+				lineCtr++;
+				charCtr++;
+				posCtr = 0;
+			}
+			else if (text[charCtr-1] == '\r')
+			{
+				/*------------------------------------------------------------*/
+				/* This is a CR line ending (macos-style)                     */
+				/*------------------------------------------------------------*/
+				lineCtr++;
+				posCtr = 0;
+			}
+			else if (text[charCtr-1] == '\n')
+			{
+				/*------------------------------------------------------------*/
+				/* This is a LF line ending (linux-style)                     */
+				/*------------------------------------------------------------*/
+				lineCtr++;
+				posCtr = 0;
+			}
+			else
+			{
+				posCtr++;
+			}
+		}
+		if (text[charCtr] == '\r' || text[charCtr] == '\n')
+		{
+			/*----------------------------------------------------------------*/
+			/* This would be a final single character trailing newline        */
+			/*----------------------------------------------------------------*/
+			lineCtr++;
+			posCtr = 0;
+		}
+		else
+		{
+			posCtr++;
+		}
+	}
+	else if (textLen == 1)
+	{
+		if (text[0] == '\n' || text[0] == '\r')
+		{
+			lineCtr++;
+			posCtr = 0;
+		}
+		else
+		{
+			posCtr++;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine if the receiving data block has enough extra space to hold   */
+	/* the addtional text in its entirety.                                    */
+	/*------------------------------------------------------------------------*/
+	if (aBlock->bytesInUse + (textLen + lineCtr) < aBlock->bytesAllocated)
+	{
+		startOfCopy = (aBlock->bytesInUse - 1) + (textLen + lineCtr); 
+		endOfCopy   = startPosition + (textLen + lineCtr);
+
+		/*--------------------------------------------------------------------*/
+		/* Shift over the existing data to make room for the new text         */
+		/*--------------------------------------------------------------------*/
+		for (copyCtr = startOfCopy; copyCtr >= endOfCopy; copyCtr--)
+		{
+			aBlock->data[copyCtr] = aBlock->data[copyCtr - (textLen + lineCtr)];
+		}
+		aBlock->bytesInUse += (textLen + lineCtr);
+		aBlock->data[aBlock->bytesInUse] = '\0';
+
+
+		/*--------------------------------------------------------------------*/
+		/* Copy over the new text into the desired location                   */
+		/*--------------------------------------------------------------------*/
+		if (textLen > 1)
+		{
+			/*----------------------------------------------------------------*/
+			/* Copying over data one byte at a time taking special care to    */
+			/* include a `\0` character after each line ending sequence.      */
+			/*----------------------------------------------------------------*/
+			writeCtr = startPosition;
+			for (charCtr = 1; charCtr <= textLen; charCtr++)
+			{
+				if (text[charCtr-1] == '\r' && text[charCtr] == '\n')
+				{
+					/*--------------------------------------------------------*/
+					/* This is a CR-LF line ending (m$-windows-style)         */
+					/*--------------------------------------------------------*/
+					charCtr++;
+					aBlock->data[writeCtr++] = '\r';
+					aBlock->data[writeCtr++] = '\n';
+					aBlock->data[writeCtr++] = '\0';
+					tblk->nLines++;
+					aBlock->nLines++;
+				}
+				else if (text[charCtr-1] == '\r')
+				{
+					/*--------------------------------------------------------*/
+					/* This is a CR line ending (macos-style)                 */
+					/*--------------------------------------------------------*/
+					aBlock->data[writeCtr++] = '\r';
+					aBlock->data[writeCtr++] = '\0';
+					tblk->nLines++;
+					aBlock->nLines++;
+				}
+				else if (text[charCtr-1] == '\n')
+				{
+					/*--------------------------------------------------------*/
+					/* This is a LF line ending (linux-style)                 */
+					/*--------------------------------------------------------*/
+					aBlock->data[writeCtr++] = '\n';
+					aBlock->data[writeCtr++] = '\0';
+					tblk->nLines++;
+					aBlock->nLines++;
+				}
+				else
+				{
+
+					aBlock->data[writeCtr++] = text[charCtr-1];
+				}
+			}
+		}
+		else if (textLen == 1)
+		{
+			aBlock->data[startPosition] = text[0];
+			if (text[0] == '\n' || text[0] == '\r')
+			{
+				aBlock->data[startPosition + 1] = '\0';
+				tblk->nLines++;
+				aBlock->nLines++;
+			}
+		}
+	}
+	else
+	{
+		#pragma message("[TODO]: `neuik_TextBlock_InsertText` Insert Text into multiple blocks.")
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Return the position immediately after the end of the text insertion    */
+	/*------------------------------------------------------------------------*/
+	if (lineCtr > 0)
+	{
+		*finalLineNo  = lineNo + lineCtr;
+		*finalLinePos = posCtr;
+	}
+	else
+	{
+		*finalLinePos = linePos + posCtr;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	return eNum;
+}
+
 
 /*----------------------------------------------------------------------------*/
 /* Delete a character at a position                                           */

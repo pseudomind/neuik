@@ -144,14 +144,16 @@ int
 			char              newChar);
 
 /*----------------------------------------------------------------------------*/
-/* Insert multiple characters at the specified position                       */
+/* Insert a string of characters at the specified position                    */
 /*----------------------------------------------------------------------------*/
-int
-	neuik_TextBlock_InsertChars(
+int 
+	neuik_TextBlock_InsertText(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos,
-			char            * newString);
+			unsigned int      lineNo,        /* line in which to insert text */
+			unsigned int      linePos,       /* position within the line to insert */
+			const char      * text,          /* text section to be inserted */ 
+			unsigned int    * finalLineNo,   /* line where resulting insert completed */
+			unsigned int    * finalLinePos); /* line position where insert completed */
 
 /*----------------------------------------------------------------------------*/
 /* Delete a character at a position                                           */
