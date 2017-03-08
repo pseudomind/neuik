@@ -1058,7 +1058,6 @@ int neuik_TextBlock_GetSection(
 	unsigned int          copyCtr;
 	unsigned int          writeCtr;
 	unsigned int          copySize;
-	unsigned int          endOfCopy;
 	unsigned int          startLineLen;
 	unsigned int          endLineLen;
 	unsigned int          startPosition;
@@ -1353,20 +1352,14 @@ int neuik_TextBlock_InsertText(
 	int                   textLen;
 	neuik_TextBlockData * aBlock;
 	unsigned int          copyCtr;
-	unsigned int          copyOffset;
 	unsigned int          charCtr;
 	unsigned int          lineLen;
-	unsigned int          position;
 	unsigned int          startPosition;
-	unsigned int          endPosition;
 	unsigned int          startOfCopy;
 	unsigned int          endOfCopy;
 	unsigned int          writeCtr         = 0;
 	unsigned int          posCtr           = 0;
 	unsigned int          lineCtr          = 0;
-	unsigned int          nBlocksRequried  = 0;
-	unsigned int          maxInitBlockFill = (unsigned int)(
-		(1.0 - DefaultBlockFracitonFree) * (double)(DefaultBlockSize));
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_InsertText";
 	static char         * errMsgs[]  = {"",                            // [0] no error
