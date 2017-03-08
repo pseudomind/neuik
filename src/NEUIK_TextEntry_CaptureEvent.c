@@ -228,6 +228,18 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 	NEUIK_ElementBase     * eBase      = NULL;
 	static char             funcName[] = "neuik_Element_CaptureEvent__TextEntry_MouseEvent";
 
+	if (!neuik_Object_IsClass(elem, neuik__Class_TextEntry))
+	{
+		eNum = 3;
+		goto out;
+	}
+	te = (NEUIK_TextEntry*)elem;
+	if (neuik_Object_GetClassObject(te, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 4;
+		goto out;
+	}
+
 	/*------------------------------------------------------------------------*/
 	/* Redirect the MouseEvent to the appropriate handling section            */
 	/*------------------------------------------------------------------------*/
@@ -792,6 +804,18 @@ int neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
 	NEUIK_ElementBase  * eBase      = NULL;
 	static char          funcName[] = "neuik_Element_CaptureEvent__TextEntry_TextInputEvent";
 
+	if (!neuik_Object_IsClass(elem, neuik__Class_TextEntry))
+	{
+		eNum = 3;
+		goto out;
+	}
+	te = (NEUIK_TextEntry*)elem;
+	if (neuik_Object_GetClassObject(te, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 4;
+		goto out;
+	}
+
 	if (!eBase->eSt.hasFocus)
 	{
 		goto out;
@@ -972,6 +996,18 @@ int neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 	NEUIK_TextEntry   * te         = NULL;
 	NEUIK_ElementBase * eBase      = NULL;
 	static char         funcName[] = "neuik_Element_CaptureEvent__TextEntry_KeyDownEvent";
+
+	if (!neuik_Object_IsClass(elem, neuik__Class_TextEntry))
+	{
+		eNum = 3;
+		goto out;
+	}
+	te = (NEUIK_TextEntry*)elem;
+	if (neuik_Object_GetClassObject(te, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 4;
+		goto out;
+	}
 
 	if (!eBase->eSt.hasFocus)
 	{
