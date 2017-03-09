@@ -1149,7 +1149,7 @@ int neuik_TextBlock_GetSection(
 		/*--------------------------------------------------------------------*/
 		/* The section being copied is one or more characters                 */
 		/*--------------------------------------------------------------------*/
-		copySize = 1 + (endPosition - startPosition);
+		copySize = endPosition - startPosition;
 
 		(*secData) = (char *)malloc((copySize+1)*sizeof(char));
 		writeStr = *secData;
@@ -1163,7 +1163,7 @@ int neuik_TextBlock_GetSection(
 		/* Copy over the data one byte at a time                              */
 		/*--------------------------------------------------------------------*/
 		writeCtr = 0;
-		for (copyCtr = startPosition; copyCtr <= endPosition; copyCtr++)
+		for (copyCtr = startPosition; copyCtr < endPosition; copyCtr++)
 		{
 			copyChar = startBlock->data[copyCtr];
 			if (copyChar != '\0')
@@ -1868,7 +1868,7 @@ int neuik_TextBlock_DeleteSection(
 		/*--------------------------------------------------------------------*/
 		/* The section being deleted is one or more characters                */
 		/*--------------------------------------------------------------------*/
-		copyOffset = 1 + (endPosition - startPosition);
+		copyOffset = endPosition - startPosition;
 
 		/*--------------------------------------------------------------------*/
 		/* Check for any captured lineBreaks/newline characters               */
@@ -1892,7 +1892,7 @@ int neuik_TextBlock_DeleteSection(
 		/*--------------------------------------------------------------------*/
 		/* Simply shift over the bytes by one                                 */
 		/*--------------------------------------------------------------------*/
-		for (copyCtr = startPosition; copyCtr <= endOfCopy; copyCtr++)
+		for (copyCtr = startPosition; copyCtr < endOfCopy; copyCtr++)
 		{
 			/*----------------------------------------------------------------*/
 			/* First store the value of the deleted character.                */

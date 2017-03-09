@@ -1161,10 +1161,10 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 							}
 							else if (te->highlightEndPos != 0)
 							{
-								tempChar = lineBytes[1 + te->highlightEndPos];
-								lineBytes[1 + te->highlightEndPos] = '\0';
+								tempChar = lineBytes[te->highlightEndPos];
+								lineBytes[te->highlightEndPos] = '\0';
 								TTF_SizeText(font, lineBytes, &textW, &textH);
-								lineBytes[1 + te->highlightEndPos] = tempChar;
+								lineBytes[te->highlightEndPos] = tempChar;
 							}
 							else
 							{
@@ -1202,12 +1202,12 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 							}
 							else
 							{
-								tempChar = lineBytes[1 + te->highlightEndPos];
-								lineBytes[1 + te->highlightEndPos] = '\0';
+								tempChar = lineBytes[te->highlightEndPos];
+								lineBytes[te->highlightEndPos] = '\0';
 								TTF_SizeText(font, 
 									lineBytes + te->highlightStartPos, 
 									&textW, &textH);
-								lineBytes[1 + te->highlightEndPos] = tempChar;
+								lineBytes[te->highlightEndPos] = tempChar;
 							}
 						}
 						hlWidth = textW;

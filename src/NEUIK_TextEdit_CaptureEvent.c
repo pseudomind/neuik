@@ -537,7 +537,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightStartLine = te->cursorLine;
 				te->highlightStartPos  = te->cursorPos;
 				te->highlightEndLine   = te->highlightBeginLine;
-				te->highlightEndPos    = te->highlightBeginPos - 1;
+				te->highlightEndPos    = te->highlightBeginPos;
 			}
 			else
 			{
@@ -545,7 +545,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightStartLine = te->highlightBeginLine;
 				te->highlightStartPos  = te->highlightBeginPos;
 				te->highlightEndLine   = te->cursorLine;
-				te->highlightEndPos    = te->cursorPos - 1;
+				te->highlightEndPos    = te->cursorPos;
 			}
 		}
 
@@ -791,7 +791,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightStartLine = te->cursorLine;
 				te->highlightStartPos  = te->cursorPos;
 				te->highlightEndLine   = te->highlightBeginLine;
-				te->highlightEndPos    = te->highlightBeginPos - 1;
+				te->highlightEndPos    = te->highlightBeginPos;
 			}
 			else
 			{
@@ -799,7 +799,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightStartLine = te->highlightBeginLine;
 				te->highlightStartPos  = te->highlightBeginPos;
 				te->highlightEndLine   = te->cursorLine;
-				te->highlightEndPos    = te->cursorPos - 1;
+				te->highlightEndPos    = te->cursorPos;
 			}
 
 			neuik_Element_RequestRedraw((NEUIK_Element)te);
@@ -1019,7 +1019,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightStartLine = te->cursorLine;
 						te->highlightStartPos  = te->cursorPos;
 						te->highlightEndLine   = te->highlightBeginLine;
-						te->highlightEndPos    = te->highlightBeginPos - 1;
+						te->highlightEndPos    = te->highlightBeginPos;
 					}
 					else
 					{
@@ -1027,7 +1027,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightStartLine = te->highlightBeginLine;
 						te->highlightStartPos  = te->highlightBeginPos;
 						te->highlightEndLine   = te->cursorLine;
-						te->highlightEndPos    = te->cursorPos - 1;
+						te->highlightEndPos    = te->cursorPos;
 					}
 				}
 			}
@@ -1114,14 +1114,14 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightStartLine = te->highlightBeginLine;
 						te->highlightStartPos  = te->highlightBeginPos;
 						te->highlightEndLine   = te->cursorLine;
-						te->highlightEndPos    = te->cursorPos - 1;
+						te->highlightEndPos    = te->cursorPos;
 					}
 					else
 					{
 						te->highlightStartLine = te->cursorLine;
 						te->highlightStartPos  = te->cursorPos;
 						te->highlightEndLine   = te->highlightBeginLine;
-						te->highlightEndPos    = te->highlightBeginPos - 1;
+						te->highlightEndPos    = te->highlightBeginPos;
 					}
 				}
 				else if (te->cursorPos == lineLen && 
@@ -1336,7 +1336,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightStartLine = te->cursorLine;
 						te->highlightStartPos  = te->cursorPos;
 						te->highlightEndLine   = te->highlightBeginLine;
-						te->highlightEndPos    = te->highlightBeginPos - 1;
+						te->highlightEndPos    = te->highlightBeginPos;
 					}
 					else
 					{
@@ -1344,7 +1344,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightStartLine = te->highlightBeginLine;
 						te->highlightStartPos  = te->highlightBeginPos;
 						te->highlightEndLine   = te->cursorLine;
-						te->highlightEndPos    = te->cursorPos - 1;
+						te->highlightEndPos    = te->cursorPos;
 					}
 				}
 			}
@@ -1439,14 +1439,14 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightStartLine = te->highlightBeginLine;
 						te->highlightStartPos  = te->highlightBeginPos;
 						te->highlightEndLine   = te->cursorLine;
-						te->highlightEndPos    = te->cursorPos - 1;
+						te->highlightEndPos    = te->cursorPos;
 					}
 					else
 					{
 						te->highlightStartLine = te->cursorLine;
 						te->highlightStartPos  = te->cursorPos;
 						te->highlightEndLine   = te->highlightBeginLine;
-						te->highlightEndPos    = te->highlightBeginPos - 1;
+						te->highlightEndPos    = te->highlightBeginPos;
 					}
 
 				}
@@ -1530,16 +1530,6 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 					}
 					te->cursorPos = 0;
 
-					// if (te->cursorPos < te->highlightBegin)
-					// {
-					// 	te->highlightStart = te->cursorPos;
-					// 	te->highlightEnd   = te->highlightBegin - 1;
-					// }
-					// else
-					// {
-					// 	te->highlightStart = te->highlightBegin;
-					// 	te->highlightEnd   = te->cursorPos - 1;
-					// }
 					if (te->cursorLine < te->highlightBeginLine ||
 							(te->cursorLine == te->highlightBeginLine &&
 							 te->cursorPos < te->highlightBeginPos))
@@ -1548,7 +1538,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightStartLine = te->cursorLine;
 						te->highlightStartPos  = te->cursorPos;
 						te->highlightEndLine   = te->highlightBeginLine;
-						te->highlightEndPos    = te->highlightBeginPos - 1;
+						te->highlightEndPos    = te->highlightBeginPos;
 					}
 					else
 					{
@@ -1615,14 +1605,14 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightStartLine = te->highlightBeginLine;
 						te->highlightStartPos  = te->highlightBeginPos;
 						te->highlightEndLine   = te->cursorLine;
-						te->highlightEndPos    = te->cursorPos - 1;
+						te->highlightEndPos    = te->cursorPos;
 					}
 					else
 					{
 						te->highlightStartLine = te->cursorLine;
 						te->highlightStartPos  = te->cursorPos;
 						te->highlightEndLine   = te->highlightBeginLine;
-						te->highlightEndPos    = te->highlightBeginPos - 1;
+						te->highlightEndPos    = te->highlightBeginPos;
 					}
 				}
 			}
@@ -1758,7 +1748,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 			te->highlightStartLine = te->highlightBeginLine;
 			te->highlightStartPos  = te->highlightBeginPos;
 			te->highlightEndLine   = te->cursorLine;
-			te->highlightEndPos    = te->cursorPos - 1;
+			te->highlightEndPos    = te->cursorPos;
 			doRedraw = 1;
 		}
 	}
