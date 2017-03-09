@@ -946,12 +946,6 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 		goto out;
 	}
 
-	printf("TextEdit_Render [Line:Pos] : [%u:%u]\n", te->cursorLine, te->cursorPos);
-	printf("\tHighlightIsSet : %d\n", te->highlightIsSet);
-	printf("\tHighlightBegin : [%lu:%lu]\n", te->highlightBeginLine, te->highlightBeginPos);
-	printf("\tHighlightStart : [%lu:%lu]\n", te->highlightStartLine, te->highlightStartPos);
-	printf("\tHighlightEnd   : [%lu:%lu]\n", te->highlightEndLine,   te->highlightEndPos);
-
 	/*------------------------------------------------------------------------*/
 	/* check to see if the requested draw size of the element has changed     */
 	/*------------------------------------------------------------------------*/

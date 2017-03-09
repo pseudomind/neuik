@@ -85,13 +85,13 @@ int neuik_TextEdit_UpdatePanCursor(
 	if (te->text == NULL)
 	{
 		te->panCursor = 0;
-		printf("case0;\n");
+		// printf("case0;\n");
 		goto out;
 	}
 	if (te->text[0] == '\0') 
 	{
 		te->panCursor = 0;
-		printf("case1;\n");
+		// printf("case1;\n");
 		goto out;
 	}
 
@@ -126,14 +126,14 @@ int neuik_TextEdit_UpdatePanCursor(
 	TTF_SizeText(font, te->text, &textW, &textH);
 	textW++;
 	normWidth = (eBase->eSt.rSize).w - 12; 
-	printf("textW: %d, normWidth %d, `%s`\n", textW, normWidth, te->text);
+	// printf("textW: %d, normWidth %d, `%s`\n", textW, normWidth, te->text);
 	if (textW < normWidth) 
 	{
 		/*--------------------------------------------------------------------*/
 		/* The text doesn't completely fill the available space; don't pan.   */
 		/*--------------------------------------------------------------------*/
 		te->panCursor = 0;
-		printf("case2;\n");
+		// printf("case2;\n");
 	}
 	else
 	{
@@ -166,14 +166,14 @@ int neuik_TextEdit_UpdatePanCursor(
 				{
 					te->panCursor = te->cursorX;
 				}
-				printf("case3;\n");
+				// printf("case3;\n");
 				break;
 			case CURSORPAN_MOVE_FORWARD:
 				if (te->cursorX > te->panCursor + normWidth)
 				{
 					te->panCursor = (1 + te->cursorX) - normWidth;
 				}
-				printf("case4;\n");
+				// printf("case4;\n");
 				break;
 			case CURSORPAN_TEXT_DELTETED:
 				if (textW - te->panCursor < normWidth)
@@ -185,7 +185,7 @@ int neuik_TextEdit_UpdatePanCursor(
 					/*--------------------------------------------------------*/
 					te->panCursor = textW - normWidth;
 				}
-				printf("case5;\n");
+				// printf("case5;\n");
 				break;
 		}
 	}
@@ -195,7 +195,7 @@ out:
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 	}
 
-	printf("UpdatePanCursor: te->panCursor = %d\n", te->panCursor);
+	// printf("UpdatePanCursor: te->panCursor = %d\n", te->panCursor);
 
 	return eNum;
 }
