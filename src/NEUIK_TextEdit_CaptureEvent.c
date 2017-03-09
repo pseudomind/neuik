@@ -682,8 +682,32 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					goto out;
 				}
 				te->cursorPos = lineLen;
+
+				/*------------------------------------------------------------*/
+				/* Update the highlight selections .                          */
+				/*------------------------------------------------------------*/
+				if (te->cursorLine < te->highlightBeginLine ||
+						(te->cursorLine == te->highlightBeginLine &&
+						 te->cursorPos < te->highlightBeginPos))
+				{
+					/* highlight is expanding/contracting to the above/left */
+					te->highlightStartLine = te->cursorLine;
+					te->highlightStartPos  = te->cursorPos;
+					te->highlightEndLine   = te->highlightBeginLine;
+					te->highlightEndPos    = te->highlightBeginPos;
+				}
+				else
+				{
+					/* highlight is expanding/contracting to the below/right */
+					te->highlightStartLine = te->highlightBeginLine;
+					te->highlightStartPos  = te->highlightBeginPos;
+					te->highlightEndLine   = te->cursorLine;
+					te->highlightEndPos    = te->cursorPos;
+				}
+
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 				neuik_Element_RequestRedraw((NEUIK_Element)te);
+				evCaptured = 1;
 			}
 
 			if (!doContinue) goto out;
