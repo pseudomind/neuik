@@ -35,6 +35,28 @@ int
 			...);
 
 int 
+	NEUIK_Element_SetBackgroundColorGradient(
+			NEUIK_Element   elem,
+			const char    * styleName,
+			char            direction,
+			const char    * colorStop0,
+			...);
+
+int
+	NEUIK_Element_SetBackgroundColorSolid(
+			NEUIK_Element   elem,
+			const char    * styleName,
+			unsigned char   r,
+			unsigned char   g,
+			unsigned char   b,
+			unsigned char   a);
+
+int
+	NEUIK_Element_SetBackgroundColorTransparent(
+			NEUIK_Element   elem,
+			const char    * styleName);
+
+int
 	NEUIK_Element_SetCallback(
 			NEUIK_Element    elem, 
 			const char     * cbName, 

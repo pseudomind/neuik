@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <signal.h>
 
+#include "NEUIK_colors.h"
 #include "NEUIK_error.h"
 #include "NEUIK_structs_basic.h"
 #include "NEUIK_Event.h"
@@ -54,6 +55,18 @@ neuik_Class_BaseFuncs  neuik_Element_BaseFuncs = {
 	neuik_Object_Free__Element,
 };
 
+NEUIK_ElementBackground neuik_default_ElementBackground = {
+	NEUIK_BGSTYLE_SOLID, /* style to use when element is unselected */
+	NEUIK_BGSTYLE_SOLID, /* style to use when element is selected */
+	NEUIK_BGSTYLE_SOLID, /* style to use when element is hovered */
+	COLOR_LLGRAY,        /* solid color to use under normal condtions */
+	COLOR_LLGRAY,        /* solid color to use when selected */
+	COLOR_LLGRAY,        /* solid color to use being hovered over */
+	'v',                 /* direction to use for the gradient (`v` or `h`) */
+	NULL,                /* color gradient to use under normal condtions */
+	NULL,                /* color gradient to use when selected */
+	NULL,                /* color gradient to use being hovered over */
+};
 
 NEUIK_ElementConfig neuik_default_ElementConfig = {
 	 1.0,                  /* Scale Factor : 0 = Doesn't stretch; other value does */
@@ -74,20 +87,21 @@ NEUIK_ElementConfig neuik_default_ElementConfig = {
 };
 
 NEUIK_ElementState neuik_default_ElementState = {
-	1,        /* Element needs to be redrawn */
-	0,        /* Element does not have Window focus */
-	0,        /* Element does not require an alpha blending */
-	0,        /* Element is not active by default */
-	NULL,     /* (NEUIK_Window *) containing window */
-	NULL,     /* (NEUIK_Element)  parent element */
-	NULL,     /* (NEUIK_Element)  popup element */
-	NULL,     /* (SDL_Texture *)  rendered texture */
-	NULL,     /* (SDL_Surface *)  surface for this element */
-	NULL,     /* (SDL_Renderer *) renderer for this surface */
-	NULL,     /* (SDL_Renderer *) last used extRenderer */
-	{0, 0},   /* render size */
-	{-1, -1}, /* old render size */
-	{0, 0},   /* render loc  */
+	1,                       /* Element needs to be redrawn */
+	0,                       /* Element does not have Window focus */
+	0,                       /* Element does not require an alpha blending */
+	0,                       /* Element is not active by default */
+	NEUIK_FOCUSSTATE_NORMAL, /* Element is unselected */
+	NULL,                    /* (NEUIK_Window *) containing window */
+	NULL,                    /* (NEUIK_Element)  parent element */
+	NULL,                    /* (NEUIK_Element)  popup element */
+	NULL,                    /* (SDL_Texture *)  rendered texture */
+	NULL,                    /* (SDL_Surface *)  surface for this element */
+	NULL,                    /* (SDL_Renderer *) renderer for this surface */
+	NULL,                    /* (SDL_Renderer *) last used extRenderer */
+	{0, 0},                  /* render size */
+	{-1, -1},                /* old render size */
+	{0, 0},                  /* render loc  */
 };
 
 
@@ -193,6 +207,7 @@ int neuik_Object_New__Element(
 	elem->eFT  = NULL; 
 	elem->eCfg = neuik_default_ElementConfig;
 	elem->eSt  = neuik_default_ElementState;
+	elem->eBg  = neuik_default_ElementBackground;
 	elem->eCT  = NEUIK_NewCallbackTable();
 out:
 	if (eNum > 0)
@@ -840,6 +855,431 @@ void neuik_Element_StoreSizeAndLocation(
 
 /*******************************************************************************
  *
+ *  Name:          NEUIK_Element_SetBackgroundColorGradient
+ *
+ *  Description:   Set the specified background style to a color gradient.
+ *
+ *  Returns:       Non-zero if error, 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Element_SetBackgroundColorGradient(
+	NEUIK_Element   elem,
+	const char    * styleName,
+	char            direction,
+	const char    * colorStop0,
+	...)
+{
+	int                   ns; /* number of items from sscanf */
+	int                   ctr;
+	int                   eNum       = 0;
+	int                   nStops     = 1;
+	NEUIK_Color           clr;
+	float                 frac;
+	char                  buf[4096];
+	va_list               args;
+	NEUIK_ElementBase   * eBase      = NULL;
+	NEUIK_ColorStop   *** cstops     = NULL; /* pointer to the active colorstops */
+	NEUIK_ColorStop     * cs;
+	const char          * cs_str     = NULL;
+	static char           funcName[] = "NEUIK_Element_SetBackgroundColorGradient";
+	static char         * errMsgs[]  = {"",                               // [ 0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.",  // [ 1]
+		"Argument `styleName` is NULL.",                                  // [ 2]
+		"Argument `styleName` is blank.",                                 // [ 3]
+		"Argument `styleName` has unexpected value.",                     // [ 4]
+		"Failure in function `neuik_Element_RequestRedraw`.",             // [ 5]
+		"Argument `direction` has unexpected value.",                     // [ 6]
+		"`colorStop` string is too long.",                                // [ 7]
+		"`colorStop` string invalid; should be comma separated RGBAF.",   // [ 8]
+		"`colorStop` string invalid; RGBA value range is 0-255."          // [ 9]
+		"`colorStop` string invalid; fraction value range is 0.0-1.0."    // [10]
+		"Failed to allocate memory.",                                     // [11]
+		"Failed to reallocate memory.",                                   // [12]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Read in the styleName and set the pointer to the appropriate style     */
+	/*------------------------------------------------------------------------*/
+	if (styleName == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	else if (styleName[0] == 0)
+	{
+		eNum = 3;
+		goto out;
+	}
+	else if (!strcmp("normal", styleName))
+	{
+		eBase->eBg.bgstyle_normal = NEUIK_BGSTYLE_GRADIENT;
+		cstops = &(eBase->eBg.gradient_normal);
+	}
+	else if (!strcmp("selected", styleName))
+	{
+		eBase->eBg.bgstyle_selected = NEUIK_BGSTYLE_GRADIENT;
+		cstops = &(eBase->eBg.gradient_selected);
+	}
+	else if (!strcmp("hovered", styleName))
+	{
+		eBase->eBg.bgstyle_hover = NEUIK_BGSTYLE_GRADIENT;
+		cstops = &(eBase->eBg.gradient_hover);
+	}
+	else
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Free and NULL out the currently allocated ColorStops (if allocated).   */
+	/*------------------------------------------------------------------------*/
+	if (*cstops != NULL)
+	{
+		for (ctr = 0;; ctr++)
+		{
+			if ((*cstops)[ctr] == NULL)
+			{
+				break;
+			}
+			free((*cstops)[ctr]);
+		}
+		free(*cstops);
+		(*cstops) = NULL;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set the gradient direction.                                            */
+	/*------------------------------------------------------------------------*/
+	switch (direction)
+	{
+		case 'h':
+		case 'v':
+			eBase->eBg.gradient_dirn = direction;
+			break;
+		default:
+			/* Unsupported gradient direction */
+			eNum = 6;
+			goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Iterate over the list of colorstops.                                   */
+	/*------------------------------------------------------------------------*/
+	cs_str = colorStop0;
+
+	va_start(args, colorStop0);
+
+	for (ctr = 0;; ctr++)
+	{
+		if (cs_str == NULL)
+		{
+			(*cstops)[ctr] = NULL;
+			break;
+		}
+
+		// #ifndef NO_NEUIK_SIGNAL_TRAPPING
+		// 	signal(SIGSEGV, neuik_Element_Configure_capture_segv);
+		// #endif
+
+		if (strlen(cs_str) > 4095)
+		{
+			// #ifndef NO_NEUIK_SIGNAL_TRAPPING
+			// 	signal(SIGSEGV, NULL);
+			// #endif
+			eNum = 7;
+			goto out;
+		}
+		// #ifndef NO_NEUIK_SIGNAL_TRAPPING
+		// 	signal(SIGSEGV, NULL);
+		// #endif
+		strcpy(buf, cs_str);
+		/*--------------------------------------------------------------------*/
+		/* Check for empty value errors.                                      */
+		/*--------------------------------------------------------------------*/
+		if (buf[0] == '\0')
+		{
+			NEUIK_RaiseError(funcName, errMsgs[8]);
+			continue;
+		}
+
+		ns = sscanf(buf, "%d,%d,%d,%d,%f", &clr.r, &clr.g, &clr.b, &clr.a, &frac);
+		/*--------------------------------------------------------------------*/
+		/* Check for EOF, incorrect # of values, & out of range vals.         */
+		/*--------------------------------------------------------------------*/
+		if (ns == EOF || ns < 5)
+		{
+			NEUIK_RaiseError(funcName, errMsgs[8]);
+			continue;
+		}
+		if (clr.r < 0 || clr.r > 255 ||
+			clr.g < 0 || clr.g > 255 ||
+			clr.b < 0 || clr.b > 255 ||
+			clr.a < 0 || clr.a > 255)
+		{
+			NEUIK_RaiseError(funcName, errMsgs[9]);
+			continue;
+		}
+		if (frac < 0.0 || frac > 1.0)
+		{
+			NEUIK_RaiseError(funcName, errMsgs[10]);
+			continue;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Allocate/Reallocate memory for the colorStop array                 */
+		/*--------------------------------------------------------------------*/
+		if (*cstops != NULL)
+		{
+			/*----------------------------------------------------------------*/
+			/* Reallocate memory for the colorStop array                      */
+			/*----------------------------------------------------------------*/
+			(*cstops) = (NEUIK_ColorStop **)realloc((*cstops),
+				(nStops + 1)*sizeof(NEUIK_ColorStop*));
+			if ((*cstops) == NULL)
+			{
+				eNum = 12;
+				goto out;
+			}
+		}
+		else
+		{
+			/*----------------------------------------------------------------*/
+			/* Allocate memory for the colorStop array                        */
+			/*----------------------------------------------------------------*/
+			(*cstops) = (NEUIK_ColorStop **)malloc(2*sizeof(NEUIK_ColorStop*));
+			if ((*cstops) == NULL)
+			{
+				eNum = 11;
+				goto out;
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Allocate memory for this new colorStop                             */
+		/*--------------------------------------------------------------------*/
+		(*cstops)[nStops - 1] = (NEUIK_ColorStop *)malloc(sizeof(NEUIK_ColorStop));
+		cs = (*cstops)[nStops - 1];
+		if (cs == NULL)
+		{
+			eNum = 11;
+			goto out;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Set the value of the new ColorStop                                 */
+		/*--------------------------------------------------------------------*/
+		cs->color.r = clr.r;
+		cs->color.g = clr.g;
+		cs->color.b = clr.b;
+		cs->color.a = clr.a;
+		cs->frac    = frac;
+
+		/* before starting */
+		cs_str = va_arg(args, const char *);
+		nStops++;
+	}
+	va_end(args);
+
+	if (neuik_Element_RequestRedraw(elem))
+	{
+		eNum = 5;
+		goto out;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Element_SetBackgroundColorSolid
+ *
+ *  Description:   Set the specified background style to a solid color.
+ *
+ *  Returns:       Non-zero if error, 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Element_SetBackgroundColorSolid(
+	NEUIK_Element   elem,
+	const char    * styleName,
+	unsigned char   r,
+	unsigned char   g,
+	unsigned char   b,
+	unsigned char   a)
+{
+	int                 eNum       = 0;
+	NEUIK_ElementBase * eBase      = NULL;
+	NEUIK_Color       * aClr       = NULL;
+	static char         funcName[] = "NEUIK_Element_SetBackgroundColorSolid";
+	static char       * errMsgs[]  = {"",                               // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Argument `styleName` is NULL.",                                 // [2]
+		"Argument `styleName` is blank.",                                // [3]
+		"Argument `styleName` has unexpected value.",                    // [4]
+		"Failure in function `neuik_Element_RequestRedraw`.",            // [5]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (styleName == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	else if (styleName[0] == 0)
+	{
+		eNum = 3;
+		goto out;
+	}
+	else if (!strcmp("normal", styleName))
+	{
+		eBase->eBg.bgstyle_normal = NEUIK_BGSTYLE_SOLID;
+		aClr = &(eBase->eBg.solid_normal);
+	}
+	else if (!strcmp("selected", styleName))
+	{
+		eBase->eBg.bgstyle_selected = NEUIK_BGSTYLE_SOLID;
+		aClr = &(eBase->eBg.solid_selected);
+	}
+	else if (!strcmp("hovered", styleName))
+	{
+		eBase->eBg.bgstyle_hover = NEUIK_BGSTYLE_SOLID;
+		aClr = &(eBase->eBg.solid_hover);
+	}
+	else
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	aClr->r = r;
+	aClr->g = g;
+	aClr->b = b;
+	aClr->a = a;
+	if (neuik_Element_RequestRedraw(elem))
+	{
+		eNum = 5;
+		goto out;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Element_SetBackgroundColorTransparent
+ *
+ *  Description:   Set the specified background style to transparent.
+ *
+ *  Returns:       Non-zero if error, 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Element_SetBackgroundColorTransparent(
+	NEUIK_Element   elem,
+	const char    * styleName)
+{
+	int                 eNum       = 0;
+	NEUIK_ElementBase * eBase      = NULL;
+	static char         funcName[] = "NEUIK_Element_SetBackgroundColorTransparent";
+	static char       * errMsgs[]  = {"",                                // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Argument `styleName` is NULL.",                                 // [2]
+		"Argument `styleName` is blank.",                                // [3]
+		"Argument `styleName` has unexpected value.",                    // [4]
+		"Failure in function `neuik_Element_RequestRedraw`.",            // [5]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (styleName == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	else if (styleName[0] == 0)
+	{
+		eNum = 3;
+		goto out;
+	}
+	else if (!strcmp("normal", styleName))
+	{
+		if (eBase->eBg.bgstyle_normal != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			eBase->eBg.bgstyle_normal = NEUIK_BGSTYLE_TRANSPARENT;
+			if (neuik_Element_RequestRedraw(elem))
+			{
+				eNum = 5;
+				goto out;
+			}
+		}
+	}
+	else if (!strcmp("selected", styleName))
+	{
+		if (eBase->eBg.bgstyle_selected != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			eBase->eBg.bgstyle_selected = NEUIK_BGSTYLE_TRANSPARENT;
+			if (neuik_Element_RequestRedraw(elem))
+			{
+				eNum = 5;
+				goto out;
+			}
+		}
+	}
+	else if (!strcmp("hovered", styleName))
+	{
+		if (eBase->eBg.bgstyle_hover != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			eBase->eBg.bgstyle_hover = NEUIK_BGSTYLE_TRANSPARENT;
+			if (neuik_Element_RequestRedraw(elem))
+			{
+				eNum = 5;
+				goto out;
+			}
+		}
+	}
+	else
+	{
+		eNum = 4;
+		goto out;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
  *  Name:          NEUIK_Element_SetCallback
  *
  *  Description:   Set the function and arguments for the named callback event.
@@ -847,7 +1287,7 @@ void neuik_Element_StoreSizeAndLocation(
  *  Returns:       Non-zero if error, 0 otherwise.
  *
  ******************************************************************************/
-int  NEUIK_Element_SetCallback(
+int NEUIK_Element_SetCallback(
 	NEUIK_Element    elem,    /* the element to se the callback for */
 	const char     * cbName,  /* the name of the callback to set */
 	void           * cbFunc,  /* the function to use for the callback */
@@ -1393,6 +1833,340 @@ int neuik_Element_NeedsRedraw(
 	}
 
 	return 	eBase->eSt.doRedraw;
+}
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_RedrawBackgroundGradient
+ *
+ *  Description:   Renders a color gradient using the specified ColorStops.
+ *
+ *                 Vertical gradients start at the top and go down from there.
+ *                 Horizontal gradients start at the left and go right from there.
+ *
+ *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
+ *
+ ******************************************************************************/
+int neuik_Element_RedrawBackgroundGradient(
+	NEUIK_Element      elem,
+	NEUIK_ColorStop ** cs)
+{
+	int                 ctr;
+	int                 gCtr;             /* gradient counter */
+	int                 nClrs;
+	int                 eNum      = 0;    /* which error to report (if any) */
+	int                 clrR;
+	int                 clrG;
+	int                 clrB;
+	int                 clrA;
+	int                 clrFound;
+	char                dirn;            /* Direction of the gradient 'v' or 'h' */
+	float               lastFrac  = -1.0;
+	float               frac;
+	float               fracDelta;        /* fraction between ColorStop 1 & 2 */
+	float               fracStart = 0.0;  /* fraction at ColorStop 1 */
+	float               fracEnd   = 1.0;  /* fraction at ColorStop 2 */
+	RenderSize          rSize;            /* Size of the element background to fill */
+	NEUIK_ElementBase * eBase     = NULL;
+	SDL_Renderer      * rend      = NULL;
+	SDL_Surface       * surf      = NULL;
+	SDL_Texture       * rvTex     = NULL;
+	colorDeltas       * deltaPP   = NULL;
+	colorDeltas       * clrDelta;
+	NEUIK_Color       * clr;
+	static char         funcName[] = "neuik_Element_RedawBackgroundGradient";
+	static char       * errMsgs[] = {"",                                 // [0] no error
+		"Pointer to ColorStops is NULL.",                                // [1]
+		"Unsupported gradient direction.",                               // [2]
+		"Invalid RenderSize supplied.",                                  // [3]
+		"Unable to create RGB surface.",                                 // [4]
+		"SDL_CreateTextureFromSurface failed.",                          // [5]
+		"ColorStops array is empty.",                                    // [6]
+		"Invalid ColorStop fraction (<0 or >1).",                        // [7]
+		"ColorStops array fractions not in ascending order.",            // [8]
+		"Failure to allocate memory.",                                   // [9]
+		"Failed to create software renderer.",                           // [10]
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [11]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 11;
+		goto out;
+	}
+
+	rSize.w = eBase->eSt.rSize.w;
+	rSize.h = eBase->eSt.rSize.h;
+
+	rend = eBase->eSt.rend;
+	dirn = eBase->eBg.gradient_dirn;
+
+	/*------------------------------------------------------------------------*/
+	/* Check for easily issues before attempting to render the gradient       */
+	/*------------------------------------------------------------------------*/
+	if (cs == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+	else if (*cs == NULL)
+	{
+		eNum = 6;
+		goto out;
+	}
+	if (dirn != 'v' && dirn != 'h')
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (rSize.w <= 0 || rSize.h <= 0)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Count the number of color stops and check that the color stop          */
+	/* fractions are in increasing order                                      */
+	/*------------------------------------------------------------------------*/
+	for (nClrs = 0;; nClrs++)
+	{
+		if (cs[nClrs] == NULL) break; /* this is the number of ColorStops */
+		if (cs[nClrs]->frac < 0.0 || cs[nClrs]->frac > 1.0)
+		{
+			printf("cs[%d]->frac = %f\n", nClrs, cs[nClrs]->frac);
+			eNum = 7;
+			goto out;
+		}
+		else if (cs[nClrs]->frac < lastFrac)
+		{
+			eNum = 8;
+			goto out;
+		}
+		else
+		{
+			lastFrac = cs[nClrs]->frac;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory for delta-per-px array and calculate the ColorStop     */
+	/* delta-per-px values.                                                   */
+	/*------------------------------------------------------------------------*/
+	if (nClrs > 1)
+	{
+		deltaPP = (colorDeltas *)malloc((nClrs - 1)*sizeof(colorDeltas));
+		if (deltaPP == NULL)
+		{
+			eNum = 9;
+			goto out;
+		}
+		for (ctr = 0; ctr < nClrs-1; ctr++)
+		{
+			deltaPP[ctr].r = (cs[ctr+1]->color).r - (cs[ctr]->color).r;
+			deltaPP[ctr].g = (cs[ctr+1]->color).g - (cs[ctr]->color).g;
+			deltaPP[ctr].b = (cs[ctr+1]->color).b - (cs[ctr]->color).b;
+			deltaPP[ctr].a = (cs[ctr+1]->color).a - (cs[ctr]->color).a;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Fill in the colors of the gradient                                     */
+	/*------------------------------------------------------------------------*/
+	if (nClrs == 1)
+	{
+		/*--------------------------------------------------------------------*/
+		/* A single color; this will just be a filled rectangle               */
+		/*--------------------------------------------------------------------*/
+		clr = &(cs[0]->color);
+		SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, clr->a);
+		SDL_RenderClear(rend);
+	}
+	else if (dirn == 'v')
+	{
+		/*--------------------------------------------------------------------*/
+		/* Draw a vertical gradient                                           */
+		/*--------------------------------------------------------------------*/
+		for (gCtr = 0; gCtr < rSize.h; gCtr++)
+		{
+			/* calculate the fractional position within the gradient */
+			frac = (float)(gCtr+1)/(float)(rSize.h);
+
+
+			/* determine which ColorStops/colorDeltas should be used */
+			fracStart = cs[0]->frac;
+			clr       = &(cs[0]->color);
+			clrDelta  = NULL;
+			clrFound  = 0;
+			for (ctr = 0;;ctr++)
+			{
+				if (cs[ctr] == NULL) break;
+
+				if (frac < cs[ctr]->frac)
+				{
+					/* apply delta from this clr */
+					fracEnd  = cs[ctr]->frac;
+					clrFound = 1;
+					break;
+				}
+
+				clr      = &(cs[ctr]->color);
+				clrDelta = &(deltaPP[ctr]);
+			}
+
+			if (!clrFound)
+			{
+				/* line is beyond the final ColorStop; use that color */
+				clrDelta = NULL;
+			}
+
+			/* calculate and set the color for this gradient line */
+			if (clrDelta != NULL)
+			{
+				/* between two ColorStops, blend the color */
+				fracDelta = (frac - fracStart)/(fracEnd - fracStart);
+				clrR = clr->r + (int)((clrDelta->r)*fracDelta);
+				clrG = clr->g + (int)((clrDelta->g)*fracDelta);
+				clrB = clr->b + (int)((clrDelta->b)*fracDelta);
+				clrA = clr->a + (int)((clrDelta->a)*fracDelta);
+				SDL_SetRenderDrawColor(rend, clrR, clrG, clrB, clrA);
+			}
+			else
+			{
+				/* not between two ColorStops, use a single color */
+				SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, clr->a);
+			}
+
+			SDL_RenderDrawLine(rend, 0, gCtr, rSize.w - 1, gCtr);
+		}
+	}
+	else if (dirn == 'h')
+	{
+		/*--------------------------------------------------------------------*/
+		/* Draw a horizontal gradient                                         */
+		/*--------------------------------------------------------------------*/
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	if (deltaPP != NULL) free(deltaPP);
+
+	return eNum;
+}
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_RedrawBackground
+ *
+ *  Description:   Redraw the element background to the stored renderer.
+ *
+ *  Returns:       Non-zero if error, 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Element_RedrawBackground(
+	NEUIK_Element elem)
+{
+	NEUIK_ElementBase    * eBase          = NULL;
+	SDL_Renderer         * rend           = NULL;
+	enum neuik_bgstyle     bgstyle;               /* active background style */
+	NEUIK_Color          * color_solid    = NULL; /* pointer to active solid color */
+	NEUIK_ColorStop    *** color_gradient = NULL; /* color gradient to use under normal condtions */
+	RenderSize             rSize;                 /* Size of the element background to fill */
+	static char            funcName[] = "neuik_Element_RedrawBackground";
+	static char            errMsg[]   =
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.";
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		NEUIK_RaiseError(funcName, errMsg);
+		return 1;
+	}
+
+	rSize.w = eBase->eSt.rSize.w;
+	rSize.h = eBase->eSt.rSize.h;
+
+	rend = eBase->eSt.rend;
+
+	/*------------------------------------------------------------------------*/
+	/* Identify both the background style to use as well as the color(s) to   */
+	/* use to render the background.                                          */
+	/*------------------------------------------------------------------------*/
+	switch (eBase->eSt.focusstate)
+	{
+		case NEUIK_FOCUSSTATE_NORMAL:
+			bgstyle = eBase->eBg.bgstyle_normal;
+			switch (bgstyle)
+			{
+				case NEUIK_BGSTYLE_SOLID:
+					color_solid = &(eBase->eBg.solid_normal);
+					break;
+				case NEUIK_BGSTYLE_GRADIENT:
+					color_gradient = &(eBase->eBg.gradient_normal);
+					break;
+				case NEUIK_BGSTYLE_TRANSPARENT:
+					break;
+			}
+			break;
+		case NEUIK_FOCUSSTATE_SELECTED:
+			bgstyle = eBase->eBg.bgstyle_selected;
+			switch (bgstyle)
+			{
+				case NEUIK_BGSTYLE_SOLID:
+					color_solid = &(eBase->eBg.solid_selected);
+					break;
+				case NEUIK_BGSTYLE_GRADIENT:
+					color_gradient = &(eBase->eBg.gradient_selected);
+					break;
+				case NEUIK_BGSTYLE_TRANSPARENT:
+					break;
+			}
+			break;
+		case NEUIK_FOCUSSTATE_HOVERED:
+			bgstyle = eBase->eBg.bgstyle_hover;
+			switch (bgstyle)
+			{
+				case NEUIK_BGSTYLE_SOLID:
+					color_solid = &(eBase->eBg.solid_hover);
+					break;
+				case NEUIK_BGSTYLE_GRADIENT:
+					color_gradient = &(eBase->eBg.gradient_hover);
+					break;
+				case NEUIK_BGSTYLE_TRANSPARENT:
+					break;
+			}
+			break;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Render the background.                                                 */
+	/*------------------------------------------------------------------------*/
+	switch (bgstyle)
+	{
+		case NEUIK_BGSTYLE_SOLID:
+			/*----------------------------------------------------------------*/
+			/* Fill the entire surface background with a solid color.         */
+			/*----------------------------------------------------------------*/
+			SDL_SetRenderDrawColor(rend,
+				color_solid->r, color_solid->g, color_solid->b, color_solid->a);
+			SDL_RenderClear(rend);
+			break;
+		case NEUIK_BGSTYLE_GRADIENT:
+			neuik_Element_RedrawBackgroundGradient(elem, *color_gradient);
+			break;
+		case NEUIK_BGSTYLE_TRANSPARENT:
+			/*----------------------------------------------------------------*/
+			/* Fill the entire surface background with a transparent color.   */
+			/*----------------------------------------------------------------*/
+			SDL_SetRenderDrawColor(rend, 255, 255, 255, 0);
+			SDL_RenderClear(rend);
+			break;
+	}
+
+	/* No errors*/
+	return 0;
 }
 
 

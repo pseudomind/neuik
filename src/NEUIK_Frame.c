@@ -421,6 +421,7 @@ SDL_Texture * neuik_Element_Render__Frame(
 		"Element_GetConfig returned NULL.",                               // [6]
 		"neuik_Element_Render returned NULL.",                            // [7]
 		"SDL_CreateTextureFromSurface returned NULL.",                    // [8]
+		"Failure in neuik_Element_RedrawBackground().",                   // [9]
 	};
 
 	if (!neuik_Object_IsClass(fElem, neuik__Class_Frame))
@@ -492,10 +493,13 @@ SDL_Texture * neuik_Element_Render__Frame(
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the entire surface background with a transparent color            */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	SDL_SetRenderDrawColor(rend, 255, 255, 255, 0);
-	SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(fElem))
+	{
+		eNum = 9;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the border of the frame.                                          */

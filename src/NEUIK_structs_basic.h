@@ -67,6 +67,7 @@ typedef struct {
 	float r;
 	float g;
 	float b;
+	float a;
 } colorDeltas;
 
 #endif /* NEUIK_STRUCTS_BASIC_H */
