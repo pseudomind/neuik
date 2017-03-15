@@ -1065,7 +1065,7 @@ SDL_Texture * neuik_Element_Render__Button(
 
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the background with it's color                                    */
+	/* Select the correct foreground color                                    */
 	/*------------------------------------------------------------------------*/
 	fgClr = &(aCfg->fgColor); /* use the unselected colors */
 	if (btn->selected)

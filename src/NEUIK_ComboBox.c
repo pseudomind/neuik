@@ -137,13 +137,14 @@ int neuik_Object_New__ComboBox(
 	NEUIK_ComboBox * cb        = NULL;
 	NEUIK_Element  * sClassPtr  = NULL;
 	static char     funcName[] = "neuik_Object_New__ComboBox";
-	static char    * errMsgs[]  = {"",                        // [0] no error
-		"Failure to allocate memory.",                       // [1]
-		"Failure in NEUIK_NewComboBoxConfig.",                 // [2]
-		"Output Argument `cbPtr` is NULL.",                 // [3]
-		"Failure in function `neuik_Object_New`.",           // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.", // [5]
-		"Failure in `neuik_GetObjectBaseOfClass`.",          // [6]
+	static char    * errMsgs[]  = {"",                            // [0] no error
+		"Failure to allocate memory.",                            // [1]
+		"Failure in NEUIK_NewComboBoxConfig.",                    // [2]
+		"Output Argument `cbPtr` is NULL.",                       // [3]
+		"Failure in function `neuik_Object_New`.",                // [4]
+		"Failure in function `neuik_Element_SetFuncTable`.",      // [5]
+		"Failure in `neuik_GetObjectBaseOfClass`.",               // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorGradient`.", // [7]
 	};
 
 	if (cbPtr == NULL)
@@ -202,6 +203,33 @@ int neuik_Object_New__ComboBox(
 	if (NEUIK_NewComboBoxConfig(&cb->cfg))
 	{
 		eNum = 2;
+		goto out;
+	}
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorGradient(cb, "normal", 'v',
+		"220,220,220,255,0.0",
+		"200,200,200,255,1.0",
+		NULL))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorGradient(cb, "selected", 'v',
+		"120,120,120,255,0.0",
+		"165,165,165,255,1.0",
+		NULL))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorGradient(cb, "hovered", 'v',
+		"220,220,220,255,0.0",
+		"200,200,200,255,1.0",
+		NULL))
+	{
+		eNum = 7;
 		goto out;
 	}
 out:
@@ -577,52 +605,33 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
 	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
 {
-	int                   ctr;
-	int                   gCtr;             /* gradient counter */
-	int                   nClrs;
-	int                   clrR;
-	int                   clrG;
-	int                   clrB;
-	int                   clrFound;
-	int                   eNum       = 0;    /* which error to report (if any) */
-	int                   textW      = 0;
-	int                   textH      = 0;
-	float                 lastFrac   = -1.0;
-	float                 frac;
-	float                 fracDelta;         /* fraction between ColorStop 1 & 2 */
-	float                 fracStart  = 0.0;  /* fraction at ColorStop 1 */
-	float                 fracEnd    = 1.0;  /* fraction at ColorStop 2 */
-	SDL_Rect              rect;
-	SDL_Surface         * surf       = NULL;
-	SDL_Renderer        * rend       = NULL;
-	SDL_Texture         * tTex       = NULL; /* text texture */
-	SDL_Texture         * aTex       = NULL; /* arrow texture */
-	TTF_Font            * font       = NULL;
-	const NEUIK_Color   * fgClr      = NULL;
-	const NEUIK_Color   * bClr       = NULL; /* border color */
-	static SDL_Color      tClr       = COLOR_TRANSP;
-	NEUIK_ComboBoxConfig  * aCfg       = NULL; /* the active comboBox config */
-	NEUIK_ComboBox        * cb        = NULL;
-	NEUIK_ElementBase   * eBase      = NULL;
-	colorDeltas         * deltaPP    = NULL;
-	colorDeltas         * clrDelta;
-	RenderSize            shadeSize;
-	RenderSize            arrowSize;
-	NEUIK_Color         * clr;
-	NEUIK_ColorStop    ** cs;
-	static char           funcName[] = "neuik_Element_Render__ComboBox";
-	static char         * errMsgs[] = {"",                               // [ 0] no error
-		"Argument `elem` is not of ComboBox class.",                     // [ 1]
-		"Failure in Element_Resize().",                                  // [ 2]
-		"Invalid ColorStop fraction (<0 or >1).",                        // [ 3]
-		"FontSet_GetFont returned NULL.",                                // [ 4]
-		"SDL_CreateTextureFromSurface returned NULL.",                   // [ 5]
-		"RenderText returned NULL.",                                     // [ 6]
-		"Invalid specified `rSize` (negative values).",                  // [ 7]
-		"ColorStops array fractions not in ascending order.",            // [ 8]
-		"Failure to allocate memory.",                                   // [ 9]
-		"ColorStops array is empty.",                                    // [10]
-		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [11]
+	int                    eNum       = 0;    /* which error to report (if any) */
+	int                    textW      = 0;
+	int                    textH      = 0;
+	SDL_Rect               rect;
+	SDL_Surface          * surf       = NULL;
+	SDL_Renderer         * rend       = NULL;
+	SDL_Texture          * tTex       = NULL; /* text texture */
+	SDL_Texture          * aTex       = NULL; /* arrow texture */
+	TTF_Font             * font       = NULL;
+	const NEUIK_Color    * fgClr      = NULL;
+	const NEUIK_Color    * bClr       = NULL; /* border color */
+	static SDL_Color       tClr       = COLOR_TRANSP;
+	NEUIK_ComboBoxConfig * aCfg       = NULL; /* the active comboBox config */
+	NEUIK_ComboBox       * cb         = NULL;
+	NEUIK_ElementBase    * eBase      = NULL;
+	colorDeltas          * deltaPP    = NULL;
+	RenderSize             arrowSize;
+	static char            funcName[] = "neuik_Element_Render__ComboBox";
+	static char          * errMsgs[]  = {"",                             // [0] no error
+		"Argument `elem` is not of ComboBox class.",                     // [1]
+		"Failure in Element_Resize().",                                  // [2]
+		"FontSet_GetFont returned NULL.",                                // [3]
+		"SDL_CreateTextureFromSurface returned NULL.",                   // [4]
+		"RenderText returned NULL.",                                     // [5]
+		"Invalid specified `rSize` (negative values).",                  // [6]
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [7]
+		"Failure in `neuik_Element_RedrawBackground()`.",                // [8]
 	};
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_ComboBox))
@@ -634,7 +643,7 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 
 	if (neuik_Object_GetClassObject(cb, neuik__Class_Element, (void**)&eBase))
 	{
-		eNum = 11;
+		eNum = 7;
 		goto out;
 	}
 
@@ -654,7 +663,7 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 
 	if (rSize->w < 0 || rSize->h < 0)
 	{
-		eNum = 7;
+		eNum = 6;
 		goto out;
 	}
 
@@ -690,149 +699,22 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the background with it's color                                    */
+	/* Select the correct foreground color                                    */
 	/*------------------------------------------------------------------------*/
+	fgClr = &(aCfg->fgColor); /* use the unselected colors */
 	if (cb->selected)
 	{
+		/* use the selected colors */
 		fgClr = &(aCfg->fgColorSelect);
-		cs    = aCfg->gradCSSelect;
 	}
-	else
-	{
-		/* use the unselected colors */
-		fgClr = &(aCfg->fgColor);
-		cs    = aCfg->gradCS;
-	}
-	// SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
-	// SDL_RenderClear(rend);
-
-	shadeSize.w = rSize->w - 2;
-	shadeSize.h = rSize->h - 1;
-
-	/*--------------------------------------------------------------------*/
-	/* TODO: when the opportunity presents itself, the rest of the code   */
-	/* in this block should be replaced by a fixed call to RenderGradient */
-	/* however for now, I will leave duplicate code here since it works.  */
-	/*--------------------------------------------------------------------*/
-
-	// gTex = NEUIK_RenderGradient(aCfg->gradCS, 'v', rend, shadeSize);
-	// if (gTex == NULL)
-	// {
-	// 	eNum = 3;
-	// 	goto out;
-	// }
-
-	// SDL_QueryTexture(gTex, &testUint32, &access, &testW, &testH);
-
-	// srcRect.x = 0;
-	// srcRect.y = 0;
-	// srcRect.w = rect.w;
-	// srcRect.h = rect.h;
-	// SDL_RenderCopy(rend, gTex, NULL, &rect);
-	// // SDL_RenderCopy(rend, gTex, &srcRect, &rect);
-	// //SDL_RenderCopy(rend, gTex, NULL, NULL);
 
 	/*------------------------------------------------------------------------*/
-	/* Count the number of color stops and check that the color stop          */
-	/* fractions are in increasing order                                      */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	for (nClrs = 0;; nClrs++)
+	if (neuik_Element_RedrawBackground(elem))
 	{
-		if (cs[nClrs] == NULL) break; /* this is the number of ColorStops */
-		if (cs[nClrs]->frac < 0.0 || cs[nClrs]->frac > 1.0)
-		{
-			eNum = 3;
-			goto out;
-		}
-		else if (cs[nClrs]->frac < lastFrac)
-		{
-			eNum = 8;
-			goto out;
-		}
-		else
-		{
-			lastFrac = cs[nClrs]->frac;
-		}
-	}
-	if (nClrs == 0)
-	{
-		eNum = 10;
+		eNum = 8;
 		goto out;
-	}
-
-	/*------------------------------------------------------------------------*/
-	/* Allocate memory for delta-per-px array and calculate the ColorStop     */
-	/* delta-per-px values.                                                   */
-	/*------------------------------------------------------------------------*/
-	if (nClrs > 1)
-	{
-		deltaPP = (colorDeltas *)malloc((nClrs - 1)*sizeof(colorDeltas));
-		if (deltaPP == NULL)
-		{
-			eNum = 9;
-			goto out;
-		}
-		for (ctr = 0; ctr < nClrs-1; ctr++)
-		{
-			deltaPP[ctr].r = (cs[ctr+1]->color).r - (cs[ctr]->color).r;
-			deltaPP[ctr].g = (cs[ctr+1]->color).g - (cs[ctr]->color).g;
-			deltaPP[ctr].b = (cs[ctr+1]->color).b - (cs[ctr]->color).b;
-		}
-	}
-
-	/*--------------------------------------------------------------------*/
-	/* Draw a vertical gradient                                           */
-	/*--------------------------------------------------------------------*/
-	for (gCtr = 1; gCtr < shadeSize.h; gCtr++)
-	{
-		/* calculate the fractional position within the gradient */
-		frac = (float)(gCtr+1)/(float)(shadeSize.h);
-
-
-		/* determine which ColorStops/colorDeltas should be used */
-		fracStart = cs[0]->frac;
-		clr       = &(cs[0]->color);
-		clrDelta  = NULL;
-		clrFound  = 0;
-		for (ctr = 0;;ctr++)
-		{
-			if (cs[ctr] == NULL) break;
-
-			if (frac < cs[ctr]->frac)
-			{
-				/* apply delta from this clr */
-				fracEnd  = cs[ctr]->frac;
-				clrFound = 1;
-				break;
-			}
-
-			clr      = &(cs[ctr]->color);
-			clrDelta = &(deltaPP[ctr]);
-		}
-
-		if (!clrFound)
-		{
-			/* line is beyond the final ColorStop; use that color */
-			clrDelta = NULL;
-		}
-
-		/* calculate and set the color for this gradient line */
-		if (clrDelta != NULL)
-		{
-			/* between two ColorStops, blend the color */
-			fracDelta = (frac - fracStart)/(fracEnd - fracStart);
-			clrR = clr->r + (int)((clrDelta->r)*fracDelta);
-			clrG = clr->g + (int)((clrDelta->g)*fracDelta);
-			clrB = clr->b + (int)((clrDelta->b)*fracDelta);
-			SDL_SetRenderDrawColor(rend, clrR, clrG, clrB, 255);
-		}
-		else
-		{
-			/* not between two ColorStops, use a single color */
-			SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, 255);
-		}
-
-		SDL_RenderDrawLine(rend, 1, gCtr, shadeSize.w, gCtr);
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -840,7 +722,7 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 	/*------------------------------------------------------------------------*/
 	SDL_SetColorKey(surf, SDL_TRUE, 
 		SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-	SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
+	SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 0);
 
 	/* Apply transparent pixels to (round off) the upper-left corner */
 	SDL_RenderDrawPoint(rend, 0, 0);
@@ -932,7 +814,7 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 			aCfg->fontBold, aCfg->fontItalic);
 		if (font == NULL) 
 		{
-			eNum = 4;
+			eNum = 3;
 			goto out;
 
 		}
@@ -940,7 +822,7 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 		tTex = NEUIK_RenderText(cb->aEntry, font, *fgClr, rend, &textW, &textH);
 		if (tTex == NULL)
 		{
-			eNum = 6;
+			eNum = 5;
 			goto out;
 		}
 
@@ -978,7 +860,7 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
 	if (eBase->eSt.texture == NULL)
 	{
-		eNum = 5;
+		eNum = 4;
 		goto out;
 	}
 	eBase->eSt.doRedraw = 0;
@@ -1038,10 +920,11 @@ int neuik_Element_CaptureEvent__ComboBox(
 				mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 			{
 				/* This mouse click originated within this comboBox */
-				cb->clickOrigin = 1;
-				cb->selected    = 1;
-				cb->wasSelected = 1;
-				evCaputred      = 1;
+				cb->clickOrigin       = 1;
+				eBase->eSt.focusstate = NEUIK_FOCUSSTATE_SELECTED;
+				cb->selected          = 1;
+				cb->wasSelected       = 1;
+				evCaputred            = 1;
 				neuik_Window_TakeFocus(eBase->eSt.window, cb);
 				neuik_Element_TriggerCallback(cb, NEUIK_CALLBACK_ON_CLICK);
 				neuik_Element_RequestRedraw(cb);
@@ -1075,10 +958,11 @@ int neuik_Element_CaptureEvent__ComboBox(
 					}
 				}
 			}
-			cb->selected    = 0;
-			cb->wasSelected = 0;
-			cb->clickOrigin = 0;
-			evCaputred       = 1;
+			eBase->eSt.focusstate = NEUIK_FOCUSSTATE_NORMAL;
+			cb->selected          = 0;
+			cb->wasSelected       = 0;
+			cb->clickOrigin       = 0;
+			evCaputred            = 1;
 			neuik_Element_RequestRedraw((NEUIK_Element)cb);
 			goto out;
 		}
@@ -1093,13 +977,15 @@ int neuik_Element_CaptureEvent__ComboBox(
 			/* The mouse was initially clicked within the comboBox. If the    */
 			/* user moves the cursor out of the comboBox area, deselect it.   */
 			/*----------------------------------------------------------------*/
-			cb->selected = 0;
+			eBase->eSt.focusstate = NEUIK_FOCUSSTATE_NORMAL;
+			cb->selected          = 0;
 			if (mouseMotEv->y >= eBase->eSt.rLoc.y && 
 				mouseMotEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 			{
 				if (mouseMotEv->x >= eBase->eSt.rLoc.x && 
 					mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 				{
+					eBase->eSt.focusstate = NEUIK_FOCUSSTATE_SELECTED;
 					cb->selected = 1;
 				}
 			}
