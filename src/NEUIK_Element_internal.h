@@ -160,6 +160,10 @@ SDL_Texture *
 	 		RenderSize     * rSize, 
 	 		SDL_Renderer   * xRend);
 
+int
+	neuik_Element_RedrawBackground(
+			NEUIK_Element elem);
+
 int 
 	neuik_Element_RequestRedraw(
 			NEUIK_Element elem);

@@ -145,6 +145,7 @@ int neuik_Object_New__Frame(
 		"Failure in function `neuik.NewElement`.",                       // [4]
 		"Failure in function `neuik_Element_SetFuncTable`.",             // [5]
 		"Argument `fPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",     // [7]
 	};
 
 	if (fPtr == NULL)
@@ -197,6 +198,25 @@ int neuik_Object_New__Frame(
 	}
 	cont->cType        = NEUIK_CONTAINER_SINGLE;
 	cont->shownIfEmpty = 1;
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(frame, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(frame, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(frame, "hovered"))
+	{
+		eNum = 7;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{

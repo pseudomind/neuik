@@ -1869,8 +1869,6 @@ int neuik_Element_RedrawBackgroundGradient(
 	RenderSize          rSize;            /* Size of the element background to fill */
 	NEUIK_ElementBase * eBase     = NULL;
 	SDL_Renderer      * rend      = NULL;
-	SDL_Surface       * surf      = NULL;
-	SDL_Texture       * rvTex     = NULL;
 	colorDeltas       * deltaPP   = NULL;
 	colorDeltas       * clrDelta;
 	NEUIK_Color       * clr;
