@@ -144,6 +144,7 @@ int neuik_Object_New__FlowGroup(
 		"Failure in function `neuik.NewElement`.",                        // [4]
 		"Failure in function `neuik_Element_SetFuncTable`.",              // [5]
 		"Argument `fgPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",      // [7]
 	};
 
 	if (fgPtr == NULL)
@@ -198,6 +199,25 @@ int neuik_Object_New__FlowGroup(
 	}
 	cont->cType        = NEUIK_CONTAINER_MULTI;
 	cont->shownIfEmpty = 0;
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "hovered"))
+	{
+		eNum = 7;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
@@ -359,6 +379,7 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 		"Failure in `NEUIK_Container_GetElementCount`."                    // [11]
 		"Failed to allocate memory"                                        // [12]
 		"Invalid (negative) number of contained elements.",                // [13]
+		"Failure in neuik_Element_RedrawBackground().",                    // [14]
 	};
 
 	if (!neuik_Object_IsClass(fgElem, neuik__Class_FlowGroup))
@@ -443,10 +464,13 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the entire surface background with a transparent color            */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	SDL_SetRenderDrawColor(rend, 255, 255, 255, 0);
-	SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(fgElem))
+	{
+		eNum = 14;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Calculate the minimum size used by the flow fill preferenes            */

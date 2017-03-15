@@ -144,6 +144,7 @@ int neuik_Object_New__VGroup(
 		"Failure in function `neuik.NewElement`.",                        // [4]
 		"Failure in function `neuik_Element_SetFuncTable`.",              // [5]
 		"Argument `vgPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",      // [7]
 	};
 
 	if (vgPtr == NULL)
@@ -198,6 +199,25 @@ int neuik_Object_New__VGroup(
 	}
 	cont->cType        = NEUIK_CONTAINER_MULTI;
 	cont->shownIfEmpty = 0;
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "hovered"))
+	{
+		eNum = 7;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
@@ -552,6 +572,7 @@ SDL_Texture * neuik_Element_Render__VGroup(
 		"Invalid specified `rSize` (negative values).",                    // [6]
 		"SDL_CreateTextureFromSurface returned NULL.",                     // [7]
 		"Argument `vgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
+		"Failure in neuik_Element_RedrawBackground().",                    // [9]
 	};
 
 	if (!neuik_Object_IsClass(vgElem, neuik__Class_VGroup))
@@ -612,10 +633,13 @@ SDL_Texture * neuik_Element_Render__VGroup(
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the entire surface background with a transparent color            */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	SDL_SetRenderDrawColor(rend, 255, 255, 255, 0);
-	SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(vgElem))
+	{
+		eNum = 9;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the UI elements into the VGroup                                   */

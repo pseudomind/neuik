@@ -144,6 +144,7 @@ int neuik_Object_New__HGroup(
 		"Failure in function `neuik.NewElement`.",                        // [4]
 		"Failure in function `neuik_Element_SetFuncTable`.",              // [5]
 		"Argument `hgPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",      // [7]
 	};
 
 	if (hgPtr == NULL)
@@ -198,6 +199,25 @@ int neuik_Object_New__HGroup(
 	}
 	cont->cType        = NEUIK_CONTAINER_MULTI;
 	cont->shownIfEmpty = 0;
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "hovered"))
+	{
+		eNum = 7;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
@@ -548,6 +568,7 @@ SDL_Texture * neuik_Element_Render__HGroup(
 		"Invalid specified `rSize` (negative values).",                    // [6]
 		"SDL_CreateTextureFromSurface returned NULL.",                     // [7]
 		"Argument `hgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
+		"Failure in neuik_Element_RedrawBackground().",                    // [9]
 	};
 
 	if (!neuik_Object_IsClass(hgElem, neuik__Class_HGroup))
@@ -607,10 +628,13 @@ SDL_Texture * neuik_Element_Render__HGroup(
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the entire surface background with a transparent color            */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	SDL_SetRenderDrawColor(rend, 255, 255, 255, 0);
-	SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(hgElem))
+	{
+		eNum = 9;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the UI elements into the HGroup                                   */
