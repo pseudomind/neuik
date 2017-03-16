@@ -138,13 +138,14 @@ int neuik_Object_New__Label(
 	NEUIK_Label   * lbl        = NULL;
 	NEUIK_Element * sClassPtr  = NULL;
 	static char     funcName[] = "neuik_Object_New__Label";
-	static char   * errMsgs[]  = {"",                        // [0] no error
-		"Failure to allocate memory.",                       // [1]
-		"Failure in NEUIK_NewLabelConfig.",                  // [2]
-		"Output Argument `lblPtr` is NULL.",                 // [3]
-		"Failure in function `neuik_Object_New`.",           // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.", // [5]
-		"Failure in `neuik_GetObjectBaseOfClass`.",          // [6]
+	static char   * errMsgs[]  = {"",                                // [0] no error
+		"Failure to allocate memory.",                               // [1]
+		"Failure in NEUIK_NewLabelConfig.",                          // [2]
+		"Output Argument `lblPtr` is NULL.",                         // [3]
+		"Failure in function `neuik_Object_New`.",                   // [4]
+		"Failure in function `neuik_Element_SetFuncTable`.",         // [5]
+		"Failure in `neuik_GetObjectBaseOfClass`.",                  // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.", // [7]
 	};
 
 	if (lblPtr == NULL)
@@ -198,6 +199,25 @@ int neuik_Object_New__Label(
 	if (NEUIK_NewLabelConfig(&lbl->cfg))
 	{
 		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(lbl, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(lbl, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(lbl, "hovered"))
+	{
+		eNum = 7;
 		goto out;
 	}
 out:
@@ -602,6 +622,7 @@ SDL_Texture * neuik_Element_Render__Label(
 		"RenderText returned NULL.",                                     // [6]
 		"Invalid specified `rSize` (negative values).",                  // [7]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [8]
+		"Failure in neuik_Element_RedrawBackground().",                  // [9]
 	};
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_Label))
@@ -668,18 +689,21 @@ SDL_Texture * neuik_Element_Render__Label(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the background with it's color                                    */
+	/* Set the appropriate foreground (text) color                            */
 	/*------------------------------------------------------------------------*/
 	fgClr = &(aCfg->fgColor);
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the background of the Image using a transparent color             */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	SDL_SetRenderDrawColor(rend, fgClr->r, fgClr->g, fgClr->b, 0);
-	SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(elem))
+	{
+		eNum = 9;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
-	/* Render the Label text                                                 */
+	/* Render the Label text                                                  */
 	/*------------------------------------------------------------------------*/
 	if (label->text != NULL)
 	{

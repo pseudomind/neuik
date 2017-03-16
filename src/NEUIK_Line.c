@@ -136,13 +136,14 @@ int neuik_Object_New__Line(
 	NEUIK_Element      * sClassPtr  = NULL;
 	static NEUIK_Color   dClr       = COLOR_GRAY;
 	static char          funcName[] = "neuik_Object_New__Line";
-	static char        * errMsgs[]  = {"",                                     // [0] no error
+	static char        * errMsgs[]  = {"",                                  // [0] no error
 		"Output Argument `linePtr` is NULL.",                               // [1]
 		"Failure to allocate memory.",                                      // [2]
 		"Failure in `neuik_GetObjectBaseOfClass`.",                         // [3]
 		"Failure in function `neuik.NewElement`.",                          // [4]
 		"Failure in function `neuik_Element_SetFuncTable`.",                // [5]
 		"Argument `linePtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",        // [7]
 	};
 
 	if (linePtr == NULL)
@@ -187,6 +188,24 @@ int neuik_Object_New__Line(
 		goto out;
 	}
 
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(line, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(line, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(line, "hovered"))
+	{
+		eNum = 7;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
@@ -431,21 +450,21 @@ SDL_Texture * neuik_Element_Render__Line(
 	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
 	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
 {
-	int                  eNum       = 0; /* which error to report (if any) */
-	const NEUIK_Color  * lClr       = NULL;
-	static SDL_Color     tClr       = COLOR_TRANSP;
-	SDL_Surface        * surf       = NULL;
-	SDL_Renderer       * rend       = NULL;
-	SDL_Rect             rect;
-	NEUIK_Line         * line       = NULL;
-	NEUIK_ElementBase  * eBase      = NULL;
-	static char          funcName[] = "neuik_Element_Render__Line";
-	static char        * errMsgs[]  = {"",                               // [0] no error
+	int                 eNum       = 0; /* which error to report (if any) */
+	const NEUIK_Color * lClr       = NULL;
+	SDL_Surface       * surf       = NULL;
+	SDL_Renderer      * rend       = NULL;
+	SDL_Rect            rect;
+	NEUIK_Line        * line       = NULL;
+	NEUIK_ElementBase * eBase      = NULL;
+	static char         funcName[] = "neuik_Element_Render__Line";
+	static char       * errMsgs[]  = {"",                                // [0] no error
 		"Argument `elem` is not of Line class.",                         // [1]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"neuik_Element_GetMinSize__Line failed.",                        // [3]
 		"Invalid line orientation.",                                     // [4]
 		"SDL_CreateTextureFromSurface returned NULL.",                   // [5]
+		"Failure in neuik_Element_RedrawBackground().",                  // [6]
 	};
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_Line))
@@ -511,12 +530,13 @@ SDL_Texture * neuik_Element_Render__Line(
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the background with a transparent color                           */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	SDL_SetColorKey(surf, SDL_TRUE, 
-		SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-	SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
-	SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(elem))
+	{
+		eNum = 6;
+		goto out;
+	}
 
 	/* use the specified line color */
 	lClr = &(line->color);

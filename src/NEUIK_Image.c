@@ -140,13 +140,14 @@ int neuik_Object_New__Image(
 	NEUIK_Image   * img        = NULL;
 	NEUIK_Element * sClassPtr  = NULL;
 	static char     funcName[] = "neuik_Object_New__Image";
-	static char   * errMsgs[]  = {"",                        // [0] no error
-		"Failure to allocate memory.",                       // [1]
-		"Failure in NEUIK_NewImageConfig.",                  // [2]
-		"Output Argument `imgPtr` is NULL.",                 // [3]
-		"Failure in function `neuik_Object_New`.",           // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.", // [5]
-		"Failure in `neuik_GetObjectBaseOfClass`.",          // [6]
+	static char   * errMsgs[]  = {"",                                // [0] no error
+		"Failure to allocate memory.",                               // [1]
+		"Failure in NEUIK_NewImageConfig.",                          // [2]
+		"Output Argument `imgPtr` is NULL.",                         // [3]
+		"Failure in function `neuik_Object_New`.",                   // [4]
+		"Failure in function `neuik_Element_SetFuncTable`.",         // [5]
+		"Failure in `neuik_GetObjectBaseOfClass`.",                  // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.", // [7]
 	};
 
 	if (imgPtr == NULL)
@@ -199,6 +200,25 @@ int neuik_Object_New__Image(
 	if (NEUIK_NewImageConfig(&img->cfg))
 	{
 		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(img, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(img, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(img, "hovered"))
+	{
+		eNum = 7;
 		goto out;
 	}
 out:
@@ -628,24 +648,24 @@ SDL_Texture * neuik_Element_Render__Image(
 	RenderSize     * rSize, /* [in] the size the tex occupies when complete */
 	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
 {
-	SDL_Surface             * surf       = NULL;
-	SDL_Surface             * imgSurf    = NULL;
-	SDL_Renderer            * rend       = NULL;
-	SDL_Texture             * imgTex     = NULL; /* image texture */
-	SDL_Rect                  rect;
-	int                       imW        = 0;
-	int                       imH        = 0;
-	int                       eNum       = 0; /* which error to report (if any) */
-	NEUIK_Image             * img        = NULL;
-	NEUIK_ElementBase       * eBase      = NULL;
-	// const NEUIK_ImageConfig * aCfg       = NULL; /* the active Image config */
-	static char               funcName[] = "neuik_Element_Render__Image";
-	static char             * errMsgs[]  = {"",                          // [0] no error
+	SDL_Surface       * surf       = NULL;
+	SDL_Surface       * imgSurf    = NULL;
+	SDL_Renderer      * rend       = NULL;
+	SDL_Texture       * imgTex     = NULL; /* image texture */
+	SDL_Rect            rect;
+	int                 imW        = 0;
+	int                 imH        = 0;
+	int                 eNum       = 0; /* which error to report (if any) */
+	NEUIK_Image       * img        = NULL;
+	NEUIK_ElementBase * eBase      = NULL;
+	static char         funcName[] = "neuik_Element_Render__Image";
+	static char       * errMsgs[]  = {"",                                // [0] no error
 		"Argument `elem` is not of Image class.",                        // [1]
 		"Failure in Element_Resize().",                                  // [2]
 		"SDL_CreateTextureFromSurface returned NULL.",                   // [3]
 		"Invalid specified `rSize` (negative values).",                  // [4]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [5]
+		"Failure in neuik_Element_RedrawBackground().",                  // [6]
 	};
 
 
@@ -702,22 +722,13 @@ SDL_Texture * neuik_Element_Render__Image(
 	imgSurf = (SDL_Surface *)(img->image);
 
 	/*------------------------------------------------------------------------*/
-	/* select the correct Image config to use (pointer or internal)           */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	// if (img->cfgPtr != NULL)
-	// {
-	// 	aCfg = img->cfgPtr;
-	// }
-	// else 
-	// {
-	// 	aCfg = img->cfg;
-	// }
-
-	/*------------------------------------------------------------------------*/
-	/* Fill the background of the Image using a transparent color             */
-	/*------------------------------------------------------------------------*/
-	SDL_SetRenderDrawColor(rend, 255, 255, 255, 0);
-	SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(elem))
+	{
+		eNum = 6;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Render the Image                                                       */
