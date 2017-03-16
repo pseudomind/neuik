@@ -137,14 +137,17 @@ int neuik_Object_New__ProgressBar(
 	int                 eNum       = 0; /* which error to report (if any) */
 	NEUIK_ProgressBar * pb         = NULL;
 	NEUIK_Element     * sClassPtr  = NULL;
+	NEUIK_Color  		bgClr      = COLOR_LGRAY;
+
 	static char         funcName[] = "neuik_Object_New__ProgressBar";
-	static char       * errMsgs[]  = {"",                    // [0] no error
-		"Failure to allocate memory.",                       // [1]
-		"Failure in NEUIK_NewProgressBarConfig.",            // [2]
-		"Output Argument `pbPtr` is NULL.",                  // [3]
-		"Failure in function `neuik_Object_New`.",           // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.", // [5]
-		"Failure in `neuik_GetObjectBaseOfClass`.",          // [6]
+	static char       * errMsgs[]  = {"",                      // [0] no error
+		"Failure to allocate memory.",                         // [1]
+		"Failure in NEUIK_NewProgressBarConfig.",              // [2]
+		"Output Argument `pbPtr` is NULL.",                    // [3]
+		"Failure in function `neuik_Object_New`.",             // [4]
+		"Failure in function `neuik_Element_SetFuncTable`.",   // [5]
+		"Failure in `neuik_GetObjectBaseOfClass`.",            // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorSolid`.", // [7]
 	};
 
 	if (pbPtr == NULL)
@@ -216,6 +219,28 @@ int neuik_Object_New__ProgressBar(
 	else
 	{
 		strcpy(pb->fracText, "0.0%");
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorSolid(pb, "normal",
+		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorSolid(pb, "selected",
+		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorSolid(pb, "hovered",
+		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	{
+		eNum = 7;
+		goto out;
 	}
 out:
 	if (eNum > 0)
@@ -563,6 +588,7 @@ SDL_Texture * neuik_Element_Render__ProgressBar(
 		"FontSet_GetFont returned NULL.",                                // [9]
 		"RenderText returned NULL.",                                     // [10]
 		"SDL_CreateTextureFromSurface returned NULL.",                   // [11]
+		"Failure in `neuik_Element_RedrawBackground()`.",                // [12]
 	};
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_ProgressBar))
@@ -629,12 +655,15 @@ SDL_Texture * neuik_Element_Render__ProgressBar(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the background with it's color                                    */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
+	if (neuik_Element_RedrawBackground(elem))
+	{
+		eNum = 12;
+		goto out;
+	}
 	bgClr = &(aCfg->bgColor);
 	fgClr = &(aCfg->fgColor);
-	SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
-	SDL_RenderClear(rend);
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the color representation of the progress bar progress             */

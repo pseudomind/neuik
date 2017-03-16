@@ -155,6 +155,7 @@ int neuik_Object_New__Stack(
 		"Failure in function `neuik.NewElement`.",                       // [4]
 		"Failure in function `neuik_Element_SetFuncTable`.",             // [5]
 		"Argument `fPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",     // [7]
 	};
 
 	if (objPtr == NULL)
@@ -206,6 +207,25 @@ int neuik_Object_New__Stack(
 	}
 	cont->cType        = NEUIK_CONTAINER_MULTI;
 	cont->shownIfEmpty = 1;
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(stk, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(stk, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(stk, "hovered"))
+	{
+		eNum = 7;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
@@ -430,6 +450,7 @@ SDL_Texture * neuik_Element_Render__Stack(
 		"Active element not contained by this stack.",                      // [6]
 		"Element_GetConfig returned NULL.",                                 // [7]
 		"SDL_CreateTextureFromSurface returned NULL.",                      // [8]
+		"Failure in neuik_Element_RedrawBackground().",                     // [9]
 	};
 
 	if (!neuik_Object_IsClass(stkElem, neuik__Class_Stack))
@@ -498,10 +519,13 @@ SDL_Texture * neuik_Element_Render__Stack(
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the entire surface background with a transparent color            */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	SDL_SetRenderDrawColor(rend, 255, 255, 255, 0);
-	SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(stkElem))
+	{
+		eNum = 9;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the currently shown UI element onto the Stack                     */
