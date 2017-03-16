@@ -35,7 +35,7 @@ typedef struct {
 
 int 
 	NEUIK_NewListGroup(
-			NEUIK_ListGroup **);
+			NEUIK_ListGroup ** lgPtr);
 
 void 
 	NEUIK_ListGroup_Deselect(

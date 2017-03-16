@@ -132,7 +132,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_New__ListGroup(
-		void ** fgPtr)
+	void ** lgPtr)
 {
 	int               eNum        = 0;
 	NEUIK_Container * cont        = NULL;
@@ -143,22 +143,23 @@ int neuik_Object_New__ListGroup(
 	NEUIK_Color       bgOddClr    = COLOR_WHITE;
 	NEUIK_Color       bgEvenClr   = COLOR_LWHITE;
 	static char       funcName[]  = "neuik_Object_New__ListGroup";
-	static char     * errMsgs[]   = {"",                                   // [0] no error
-		"Output Argument `fgPtr` is NULL.",                               // [1]
+	static char     * errMsgs[]   = {"",                                  // [0] no error
+		"Output Argument `lgPtr` is NULL.",                               // [1]
 		"Failure to allocate memory.",                                    // [2]
 		"Failure in `neuik_GetObjectBaseOfClass`.",                       // [3]
 		"Failure in function `neuik.NewElement`.",                        // [4]
 		"Failure in function `neuik_Element_SetFuncTable`.",              // [5]
-		"Argument `fgPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+		"Argument `lgPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",      // [7]
 	};
 
-	if (fgPtr == NULL)
+	if (lgPtr == NULL)
 	{
 		eNum = 1;
 		goto out;
 	}
-	(*fgPtr) = (NEUIK_ListGroup*) malloc(sizeof(NEUIK_ListGroup));
-	lg = *fgPtr;
+	(*lgPtr) = (NEUIK_ListGroup*) malloc(sizeof(NEUIK_ListGroup));
+	lg = *lgPtr;
 	if (lg == NULL)
 	{
 		eNum = 2;
@@ -206,6 +207,25 @@ int neuik_Object_New__ListGroup(
 	}
 	cont->cType        = NEUIK_CONTAINER_NO_DEFAULT_ADD_SET;
 	cont->shownIfEmpty = 0;
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "normal"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "selected"))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorTransparent(cont, "hovered"))
+	{
+		eNum = 7;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
@@ -229,9 +249,9 @@ out:
  *
  ******************************************************************************/
 int NEUIK_NewListGroup(
-	NEUIK_ListGroup ** fgPtr)
+	NEUIK_ListGroup ** lgPtr)
 {
-	return neuik_Object_New__ListGroup((void**)fgPtr);
+	return neuik_Object_New__ListGroup((void**)lgPtr);
 }
 
 
@@ -245,29 +265,29 @@ int NEUIK_NewListGroup(
  *
  ******************************************************************************/
 int neuik_Object_Free__ListGroup(
-	void  ** fgPtr)
+	void  ** lgPtr)
 {
 	int               eNum       = 0;    /* which error to report (if any) */
 	NEUIK_ListGroup * lg         = NULL;
 	static char       funcName[] = "neuik_Object_Free__ListGroup";
 	static char     * errMsgs[]  = {"",                // [0] no error
-		"Argument `fgPtr` is NULL.",                   // [1]
-		"Argument `fgPtr` is not of FlowGroup class.", // [2]
+		"Argument `lgPtr` is NULL.",                   // [1]
+		"Argument `lgPtr` is not of FlowGroup class.", // [2]
 		"Failure in function `neuik_Object_Free`.",    // [3]
 	};
 
-	if (fgPtr == NULL)
+	if (lgPtr == NULL)
 	{
 		eNum = 1;
 		goto out;
 	}
 
-	if (!neuik_Object_IsClass(*fgPtr, neuik__Class_ListGroup))
+	if (!neuik_Object_IsClass(*lgPtr, neuik__Class_ListGroup))
 	{
 		eNum = 2;
 		goto out;
 	}
-	lg = *fgPtr;
+	lg = *lgPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
@@ -279,7 +299,7 @@ int neuik_Object_Free__ListGroup(
 	}
 
 	free(lg);
-	(*fgPtr) = NULL;
+	(*lgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{
@@ -364,6 +384,7 @@ SDL_Texture * neuik_Element_Render__ListGroup(
 		"Invalid specified `rSize` (negative values).",                    // [6]
 		"SDL_CreateTextureFromSurface returned NULL.",                     // [7]
 		"Argument `lgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
+		"Failure in neuik_Element_RedrawBackground().",                    // [9]
 	};
 
 	if (!neuik_Object_IsClass(lgElem, neuik__Class_ListGroup))
@@ -424,13 +445,14 @@ SDL_Texture * neuik_Element_Render__ListGroup(
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the entire surface background with a transparent color            */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	// SDL_SetColorKey(surf, SDL_TRUE, 
-	// 	SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
+	if (neuik_Element_RedrawBackground(lgElem))
+	{
+		eNum = 9;
+		goto out;
+	}
 	bgClr = &(lg->colorBGOdd);
-	SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
-	SDL_RenderClear(rend);
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the border of the ListGroup.                                      */
@@ -599,22 +621,6 @@ SDL_Texture * neuik_Element_Render__ListGroup(
 				eNum = 5;
 				goto out;
 			}
-
-			/*----------------------------------------------------------------*/
-			/* Fill the row with the appropriate background color.            */
-			/*----------------------------------------------------------------*/
-			// if (ctr % 2 == 1)
-			// {
-			// 	bgClr = &(lg->colorBGEven);
-			// } 
-			// else 
-			// {
-			// 	bgClr = &(lg->colorBGOdd);
-			// }
-			// rectBG.y = rect.y;
-			// rectBG.h = rect.h + lg->VSpacing;
-			// SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
-			// SDL_RenderFillRect(rend, &rectBG);
 
 			SDL_RenderCopy(rend, tex, NULL, &rect);
 
@@ -957,9 +963,6 @@ int neuik_Element_CaptureEvent__ListGroup(
 			}
 		}		
 	}
-
-
-
 out:
 	return evCaputred;
 }

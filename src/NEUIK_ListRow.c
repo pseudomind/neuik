@@ -143,7 +143,7 @@ int neuik_Object_New__ListRow(
 	NEUIK_Color           bgOddClr    = COLOR_WHITE;
 	NEUIK_Color           bgEvenClr   = COLOR_MLLWHITE;
 	static char           funcName[]  = "neuik_Object_New__ListRow";
-	static char         * errMsgs[]   = {"",                                   // [0] no error
+	static char         * errMsgs[]   = {"",                               // [0] no error
 		"Output Argument `rowPtr` is NULL.",                               // [1]
 		"Failure to allocate memory.",                                     // [2]
 		"Failure in `neuik_GetObjectBaseOfClass`.",                        // [3]
@@ -151,6 +151,7 @@ int neuik_Object_New__ListRow(
 		"Failure in function `neuik_Element_SetFuncTable`.",               // [5]
 		"Argument `rowPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
 		"Element_GetConfig returned NULL.",                                // [7]
+		"Failure in `NEUIK_Element_SetBackgroundColorSolid`.",             // [8]
 	};
 
 	if (rowPtr == NULL)
@@ -220,6 +221,28 @@ int neuik_Object_New__ListRow(
 		goto out;
 	}
 	eCfg->HFill = 1;
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorSolid(row, "normal",
+		bgOddClr.r, bgOddClr.g, bgOddClr.b, bgOddClr.a))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorSolid(row, "selected",
+		bgSelectClr.r, bgSelectClr.g, bgSelectClr.b, bgSelectClr.a))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorSolid(row, "hovered",
+		bgOddClr.r, bgOddClr.g, bgOddClr.b, bgOddClr.a))
+	{
+		eNum = 8;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
@@ -617,27 +640,27 @@ SDL_Texture * neuik_Element_Render__ListRow(
 	RenderLoc             rl;
 	SDL_Rect              rect;
 	int                   tempH;
-	int                   ctr        = 0;
-	int                   vctr       = 0;    /* valid counter; for elements shown */
-	int                   yPos       = 0;
-	int                   elHeight   = 0;
-	int                   eNum       = 0;    /* which error to report (if any) */
-	float                 hFillPx    = 0.0;
-	float                 xPos       = 0.0;
-	float                 xSize      = 0.0;
-	float                 xFree      = 0.0;  /* px of space for hFill elems */
-	float                 tScale     = 0.0;  /* total vFill scaling factors */
-	SDL_Texture         * tex        = NULL; /* texture */
-	NEUIK_ElementConfig * eCfg       = NULL;
-	NEUIK_Element         elem       = NULL;
-	NEUIK_Container     * cont       = NULL;
-	NEUIK_ElementBase   * eBase      = NULL;
-	NEUIK_ListRow       * row        = NULL;
-	const NEUIK_Color   * bgClr      = NULL; /* background color */
-	SDL_Renderer        * rend       = NULL;
-	static RenderSize     rsZero     = {0, 0};
-	static char           funcName[] = "neuik_Element_Render__ListRow";
-	static char         * errMsgs[]  = {"",                                 // [0] no error
+	int                   ctr              = 0;
+	int                   vctr             = 0;    /* valid counter; for elements shown */
+	int                   yPos             = 0;
+	int                   elHeight         = 0;
+	int                   eNum             = 0;    /* which error to report (if any) */
+	float                 hFillPx          = 0.0;
+	float                 xPos             = 0.0;
+	float                 xSize            = 0.0;
+	float                 xFree            = 0.0;  /* px of space for hFill elems */
+	float                 tScale           = 0.0;  /* total vFill scaling factors */
+	SDL_Texture         * tex              = NULL; /* texture */
+	NEUIK_ElementConfig * eCfg             = NULL;
+	NEUIK_Element         elem             = NULL;
+	NEUIK_Container     * cont             = NULL;
+	NEUIK_ElementBase   * eBase            = NULL;
+	NEUIK_ListRow       * row              = NULL;
+	const NEUIK_Color   * bgClr            = NULL; /* background color */
+	SDL_Renderer        * rend             = NULL;
+	static RenderSize     rsZero           = {0, 0};
+	static char           funcName[]       = "neuik_Element_Render__ListRow";
+	static char         * errMsgs[]        = {"",                           // [0] no error
 		"Argument `rowElem` is not of ListRow class.",                      // [1]
 		"Failure in Element_Resize().",                                     // [2]
 		"Element_GetConfig returned NULL.",                                 // [3]
@@ -646,6 +669,8 @@ SDL_Texture * neuik_Element_Render__ListRow(
 		"Invalid specified `rSize` (negative values).",                     // [6]
 		"SDL_CreateTextureFromSurface returned NULL.",                      // [7]
 		"Argument `rowElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
+		"Failure in `NEUIK_Element_SetBackgroundColorSolid`.",              // [9]
+		"Failure in `neuik_Element_RedrawBackground()`.",                   // [10]
 	};
 
 	if (!neuik_Object_IsClass(rowElem, neuik__Class_ListRow))
@@ -710,25 +735,39 @@ SDL_Texture * neuik_Element_Render__ListRow(
 	if (row->selected)
 	{
 		bgClr = &(row->colorBGSelect);
+		eBase->eSt.focusstate = NEUIK_FOCUSSTATE_SELECTED;
 	}
 	else if (row->isOddRow)
 	{
 		bgClr = &(row->colorBGOdd);
+		eBase->eSt.focusstate = NEUIK_FOCUSSTATE_NORMAL;
+		if (NEUIK_Element_SetBackgroundColorSolid(row, "normal",
+			bgClr->r, bgClr->g, bgClr->b, bgClr->a))
+		{
+			eNum = 9;
+			goto out;
+		}
 	}
 	else
 	{
 		bgClr = &(row->colorBGEven);
-	} 
-	SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
-	SDL_RenderClear(rend);
+		eBase->eSt.focusstate = NEUIK_FOCUSSTATE_NORMAL;
+		if (NEUIK_Element_SetBackgroundColorSolid(row, "normal",
+			bgClr->r, bgClr->g, bgClr->b, bgClr->a))
+		{
+			eNum = 9;
+			goto out;
+		}
+	}
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the entire surface background with a transparent color            */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	// SDL_SetColorKey(surf, SDL_TRUE, 
-	// 	SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-	// SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
-	// SDL_RenderClear(rend);
+	if (neuik_Element_RedrawBackground(row))
+	{
+		eNum = 10;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the UI elements into the ListRow                                  */
