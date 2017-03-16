@@ -150,15 +150,17 @@ int neuik_Object_New__TextEdit(
 	int                eNum       = 0; /* which error to report (if any) */
 	NEUIK_Element    * sClassPtr  = NULL;
 	NEUIK_TextEdit   * te         = NULL;
+	NEUIK_Color        bgClr      = COLOR_WHITE;
 	static char        funcName[] = "neuik_Object_New__TextEdit";
-	static char      * errMsgs[]  = {"",                     // [0] no error
-		"Failure to allocate memory.",                       // [1]
-		"Failure in NEUIK_NewTextEditConfig.",               // [2]
-		"Output Argument `tePtr` is NULL.",                  // [3]
-		"Failure in function `neuik_Object_New`.",           // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.", // [5]
-		"Failure in `neuik_GetObjectBaseOfClass`.",          // [6]
-		"Failure in function `neuik_NewTextBlock`.",         // [7]
+	static char      * errMsgs[]  = {"",                       // [0] no error
+		"Failure to allocate memory.",                         // [1]
+		"Failure in NEUIK_NewTextEditConfig.",                 // [2]
+		"Output Argument `tePtr` is NULL.",                    // [3]
+		"Failure in function `neuik_Object_New`.",             // [4]
+		"Failure in function `neuik_Element_SetFuncTable`.",   // [5]
+		"Failure in `neuik_GetObjectBaseOfClass`.",            // [6]
+		"Failure in function `neuik_NewTextBlock`.",           // [7]
+		"Failure in `NEUIK_Element_SetBackgroundColorSolid`.", // [8]
 	};
 
 	if (tePtr == NULL)
@@ -252,6 +254,28 @@ int neuik_Object_New__TextEdit(
 	if (NEUIK_NewTextEditConfig(&te->cfg))
 	{
 		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set the default element background redraw styles.                      */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Element_SetBackgroundColorSolid(te, "normal",
+		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorSolid(te, "selected",
+		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Element_SetBackgroundColorSolid(te, "hovered",
+		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	{
+		eNum = 8;
 		goto out;
 	}
 out:
@@ -931,6 +955,7 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 		"Failure in function `neuik_TextBlock_GetLineCount`.",           // [8]
 		"Failure in function `neuik_TextBlock_GetLine`.",                // [9]
 		"Failure in function `neuik_TextBlock_GetLineLength`.",          // [10]
+		"Failure in neuik_Element_RedrawBackground().",                  // [11]
 	};
 
 	te = (NEUIK_TextEdit *)elem;
@@ -1034,11 +1059,14 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Fill the background with it's color                                    */
+	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
+	if (neuik_Element_RedrawBackground(te))
+	{
+		eNum = 11;
+		goto out;
+	}
 	bgClr = &(aCfg->bgColor);
-	SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
-	SDL_RenderClear(rend);
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the contained text and highlighting (if present)                */
