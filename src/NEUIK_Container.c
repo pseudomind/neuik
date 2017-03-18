@@ -546,6 +546,7 @@ int NEUIK_Container_AddElement(
 		"Failure to allocate memory.",                                    // [5]
 		"Failure to reallocate memory.",                                  // [6]
 		"Argument `cont` does not allow the use of method AddElement().", // [7]
+		"Failure in `neuik_Element_RequestRedraw()`.",                    // [8]
 	};
 
 	if (!neuik_Object_ImplementsClass(cont, neuik__Class_Container))
@@ -648,6 +649,15 @@ int NEUIK_Container_AddElement(
 
 	cBase->elems[newInd]   = elem;
 	cBase->elems[newInd+1] = NULL; /* NULLptr terminated array */
+
+	/*------------------------------------------------------------------------*/
+	/* When a new element is added to a container trigger a redraw            */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_RequestRedraw(cont))
+	{
+		eNum = 8;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
