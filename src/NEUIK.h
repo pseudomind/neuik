@@ -20,6 +20,8 @@
 /* This is just a meta-include which will include all of the headers needed   */
 /* by external programs.                                                      */
 /*----------------------------------------------------------------------------*/
+int NEUIK_Object_Free(
+	void ** objPtr);
 
 #include "NEUIK_Button.h"
 #include "NEUIK_ButtonConfig.h"

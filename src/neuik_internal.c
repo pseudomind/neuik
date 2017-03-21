@@ -469,8 +469,8 @@ int neuik_Object_Free(
 	int               (* freeFunc)(void **) = NULL;
 	neuik_Class        * objClass           = NULL;
 	neuik_Object_Base  * objBase            = NULL;
-	static char          funcName[]         = "neuik_Object_New";
-	static char        * errMsgs[]          = {"",                // [0] no error
+	static char          funcName[]         = "neuik_Object_Free";
+	static char        * errMsgs[]          = {"",        // [0] no error
 		"Argument `objPtr` is not a valid NEUIK Object.", // [1]
 		"Argument `objClass` is NULL.",                   // [2]
 		"Argument `objPtr` does not implement `Free().`", // [3]
@@ -516,6 +516,20 @@ out:
 	return eNum;
 }
 
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Object_Free
+ *
+ *  Description:   Call the class-specific Object_Free function.
+ *
+ *  Returns:       1 if there is an error, 0 otherwise. 
+ *
+ ******************************************************************************/
+int NEUIK_Object_Free(
+	void ** objPtr)
+{
+	return neuik_Object_Free(objPtr);
+}
 
 /*******************************************************************************
  *

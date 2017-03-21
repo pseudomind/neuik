@@ -30,31 +30,38 @@ neuik_Container_Type;
 typedef struct {
 		neuik_Object           objBase;      /* this structure is requied to be an neuik object */
 		NEUIK_Element        * elems;        /* child elements of this container */
+		unsigned int           n_allocated;  /* number of element slots allocated */
+		unsigned int           n_used;       /* number of element slots in use */
 		neuik_Container_Type   cType;        /* identify the container as single or multi */
 		int                    shownIfEmpty; /* [bool] whether container is visible without children shown */
 } NEUIK_Container;
 
 
 int 
-	NEUIK_Container_SetElement(
-			NEUIK_Element cont, 
-			NEUIK_Element elem);
-
-int 
 	NEUIK_Container_AddElement(
-			NEUIK_Element cont, 
+			NEUIK_Element cont,
 			NEUIK_Element elem);
 
 int 
 	NEUIK_Container_AddElements(
-			NEUIK_Element cont, 
-			NEUIK_Element elem0, 
+			NEUIK_Element cont,
+			NEUIK_Element elem0,
 			...);
 
 int 
 	NEUIK_Container_GetElementCount(
 			NEUIK_Element   cont,
 			int           * elemCount);
+
+int
+	NEUIK_Container_RemoveElement(
+			NEUIK_Element cont,
+			NEUIK_Element elem);
+
+int
+	NEUIK_Container_SetElement(
+			NEUIK_Element cont,
+			NEUIK_Element elem);
 
 
 #endif /* NEUIK_CONTAINER_H */

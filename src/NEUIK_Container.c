@@ -191,6 +191,8 @@ int neuik_Object_New__Container(
 		goto out;
 	}
 	cont->elems        = NULL;
+	cont->n_allocated  = 0;
+	cont->n_used       = 0;
 	cont->cType        = NEUIK_CONTAINER_UNSET;
 	cont->shownIfEmpty = 0;
 
@@ -489,6 +491,8 @@ int NEUIK_Container_SetElement(
 			eNum = 5;
 			goto out;
 		}
+		cBase->n_allocated = 1;
+		cBase->n_used      = 1;
 		cBase->elems[1] = NULL; /* NULLptr terminated array */
 	}
 
@@ -605,7 +609,18 @@ int NEUIK_Container_AddElement(
 			eNum = 5;
 			goto out;
 		}
-		newInd = 0;
+		cBase->n_allocated = 1;
+		cBase->n_used      = 1;
+		newInd             = 0;
+	}
+	else if (cBase->n_allocated < cBase->n_used)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is subsequent UI element, but there is space available in the */
+		/* container elements arrary.                                         */
+		/*--------------------------------------------------------------------*/
+		newInd = cBase->n_used;
+		cBase->n_used++;
 	}
 	else
 	{
@@ -630,6 +645,8 @@ int NEUIK_Container_AddElement(
 			eNum = 6;
 			goto out;
 		}
+		cBase->n_allocated++;
+		cBase->n_used++;
 		newInd = ctr;
 	}
 
@@ -920,4 +937,126 @@ out:
 	return eNum;
 }
 
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Container_RemoveElement
+ *
+ *  Description:   Remove an element from a container.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Container_RemoveElement(
+	NEUIK_Element cont, 
+	NEUIK_Element elem)
+{
+	int                 len;
+	int                 ctr;
+	int                 wasLocated = 0;
+	int                 newInd;            /* index for newly added item */
+	int                 eNum       = 0;    /* which error to report (if any) */
+	NEUIK_ElementBase * eBase      = NULL;
+	NEUIK_Container   * cBase      = NULL;
+	static char         funcName[] = "NEUIK_Container_RemoveElement";
+	static char       * errMsgs[]  = {"",                                 // [0] no error
+		"Argument `cont` does not implement Container class.",            // [1]
+		"Argument `cont` caused `neuik_Object_GetClassObject` to fail.",  // [2]
+		"Argument `elem` does not implement Element class.",              // [3]
+		"Container does not contain any child elements.",                 // [4]
+		"Unable to locate specified `elem` within Container.",            // [5]
+		"Failure in `neuik_Element_RequestRedraw()`.",                    // [6]
+	};
+
+	if (!neuik_Object_ImplementsClass(cont, neuik__Class_Container))
+	{
+		if (neuik_HasFatalError())
+		{
+			eNum = 1;
+			goto out2;
+		}
+		eNum = 1;
+		goto out;
+	}
+	if (neuik_Object_GetClassObject(cont, neuik__Class_Container, (void**)&cBase))
+	{
+		if (neuik_HasFatalError())
+		{
+			eNum = 1;
+			goto out2;
+		}
+		eNum = 2;
+		goto out;
+	}
+	if (!neuik_Object_ImplementsClass(elem, neuik__Class_Element))
+	{
+		if (neuik_HasFatalError())
+		{
+			eNum = 1;
+			goto out2;
+		}
+		eNum = 3;
+		goto out;
+	}
+
+	if (cBase->elems == NULL || cBase->n_used == 0)
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Search through the elements in the container and look for the element  */
+	/* to be removed.                                                         */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0;;ctr++)
+	{
+		if (cBase->elems[ctr] == NULL)
+		{
+			if (!wasLocated)
+			{
+				/*------------------------------------------------------------*/
+				/* The container did not contain the desired element          */
+				/*------------------------------------------------------------*/
+				eNum = 5;
+				goto out;
+			}
+
+			cBase->elems[ctr-1] = NULL;
+			break;
+		}
+
+		if (wasLocated)
+		{
+			/*----------------------------------------------------------------*/
+			/* Shuffle over the next value.                                   */
+			/*----------------------------------------------------------------*/
+			cBase->elems[ctr-1] = cBase->elems[ctr];
+		} else if (cBase->elems[ctr] == elem)
+		{
+			/*----------------------------------------------------------------*/
+			/* The element to be removed has been located.                    */
+			/*----------------------------------------------------------------*/
+			wasLocated = 1;
+		}
+	}
+
+	cBase->n_used--;
+
+	/*------------------------------------------------------------------------*/
+	/* When an element is removed from a container; trigger a redraw          */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_RequestRedraw(cont))
+	{
+		eNum = 6;
+		goto out;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+out2:
+	return eNum;
+}
 
