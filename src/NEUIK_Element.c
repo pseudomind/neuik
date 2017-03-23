@@ -781,12 +781,12 @@ SDL_Texture * neuik_Element_Render(
  *  Returns:       1 if the event was captured, 0 otherwise.
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent(
+neuik_EventState neuik_Element_CaptureEvent(
 	NEUIK_Element   elem, 
 	SDL_Event     * ev)
 {
-	int                  captured = 0;
-	int               (* funcImp) (NEUIK_Element, SDL_Event*);
+	neuik_EventState     captured = 0;
+	neuik_EventState  (* funcImp) (NEUIK_Element, SDL_Event*);
 	NEUIK_ElementBase  * eBase;
 
 	/*------------------------------------------------------------------------*/
@@ -819,7 +819,6 @@ int neuik_Element_CaptureEvent(
 		/*--------------------------------------------------------------------*/
 		/* A virtual reimplementation is availible for this function          */
 		/*--------------------------------------------------------------------*/
-		// return (*funcImp)(elem, ev);
 		captured = (*funcImp)(elem, ev);
 	}
 
@@ -2274,6 +2273,12 @@ void neuik_Element_Defocus(
 	NEUIK_Element  elem)
 {
 	NEUIK_ElementBase * eBase;
+
+	if (!neuik_Object_IsNEUIKObject_NoError(elem))
+	{
+		/* The object may have been freed/corrupted; ignore defocus call */
+		return;
+	}
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
 	{

@@ -123,7 +123,7 @@ void
 	neuik_SetDefaultElementConfig(
 			NEUIK_ElementConfig eCfg);
 
-int 
+neuik_EventState
 	neuik_Element_CaptureEvent(
 			NEUIK_Element   elem, 
 			SDL_Event     * ev);
