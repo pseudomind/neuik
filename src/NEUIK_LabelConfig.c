@@ -28,7 +28,7 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__LabelConfig(void ** cfg);
 int neuik_Object_Copy__LabelConfig(void * dst, const void * src);
-int neuik_Object_Free__LabelConfig(void ** cfg);
+int neuik_Object_Free__LabelConfig(void * cfg);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -403,7 +403,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__LabelConfig(
-	void  ** cfgPtr)
+	void * cfgPtr)
 {
 	int                 eNum       = 0;
 	NEUIK_LabelConfig * cfg        = NULL;
@@ -418,7 +418,7 @@ int neuik_Object_Free__LabelConfig(
 		eNum = 1;
 		goto out;
 	}
-	cfg = (*cfgPtr);
+	cfg = (NEUIK_LabelConfig*)cfgPtr;
 
 	if (!neuik_Object_IsClass(cfg, neuik__Class_LabelConfig))
 	{
@@ -432,7 +432,6 @@ int neuik_Object_Free__LabelConfig(
 	if (cfg->fontName != NULL) free(cfg->fontName);
 
 	free(cfg);
-	(*cfgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

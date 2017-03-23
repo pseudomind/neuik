@@ -32,7 +32,7 @@ extern int neuik__isInitialized;
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__HGroup(void ** hgPtr);
-int neuik_Object_Free__HGroup(void ** hgPtr);
+int neuik_Object_Free__HGroup(void * hgPtr);
 
 int neuik_Element_GetMinSize__HGroup(NEUIK_Element, RenderSize*);
 SDL_Texture * neuik_Element_Render__HGroup(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -307,7 +307,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__HGroup(
-	void  ** hgPtr)
+	void * hgPtr)
 {
 	int            eNum       = 0;    /* which error to report (if any) */
 	NEUIK_HGroup * hg         = NULL;
@@ -324,17 +324,17 @@ int neuik_Object_Free__HGroup(
 		goto out;
 	}
 
-	if (!neuik_Object_IsClass(*hgPtr, neuik__Class_HGroup))
+	if (!neuik_Object_IsClass(hgPtr, neuik__Class_HGroup))
 	{
 		eNum = 2;
 		goto out;
 	}
-	hg = *hgPtr;
+	hg = (NEUIK_HGroup*)hgPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(hg->objBase.superClassObj)))
+	if(neuik_Object_Free(hg->objBase.superClassObj))
 	{
 		eNum = 3;
 		goto out;

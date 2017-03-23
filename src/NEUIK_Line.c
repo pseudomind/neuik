@@ -31,7 +31,7 @@ extern int neuik__isInitialized;
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__Line(void **);
-int neuik_Object_Free__Line(void **);
+int neuik_Object_Free__Line(void *);
 
 int neuik_Element_GetMinSize__Line(NEUIK_Element, RenderSize*);
 SDL_Texture * neuik_Element_Render__Line(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -227,12 +227,12 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Line(
-	void  ** linePtr)
+	void  * linePtr)
 {
 	int           eNum       = 0;    /* which error to report (if any) */
 	NEUIK_Line  * line       = NULL;
 	static char   funcName[] = "neuik_Object_Free__Line";
-	static char * errMsgs[]  = {"",                     // [0] no error
+	static char * errMsgs[]  = {"",                      // [0] no error
 		"Argument `linePtr` is NULL.",                   // [1]
 		"Argument `linePtr` is not of Container class.", // [2]
 		"Failure in function `neuik_Object_Free`.",      // [3]
@@ -244,24 +244,23 @@ int neuik_Object_Free__Line(
 		goto out;
 	}
 
-	if (!neuik_Object_IsClass(*linePtr, neuik__Class_Line))
+	if (!neuik_Object_IsClass(linePtr, neuik__Class_Line))
 	{
 		eNum = 2;
 		goto out;
 	}
-	line = *linePtr;
+	line = (NEUIK_Line*)linePtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(line->objBase.superClassObj)))
+	if(neuik_Object_Free(line->objBase.superClassObj))
 	{
 		eNum = 3;
 		goto out;
 	}
 
 	free(line);
-	(*linePtr) = NULL;
 out:
 	if (eNum > 0)
 	{

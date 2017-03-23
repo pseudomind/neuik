@@ -35,8 +35,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__Element(void ** elem);
-int neuik_Object_Free__Element(void ** elem);
+int neuik_Object_New__Element(void ** elemPtr);
+int neuik_Object_Free__Element(void * elemPtr);
 
 int neuik_NewElement(NEUIK_Element ** elemPtr);
 int neuik_Element_Free(NEUIK_Element ** elemPtr);
@@ -267,7 +267,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Element(
-	void  ** elemPtr)
+	void * elemPtr)
 {
 	int                 eNum       = 0;
 	NEUIK_ElementBase * eBase      = NULL; 
@@ -283,14 +283,13 @@ int neuik_Object_Free__Element(
 		goto out;
 	}
 
-	if (neuik_Object_GetClassObject(*elemPtr, neuik__Class_Element, (void**)&eBase))
+	if (neuik_Object_GetClassObject(elemPtr, neuik__Class_Element, (void**)&eBase))
 	{
 		eNum = 2;
 		goto out;
 	}
 
 	free(eBase);
-	(*elemPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

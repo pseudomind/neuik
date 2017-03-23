@@ -31,8 +31,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__Frame(void ** hgPtr);
-int neuik_Object_Free__Frame(void ** hgPtr);
+int neuik_Object_New__Frame(void ** fPtr);
+int neuik_Object_Free__Frame(void * fPtr);
 
 int neuik_Element_GetMinSize__Frame(NEUIK_Element, RenderSize*);
 SDL_Texture * neuik_Element_Render__Frame(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -238,7 +238,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Frame(
-	void  ** fPtr)
+	void * fPtr)
 {
 	int           eNum       = 0;    /* which error to report (if any) */
 	NEUIK_Frame * frame      = NULL;
@@ -255,17 +255,17 @@ int neuik_Object_Free__Frame(
 		goto out;
 	}
 
-	if (!neuik_Object_IsClass(*fPtr, neuik__Class_Frame))
+	if (!neuik_Object_IsClass(fPtr, neuik__Class_Frame))
 	{
 		eNum = 2;
 		goto out;
 	}
-	frame = *fPtr;
+	frame = (NEUIK_Frame*)fPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(frame->objBase.superClassObj)))
+	if(neuik_Object_Free(frame->objBase.superClassObj))
 	{
 		eNum = 3;
 		goto out;

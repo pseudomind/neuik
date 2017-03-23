@@ -36,7 +36,7 @@ extern int neuik__isInitialized;
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__Container(void ** contPtr);
-int neuik_Object_Free__Container(void ** contPtr);
+int neuik_Object_Free__Container(void * contPtr);
 
 int neuik_NewElement(NEUIK_Element ** elemPtr);
 int neuik_Element_CaptureEvent__Container(NEUIK_Element cont, SDL_Event * ev);
@@ -226,17 +226,18 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Container(
-	void ** contPtr)
+	void * contPtr)
 {
 	int               ctr;
 	int               eNum       = 0;    /* which error to report (if any) */
 	NEUIK_Element     elem       = NULL;
 	NEUIK_Container * cont       = NULL;
 	static char       funcName[] = "neuik_Object_Free__Container";
-	static char     * errMsgs[]  = {"",                  // [0] no error
-		"Argument `contPtr` is NULL.",                   // [1]
-		"Argument `contPtr` is not of Container class.", // [2]
-		"Failure in function `neuik_Object_Free`.",      // [3]
+	static char     * errMsgs[]  = {"",                          // [0] no error
+		"Argument `contPtr` is NULL.",                           // [1]
+		"Argument `contPtr` is not of Container class.",         // [2]
+		"Failure in function `neuik_Object_Free` (superclass).", // [3]
+		"Failure in function `neuik_Object_Free` (child).",      // [4]
 	};
 
 	if (contPtr == NULL)
@@ -245,17 +246,17 @@ int neuik_Object_Free__Container(
 		goto out;
 	}
 
-	if (!neuik_Object_IsClass(*contPtr, neuik__Class_Container))
+	if (!neuik_Object_IsClass(contPtr, neuik__Class_Container))
 	{
 		eNum = 2;
 		goto out;
 	}
-	cont = *contPtr;
+	cont = (NEUIK_Container*)contPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(cont->objBase.superClassObj)))
+	if(neuik_Object_Free(cont->objBase.superClassObj))
 	{
 		eNum = 3;
 		goto out;
@@ -271,16 +272,15 @@ int neuik_Object_Free__Container(
 			elem = cont->elems[ctr];
 			if (elem == NULL) break; /* end of NULL-ptr terminated array */
 
-			if(neuik_Object_Free(&elem))
+			if(neuik_Object_Free(elem))
 			{
-				eNum = 3;
+				eNum = 4;
 				goto out;
 			}
 		}
 	}
 
 	free(cont);
-	(*contPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

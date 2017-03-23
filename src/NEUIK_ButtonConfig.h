@@ -27,8 +27,6 @@ typedef struct {
 		int                 fontBold;        /* (bool) use bold style */
 		int                 fontItalic;      /* (bool) use italic style */
 		char              * fontName;        /* font name for the TTF_Font */
-		NEUIK_ColorStop  ** gradCS;          /* background color used when not selected */
-		NEUIK_ColorStop  ** gradCSSelect;    /* background color used when selected */
 		NEUIK_Color         fgColor;         /* foreground color used when not selected */
 		NEUIK_Color         fgColorSelect;   /* foreground color used when selected */
 		NEUIK_Color         borderColor;     /* color used for the button border */

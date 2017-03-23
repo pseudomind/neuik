@@ -34,8 +34,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__Button(void ** wPtr);
-int neuik_Object_Free__Button(void ** wPtr);
+int neuik_Object_New__Button(void ** btnPtr);
+int neuik_Object_Free__Button(void * btnPtr);
 int neuik_Element_GetMinSize__Button(NEUIK_Element, RenderSize*);
 int neuik_Element_CaptureEvent__Button(NEUIK_Element, SDL_Event*);
 SDL_Texture * neuik_Element_Render__Button(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -254,7 +254,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Button(
-	void  ** btnPtr)  /* [out] the button to free */
+	void * btnPtr)  /* [out] the button to free */
 {
 	int            eNum       = 0; /* which error to report (if any) */
 	NEUIK_Button * btn        = NULL;
@@ -271,30 +271,29 @@ int neuik_Object_Free__Button(
 		goto out;
 	}
 
-	if (!neuik_Object_IsClass(*btnPtr, neuik__Class_Button))
+	if (!neuik_Object_IsClass(btnPtr, neuik__Class_Button))
 	{
 		eNum = 1;
 		goto out;
 	}
-	btn = (NEUIK_Button*)(*btnPtr);
+	btn = (NEUIK_Button*)btnPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(btn->objBase.superClassObj)))
+	if(neuik_Object_Free(btn->objBase.superClassObj))
 	{
 		eNum = 2;
 		goto out;
 	}
 	if(btn->text != NULL) free(btn->text);
-	if(neuik_Object_Free((void**)&(btn->cfg)))
+	if(neuik_Object_Free((void**)btn->cfg))
 	{
 		eNum = 2;
 		goto out;
 	}
 
 	free(btn);
-	(*btnPtr) = NULL;
 out:
 	if (eNum > 0)
 	{
@@ -1234,10 +1233,11 @@ int neuik_Element_CaptureEvent__Button(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                     evCaputred = 0;
+	int                     evCaputred   = 0;
+	int                     object_freed = 0;
 	SDL_Event             * e;
-	NEUIK_Button          * btn        = NULL;
-	NEUIK_ElementBase     * eBase      = NULL;
+	NEUIK_Button          * btn          = NULL;
+	NEUIK_ElementBase     * eBase        = NULL;
 	SDL_MouseMotionEvent  * mouseMotEv;
 	SDL_MouseButtonEvent  * mouseButEv;
 
@@ -1247,7 +1247,6 @@ int neuik_Element_CaptureEvent__Button(
 		goto out;
 	}
 	btn = (NEUIK_Button*)elem;
-
 	/*------------------------------------------------------------------------*/
 	/* Check if the event is captured by the menu (mouseclick/mousemotion).   */
 	/*------------------------------------------------------------------------*/
@@ -1271,6 +1270,12 @@ int neuik_Element_CaptureEvent__Button(
 				evCaputred            = 1;
 				neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)btn);
 				neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_CLICK);
+				if (!neuik_Object_IsNEUIKObject_NoError(btn))
+				{
+					/* The object was freed/corrupted by the callback */
+					evCaputred = 1;
+					goto out;
+				}
 				neuik_Element_RequestRedraw((NEUIK_Element)btn);
 				goto out;
 			}
@@ -1288,6 +1293,12 @@ int neuik_Element_CaptureEvent__Button(
 				{
 					/* cursor is still within the button, activate cbFunc */
 					neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_CLICKED);
+					if (!neuik_Object_IsNEUIKObject_NoError(btn))
+					{
+						/* The object was freed/corrupted by the callback */
+						evCaputred = 1;
+						goto out;
+					}
 				}
 			}
 			eBase->eSt.focusstate = NEUIK_FOCUSSTATE_NORMAL;
@@ -1295,7 +1306,6 @@ int neuik_Element_CaptureEvent__Button(
 			btn->wasSelected      = 0;
 			btn->clickOrigin      = 0;
 			evCaputred            = 1;
-			neuik_Element_RequestRedraw(btn);
 			goto out;
 		}
 		break;

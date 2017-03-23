@@ -474,7 +474,7 @@ int neuik_Object_Free(
 		"Argument `objPtr` is not a valid NEUIK Object.", // [1]
 		"Argument `objClass` is NULL.",                   // [2]
 		"Argument `objPtr` does not implement `Free().`", // [3]
-		"Function implemtnation for `Free()` failed.",    // [4]
+		"Function implementation for `Free()` failed.",   // [4]
 	};
 
 	if (!neuik_Object_IsNEUIKObject(objPtr))
@@ -499,7 +499,7 @@ int neuik_Object_Free(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Object_Free() impelmentation appears to be supplied; use it.           */
+	/* Object_Free() implementation appears to be supplied; use it.           */
 	/*------------------------------------------------------------------------*/
 	if ((*freeFunc)(objPtr))
 	{

@@ -34,8 +34,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__Label(void ** wPtr);
-int neuik_Object_Free__Label(void ** wPtr);
+int neuik_Object_New__Label(void ** lblPtr);
+int neuik_Object_Free__Label(void * lblPtr);
 
 int           neuik_Element_GetMinSize__Label(NEUIK_Element, RenderSize*);
 SDL_Texture * neuik_Element_Render__Label(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -241,7 +241,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Label(
-	void  ** lblPtr)  /* [out] the label to free */
+	void * lblPtr)  /* [out] the label to free */
 {
 	int           eNum       = 0; /* which error to report (if any) */
 	NEUIK_Label * lbl        = NULL;
@@ -258,27 +258,28 @@ int neuik_Object_Free__Label(
 		goto out;
 	}
 
-	if (!neuik_Object_IsClass(*lblPtr, neuik__Class_Label))
+	if (!neuik_Object_IsClass(lblPtr, neuik__Class_Label))
 	{
 		eNum = 1;
 		goto out;
 	}
-	lbl = (NEUIK_Label *)(*lblPtr);
+	lbl = (NEUIK_Label*)lblPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(lbl->objBase.superClassObj)))
+	if(neuik_Object_Free(lbl->objBase.superClassObj))
 	{
 		eNum = 2;
 		goto out;
 	}
 	if(lbl->text != NULL) free(lbl->text);
-	if(neuik_Object_Free((void**)&(lbl->cfg)))
+	if(neuik_Object_Free((void**)lbl->cfg))
 	{
 		eNum = 2;
 		goto out;
 	}
+	free(lbl);
 out:
 	if (eNum > 0)
 	{
