@@ -37,7 +37,7 @@ extern int neuik__isInitialized;
 int neuik_Object_New__ToggleButton(void ** btnPtr);
 int neuik_Object_Free__ToggleButton(void * btnPtr);
 int neuik_Element_GetMinSize__ToggleButton(NEUIK_Element, RenderSize*);
-int neuik_Element_CaptureEvent__ToggleButton(NEUIK_Element, SDL_Event*);
+neuik_EventState neuik_Element_CaptureEvent__ToggleButton(NEUIK_Element, SDL_Event*);
 SDL_Texture * neuik_Element_Render__ToggleButton(NEUIK_Element, RenderSize*, SDL_Renderer*);
 
 /*----------------------------------------------------------------------------*/
@@ -1245,11 +1245,11 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__ToggleButton(
+neuik_EventState neuik_Element_CaptureEvent__ToggleButton(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                    evCaputred  = 0;
+	neuik_EventState       evCaputred  = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	SDL_Event            * e;
 	SDL_MouseMotionEvent * mouseMotEv;
 	SDL_MouseButtonEvent * mouseButEv;
@@ -1287,10 +1287,16 @@ int neuik_Element_CaptureEvent__ToggleButton(
 				btn->clickOrigin = 1;
 				btn->selected    = 1;
 				btn->wasSelected = 1;
+				evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 				neuik_Window_TakeFocus(eBase->eSt.window, btn);
 				neuik_Element_RequestRedraw(btn);
 				neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_CLICK);
-				evCaputred       = 1;
+				if (!neuik_Object_IsNEUIKObject_NoError(btn))
+				{
+					/* The object was freed/corrupted by the callback */
+					evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+					goto out;
+				}
 				goto out;
 			}
 		}
@@ -1307,15 +1313,33 @@ int neuik_Element_CaptureEvent__ToggleButton(
 				{
 					/* cursor is still within the button, activate cbFunc */
 					neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_CLICKED);
+					if (!neuik_Object_IsNEUIKObject_NoError(btn))
+					{
+						/* The object was freed/corrupted by the callback */
+						evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+						goto out;
+					}
 					if (!btn->activated)
 					{
 						btn->activated = 1;
 						neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_ACTIVATED);
+						if (!neuik_Object_IsNEUIKObject_NoError(btn))
+						{
+							/* The object was freed/corrupted by the callback */
+							evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+							goto out;
+						}
 					}
 					else
 					{
 						btn->activated = 0;
 						neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_DEACTIVATED);
+						if (!neuik_Object_IsNEUIKObject_NoError(btn))
+						{
+							/* The object was freed/corrupted by the callback */
+							evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+							goto out;
+						}
 					}
 				}
 			}
@@ -1323,7 +1347,7 @@ int neuik_Element_CaptureEvent__ToggleButton(
 			btn->wasSelected = 0;
 			btn->clickOrigin = 0;
 			neuik_Element_RequestRedraw(btn);
-			evCaputred       = 1;
+			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 		}
 		break;
@@ -1353,7 +1377,7 @@ int neuik_Element_CaptureEvent__ToggleButton(
 				neuik_Element_RequestRedraw(btn);
 			}
 			btn->wasSelected = btn->selected;
-			evCaputred = 1;
+			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 		}
 

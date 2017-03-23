@@ -94,7 +94,7 @@ typedef struct {
 	SDL_Texture* (*Render)        (NEUIK_Element, RenderSize *, SDL_Renderer *);
 
 	/* CaptureEvent(): Determine if this element caputures a given event */
-	int          (*CaptureEvent)  (NEUIK_Element, SDL_Event *);
+	neuik_EventState (*CaptureEvent)  (NEUIK_Element, SDL_Event *);
 	
 	/* Defocus(): This function will be called when an element looses focus */
 	void         (*Defocus)       (NEUIK_Element);

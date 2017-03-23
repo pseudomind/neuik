@@ -201,11 +201,11 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
+neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                     evCaptured   = 0;
+	neuik_EventState        evCaptured   = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	int                     textW        = 0;
 	int                     textH        = 0;
 	int                     charW        = 0;
@@ -263,7 +263,7 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 					neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)te);
 					SDL_StartTextInput();
 					neuik_Element_RequestRedraw((NEUIK_Element)te);
-					evCaptured      = 1;
+					evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 				}
 				else
 				{
@@ -284,7 +284,7 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 			{
 				/* This mouse click originated within this textEntry */
 				doContinue = 1;
-				evCaptured = 1;
+				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			}
 		}
 
@@ -566,7 +566,7 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 		}
 
 		neuik_Element_RequestRedraw((NEUIK_Element)te);
-		evCaptured = 1;
+		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 
 		te->clickHeld   = 1;
 	}
@@ -578,7 +578,7 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 			/* This text entry has the window focus (unset `clickHeld`)       */
 			/*----------------------------------------------------------------*/
 			te->clickHeld =  0;
-			evCaptured    =  1;
+			evCaptured    = NEUIK_EVENTSTATE_CAPTURED;
 		}
 		goto out;
 	}
@@ -591,13 +591,15 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 			/* button is still being held down. **Drag Select**               */
 			/*----------------------------------------------------------------*/
 			mouseMotEv = (SDL_MouseMotionEvent*)(ev);
-			if (mouseMotEv->y >= eBase->eSt.rLoc.y && mouseMotEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+			if (mouseMotEv->y >= eBase->eSt.rLoc.y &&
+				mouseMotEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 			{
-				if (mouseMotEv->x >= eBase->eSt.rLoc.x && mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+				if (mouseMotEv->x >= eBase->eSt.rLoc.x &&
+					mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 				{
 					/* This mouse click originated within this button */
 					doContinue = 1;
-					evCaptured = 1;
+					evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 				}
 			}
 
@@ -762,7 +764,7 @@ int neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 			}
 
 			neuik_Element_RequestRedraw((NEUIK_Element)te);
-			evCaptured = 1;
+			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 		}
 		goto out;
 	}
@@ -785,11 +787,11 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
+neuik_EventState neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                  evCaptured   = 0;
+	neuik_EventState     evCaptured   = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	int                  eNum         = 0; /* which error to report (if any) */
 	unsigned long        inpLen       = 0;  /* length of text input */
 	unsigned long        newSize      = 0;  /* realloated text buf size */
@@ -956,7 +958,7 @@ int neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
 
 	neuik_TextEntry_UpdatePanCursor(te, CURSORPAN_TEXT_INSERTED);
 	neuik_Element_RequestRedraw((NEUIK_Element)te);
-	evCaptured = 1;
+	evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 out:
 	if (eNum > 0)
 	{
@@ -976,7 +978,7 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
+neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
@@ -1038,7 +1040,7 @@ int neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 					te->cursorPos--;
 				}
 				doRedraw        = 1;
-				evCaptured      = 1;
+				evCaptured      = NEUIK_EVENTSTATE_CAPTURED;
 				te->clickOrigin = -1;
 			}
 			else
@@ -1092,7 +1094,7 @@ int neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 					te->cursorPos++;
 				}
 				doRedraw        = 1;
-				evCaptured      = 1;
+				evCaptured      = NEUIK_EVENTSTATE_CAPTURED;
 				te->clickOrigin = -1;
 			}
 			else
@@ -1516,7 +1518,7 @@ int neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 		clipText = SDL_GetClipboardText();
 		if (clipText == NULL)
 		{
-			evCaptured = 1;
+			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			eNum = 2;
 			goto out;
 		}
@@ -1593,7 +1595,7 @@ int neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 		// neuik_TextEntry_UpdateCursorX(te);
 		neuik_TextEntry_UpdatePanCursor(te, CURSORPAN_TEXT_ADD_REMOVE);
 		neuik_Element_RequestRedraw((NEUIK_Element)te);
-		evCaptured = 1;
+		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 		goto out;
 
 	}
@@ -1613,7 +1615,7 @@ int neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 	}
 
 	if (doRedraw) neuik_Element_RequestRedraw((NEUIK_Element)te);
-	evCaptured = 1;
+	evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 out:
 	if (eNum > 0)
 	{
@@ -1634,17 +1636,17 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__TextEntry(
+neuik_EventState neuik_Element_CaptureEvent__TextEntry(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                     evCaptured   = 0;
-	int                     eNum         = 0; /* which error to report (if any) */
-	char                  * clipText     = NULL;
-	SDL_Event             * e;
-	NEUIK_TextEntry       * te         = NULL;
-	NEUIK_ElementBase     * eBase      = NULL;
-	static char             funcName[] = "neuik_Element_CaptureEvent__TextEntry";
+	neuik_EventState    evCaptured = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	int                 eNum       = 0; /* which error to report (if any) */
+	char              * clipText   = NULL;
+	SDL_Event         * e;
+	NEUIK_TextEntry   * te         = NULL;
+	NEUIK_ElementBase * eBase      = NULL;
+	static char         funcName[] = "neuik_Element_CaptureEvent__TextEntry";
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_TextEntry))
 	{

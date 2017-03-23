@@ -36,9 +36,9 @@ extern int neuik__isInitialized;
 int neuik_Object_New__TextEntry(void ** tePtr);
 int neuik_Object_Free__TextEntry(void * tePtr);
 
-int           neuik_Element_GetMinSize__TextEntry(NEUIK_Element, RenderSize*);
-int           neuik_Element_CaptureEvent__TextEntry(NEUIK_Element, SDL_Event*);
-SDL_Texture * neuik_Element_Render__TextEntry(NEUIK_Element, RenderSize*, SDL_Renderer*);
-void          neuik_Element_Defocus__TextEntry(NEUIK_Element);
+int                neuik_Element_GetMinSize__TextEntry(NEUIK_Element, RenderSize*);
+neuik_EventState   neuik_Element_CaptureEvent__TextEntry(NEUIK_Element, SDL_Event*);
+SDL_Texture      * neuik_Element_Render__TextEntry(NEUIK_Element, RenderSize*, SDL_Renderer*);
+void               neuik_Element_Defocus__TextEntry(NEUIK_Element);
 
 #endif /* NEUIK_TEXTENTRY_INTERNAL_H */

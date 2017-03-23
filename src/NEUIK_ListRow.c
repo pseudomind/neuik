@@ -36,7 +36,7 @@ int neuik_Object_New__ListRow(void ** rowPtr);
 int neuik_Object_Free__ListRow(void * rowPtr);
 
 int neuik_Element_GetMinSize__ListRow(NEUIK_Element, RenderSize*);
-int neuik_Element_CaptureEvent__ListRow(NEUIK_Element rowElem, SDL_Event * ev);
+neuik_EventState neuik_Element_CaptureEvent__ListRow(NEUIK_Element rowElem, SDL_Event * ev);
 SDL_Texture * neuik_Element_Render__ListRow(NEUIK_Element, RenderSize*, SDL_Renderer*);
 void neuik_Element_Defocus__ListRow(NEUIK_Element rowElem);
 
@@ -960,12 +960,12 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__ListRow(
+neuik_EventState neuik_Element_CaptureEvent__ListRow(
 	NEUIK_Element   rowElem,
 	SDL_Event     * ev)
 {
 	int                    wasSelected = 0;
-	int                    evCaputred  = 0;
+	neuik_EventState       evCaputred  = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	RenderLoc              eLoc;
 	RenderSize             eSz;
 	NEUIK_ListRow        * row        = NULL;
@@ -1012,19 +1012,38 @@ int neuik_Element_CaptureEvent__ListRow(
 					/* This would be a double click activation event.         */
 					/*--------------------------------------------------------*/
 					neuik_Element_TriggerCallback(row, NEUIK_CALLBACK_ON_ACTIVATED);
-					evCaputred = 1;
+					evCaputred = NEUIK_EVENTSTATE_CAPTURED;
+					if (!neuik_Object_IsNEUIKObject_NoError(row))
+					{
+						/* The object was freed/corrupted by the callback */
+						evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+					}
 					goto out;
 				}
 				row->clickOrigin   = 1;
 				row->selected      = 1;
 				row->wasSelected   = 1;
 				row->timeLastClick = SDL_GetTicks();
-				evCaputred         = 1;
 				neuik_Window_TakeFocus(eBase->eSt.window, row);
+
 				neuik_Element_TriggerCallback(row, NEUIK_CALLBACK_ON_CLICK);
+				evCaputred = NEUIK_EVENTSTATE_CAPTURED;
+				if (!neuik_Object_IsNEUIKObject_NoError(row))
+				{
+					/* The object was freed/corrupted by the callback */
+					evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+					goto out;
+				}
+
 				if (wasSelected)
 				{
 					neuik_Element_TriggerCallback(row, NEUIK_CALLBACK_ON_SELECTED);
+					if (!neuik_Object_IsNEUIKObject_NoError(row))
+					{
+						/* The object was freed/corrupted by the callback */
+						evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+						goto out;
+					}
 				} 
 				neuik_Element_RequestRedraw(row);
 				goto out;
@@ -1044,10 +1063,16 @@ int neuik_Element_CaptureEvent__ListRow(
 				{
 					/* cursor is still within the row, activate cbFunc */
 					neuik_Element_TriggerCallback(row, NEUIK_CALLBACK_ON_CLICKED);
+					if (!neuik_Object_IsNEUIKObject_NoError(row))
+					{
+						/* The object was freed/corrupted by the callback */
+						evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+						goto out;
+					}
 				}
 			}
 			row->clickOrigin = 0;
-			evCaputred       = 1;
+			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 			neuik_Element_RequestRedraw(row);
 			goto out;
 		}
@@ -1069,14 +1094,18 @@ int neuik_Element_CaptureEvent__ListRow(
 			case SDLK_RETURN:
 				/* row was selected, activate the row */
 				neuik_Element_TriggerCallback(row, NEUIK_CALLBACK_ON_ACTIVATED);
-
-				evCaputred = 1;
+				evCaputred = NEUIK_EVENTSTATE_CAPTURED;
+				if (!neuik_Object_IsNEUIKObject_NoError(row))
+				{
+					/* The object was freed/corrupted by the callback */
+					evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+					goto out;
+				}
 				goto out;
 				break;
 			}
 		}		
 	}
-
 out:
 	return evCaputred;
 }

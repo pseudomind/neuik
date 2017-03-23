@@ -37,7 +37,7 @@ extern int neuik__isInitialized;
 int neuik_Object_New__ProgressBar(void ** wPtr);
 int neuik_Object_Free__ProgressBar(void ** wPtr);
 int neuik_Element_GetMinSize__ProgressBar(NEUIK_Element, RenderSize*);
-int neuik_Element_CaptureEvent__ProgressBar(NEUIK_Element, SDL_Event*);
+neuik_EventState neuik_Element_CaptureEvent__ProgressBar(NEUIK_Element, SDL_Event*);
 SDL_Texture * neuik_Element_Render__ProgressBar(NEUIK_Element, RenderSize*, SDL_Renderer*);
 
 /*----------------------------------------------------------------------------*/
@@ -958,11 +958,11 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__ProgressBar(
+neuik_EventState neuik_Element_CaptureEvent__ProgressBar(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                    evCaputred = 0;
+	neuik_EventState       evCaputred = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	NEUIK_ProgressBar    * pb         = NULL;
 	NEUIK_ElementBase    * eBase      = NULL;
 	SDL_Event            * e;
@@ -984,9 +984,11 @@ int neuik_Element_CaptureEvent__ProgressBar(
 	{
 	case SDL_MOUSEBUTTONDOWN:
 		mouseButEv = (SDL_MouseButtonEvent*)(e);
-		if (mouseButEv->y >= eBase->eSt.rLoc.y && mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+		if (mouseButEv->y >= eBase->eSt.rLoc.y &&
+			mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 		{
-			if (mouseButEv->x >= eBase->eSt.rLoc.x && mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+			if (mouseButEv->x >= eBase->eSt.rLoc.x &&
+				mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 			{
 				/* This mouse click originated within this ProgressBar */
 				pb->clickOrigin = 1;
@@ -995,7 +997,13 @@ int neuik_Element_CaptureEvent__ProgressBar(
 				neuik_Window_TakeFocus(eBase->eSt.window, pb);
 				neuik_Element_RequestRedraw(pb);
 				neuik_Element_TriggerCallback(pb, NEUIK_CALLBACK_ON_CLICK);
-				evCaputred       = 1;
+				evCaputred = NEUIK_EVENTSTATE_CAPTURED;
+				if (!neuik_Object_IsNEUIKObject_NoError(pb))
+				{
+					/* The object was freed/corrupted by the callback */
+					evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+					goto out;
+				}
 				goto out;
 			}
 		}
@@ -1012,13 +1020,19 @@ int neuik_Element_CaptureEvent__ProgressBar(
 				{
 					/* cursor is still within the ProgressBar, activate cbFunc */
 					neuik_Element_TriggerCallback(pb, NEUIK_CALLBACK_ON_CLICKED);
+					if (!neuik_Object_IsNEUIKObject_NoError(pb))
+					{
+						/* The object was freed/corrupted by the callback */
+						evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+						goto out;
+					}
 				}
 			}
 			pb->selected    = 0;
 			pb->wasSelected = 0;
 			pb->clickOrigin = 0;
 			neuik_Element_RequestRedraw(pb);
-			evCaputred      = 1;
+			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 		}
 		break;
@@ -1049,7 +1063,7 @@ int neuik_Element_CaptureEvent__ProgressBar(
 				neuik_Element_RequestRedraw(pb);
 			}
 			pb->wasSelected = pb->selected;
-			evCaputred = 1;
+			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 		}
 

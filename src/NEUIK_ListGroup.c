@@ -36,7 +36,7 @@ int neuik_Object_New__ListGroup(void ** lgPtr);
 int neuik_Object_Free__ListGroup(void * lgPtr);
 
 int neuik_Element_GetMinSize__ListGroup(NEUIK_Element, RenderSize*);
-int neuik_Element_CaptureEvent__ListGroup(NEUIK_Element lgElem, SDL_Event * ev);
+neuik_EventState neuik_Element_CaptureEvent__ListGroup(NEUIK_Element lgElem, SDL_Event * ev);
 SDL_Texture * neuik_Element_Render__ListGroup(NEUIK_Element, RenderSize*, SDL_Renderer*);
 
 
@@ -840,14 +840,14 @@ out:
  *  Returns:       1 if the event was captured; 0 otherwise.
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__ListGroup(
+neuik_EventState neuik_Element_CaptureEvent__ListGroup(
 	NEUIK_Element   lgElem, 
 	SDL_Event     * ev)
 {
 	int                 ctr         = 0;
 	int                 indSelect   = 0;
-	int                 evCaputred  = 0;
 	int                 wasSelected = 0;
+	neuik_EventState    evCaputred  = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	NEUIK_Element       elem        = NULL;
 	NEUIK_ElementBase * eBase       = NULL;
 	NEUIK_Container   * cBase       = NULL;
@@ -873,7 +873,11 @@ int neuik_Element_CaptureEvent__ListGroup(
 
 			wasSelected = NEUIK_ListRow_IsSelected(elem);
 			evCaputred = neuik_Element_CaptureEvent(elem, ev);
-			if (evCaputred)
+			if (evCaputred == NEUIK_EVENTSTATE_OBJECT_FREED)
+			{
+				goto out;
+			}
+			else if (evCaputred == NEUIK_EVENTSTATE_CAPTURED)
 			{
 				if (!wasSelected && NEUIK_ListRow_IsSelected(elem))
 				{

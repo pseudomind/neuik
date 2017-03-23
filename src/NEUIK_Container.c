@@ -39,7 +39,7 @@ int neuik_Object_New__Container(void ** contPtr);
 int neuik_Object_Free__Container(void * contPtr);
 
 int neuik_NewElement(NEUIK_Element ** elemPtr);
-int neuik_Element_CaptureEvent__Container(NEUIK_Element cont, SDL_Event * ev);
+neuik_EventState neuik_Element_CaptureEvent__Container(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_IsShown__Container(NEUIK_Element);
 int neuik_Element_SetWindowPointer__Container(NEUIK_Element, void*);
 
@@ -302,14 +302,14 @@ out:
  *  Returns:       1 if the event was captured; 0 otherwise.
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__Container(
+neuik_EventState neuik_Element_CaptureEvent__Container(
 	NEUIK_Element   cont, 
 	SDL_Event     * ev)
 {
-	int               ctr        = 0;
-	int               evCaputred = 0;
-	NEUIK_Element     elem;
-	NEUIK_Container * cBase;
+	int                ctr        = 0;
+	neuik_EventState   evCaputred = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	NEUIK_Element      elem;
+	NEUIK_Container  * cBase;
 
 	if (neuik_Object_GetClassObject_NoError(
 		cont, neuik__Class_Container, (void**)&cBase)) goto out;
@@ -324,7 +324,11 @@ int neuik_Element_CaptureEvent__Container(
 			if (!NEUIK_Element_IsShown(elem)) continue;
 
 			evCaputred = neuik_Element_CaptureEvent(elem, ev);
-			if (evCaputred)
+			if (evCaputred == NEUIK_EVENTSTATE_OBJECT_FREED)
+			{
+				goto out;
+			}
+			if (evCaputred == NEUIK_EVENTSTATE_CAPTURED)
 			{
 				neuik_Element_SetActive(cont, 1);
 				goto out;

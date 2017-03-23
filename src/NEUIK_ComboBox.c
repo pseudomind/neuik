@@ -36,7 +36,7 @@ extern int neuik__isInitialized;
 int neuik_Object_New__ComboBox(void ** cbPtr);
 int neuik_Object_Free__ComboBox(void * cbPtr);
 int neuik_Element_GetMinSize__ComboBox(NEUIK_Element, RenderSize*);
-int neuik_Element_CaptureEvent__ComboBox(NEUIK_Element, SDL_Event*);
+neuik_EventState neuik_Element_CaptureEvent__ComboBox(NEUIK_Element, SDL_Event*);
 SDL_Texture * neuik_Element_Render__ComboBox(NEUIK_Element, RenderSize*, SDL_Renderer*);
 
 /*----------------------------------------------------------------------------*/
@@ -886,16 +886,16 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__ComboBox(
+neuik_EventState neuik_Element_CaptureEvent__ComboBox(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                     evCaputred = 0;
-	SDL_Event             * e;
-	NEUIK_ComboBox        * cb        = NULL;
-	NEUIK_ElementBase     * eBase      = NULL;
-	SDL_MouseMotionEvent  * mouseMotEv;
-	SDL_MouseButtonEvent  * mouseButEv;
+	neuik_EventState       evCaputred = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	SDL_Event            * e;
+	NEUIK_ComboBox       * cb         = NULL;
+	NEUIK_ElementBase    * eBase      = NULL;
+	SDL_MouseMotionEvent * mouseMotEv;
+	SDL_MouseButtonEvent * mouseButEv;
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
 	{
@@ -924,9 +924,16 @@ int neuik_Element_CaptureEvent__ComboBox(
 				eBase->eSt.focusstate = NEUIK_FOCUSSTATE_SELECTED;
 				cb->selected          = 1;
 				cb->wasSelected       = 1;
-				evCaputred            = 1;
 				neuik_Window_TakeFocus(eBase->eSt.window, cb);
 				neuik_Element_TriggerCallback(cb, NEUIK_CALLBACK_ON_CLICK);
+				evCaputred = NEUIK_EVENTSTATE_CAPTURED;
+				if (!neuik_Object_IsNEUIKObject_NoError(cb))
+				{
+					/* The object was freed/corrupted by the callback */
+					evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+					goto out;
+				}
+
 				neuik_Element_RequestRedraw(cb);
 				goto out;
 			}
@@ -945,16 +952,35 @@ int neuik_Element_CaptureEvent__ComboBox(
 				{
 					/* cursor is still within the comboBox, activate cbFunc */
 					neuik_Element_TriggerCallback(cb, NEUIK_CALLBACK_ON_CLICKED);
+					if (!neuik_Object_IsNEUIKObject_NoError(cb))
+					{
+						/* The object was freed/corrupted by the callback */
+						evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+						goto out;
+					}
+
 					neuik_Window_TakeFocus(eBase->eSt.window, cb);
 					if (!cb->expanded)
 					{
 						cb->expanded = 1;
 						neuik_Element_TriggerCallback(cb, NEUIK_CALLBACK_ON_EXPANDED);
+						if (!neuik_Object_IsNEUIKObject_NoError(cb))
+						{
+							/* The object was freed/corrupted by the callback */
+							evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+							goto out;
+						}
 					}
 					else
 					{
 						cb->expanded = 0;
 						neuik_Element_TriggerCallback(cb, NEUIK_CALLBACK_ON_COLLAPSED);
+						if (!neuik_Object_IsNEUIKObject_NoError(cb))
+						{
+							/* The object was freed/corrupted by the callback */
+							evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+							goto out;
+						}
 					}
 				}
 			}
@@ -962,7 +988,7 @@ int neuik_Element_CaptureEvent__ComboBox(
 			cb->selected          = 0;
 			cb->wasSelected       = 0;
 			cb->clickOrigin       = 0;
-			evCaputred            = 1;
+			evCaputred            = NEUIK_EVENTSTATE_CAPTURED;
 			neuik_Element_RequestRedraw((NEUIK_Element)cb);
 			goto out;
 		}
@@ -995,7 +1021,7 @@ int neuik_Element_CaptureEvent__ComboBox(
 				neuik_Element_RequestRedraw(cb);
 			}
 			cb->wasSelected = cb->selected;
-			evCaputred = 1;
+			evCaputred      = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 		}
 
