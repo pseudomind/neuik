@@ -950,12 +950,9 @@ int NEUIK_Container_RemoveElement(
 	NEUIK_Element cont, 
 	NEUIK_Element elem)
 {
-	int                 len;
 	int                 ctr;
 	int                 wasLocated = 0;
-	int                 newInd;            /* index for newly added item */
 	int                 eNum       = 0;    /* which error to report (if any) */
-	NEUIK_ElementBase * eBase      = NULL;
 	NEUIK_Container   * cBase      = NULL;
 	static char         funcName[] = "NEUIK_Container_RemoveElement";
 	static char       * errMsgs[]  = {"",                                 // [0] no error

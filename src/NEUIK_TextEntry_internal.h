@@ -33,8 +33,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__TextEntry(void ** wPtr);
-int neuik_Object_Free__TextEntry(void ** wPtr);
+int neuik_Object_New__TextEntry(void ** tePtr);
+int neuik_Object_Free__TextEntry(void * tePtr);
 
 int           neuik_Element_GetMinSize__TextEntry(NEUIK_Element, RenderSize*);
 int           neuik_Element_CaptureEvent__TextEntry(NEUIK_Element, SDL_Event*);

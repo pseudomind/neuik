@@ -39,7 +39,7 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__Window(void ** wPtr);
 // int neuik_Object_Copy__Window(void * dst, const void * src);
-int neuik_Object_Free__Window(void ** wPtr);
+int neuik_Object_Free__Window(void * wPtr);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -730,9 +730,9 @@ out:
 
 
 int neuik_Object_Free__Window(
-	void  ** wPtr)
+	void * wPtr)
 {
-	return NEUIK_Window_Free((NEUIK_Window **)wPtr);
+	return NEUIK_Window_Free((NEUIK_Window *)wPtr);
 }
 
 
@@ -746,22 +746,20 @@ int neuik_Object_Free__Window(
  *
  ******************************************************************************/
 int NEUIK_Window_Free(
-	NEUIK_Window ** wPtr) /* (in,out) the window to destroy */
+	NEUIK_Window * w) /* (in,out) the window to destroy */
 {
 	int            eNum       = 0;
-	NEUIK_Window * w          = NULL;
 	static char    funcName[] = "NEUIK_Window_Free";
-	static char  * errMsgs[]  = {"",                    // [0] no error
-		"Argument `w` is NULL.",                          // [1]
-		"Argument `*w` does not implement Window class.", // [2]
+	static char  * errMsgs[]  = {"",                     // [0] no error
+		"Argument `w` is NULL.",                         // [1]
+		"Argument `w` does not implement Window class.", // [2]
 	};
 
-	if (wPtr == NULL)
+	if (w == NULL)
 	{
 		eNum = 1;
 		goto out;
 	}
-	w = (*wPtr);
 
 	if (!neuik_Object_IsClass(w, neuik__Class_Window))
 	{
@@ -786,9 +784,7 @@ int NEUIK_Window_Free(
 		free(w->title);
 	}
 
-
 	free(w);
-	(*wPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

@@ -341,7 +341,6 @@ int neuik_Object_Free__HGroup(
 	}
 
 	free(hg);
-	(*hgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

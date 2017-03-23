@@ -29,7 +29,7 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__TextEditConfig(void ** cfg);
 int neuik_Object_Copy__TextEditConfig(void * dst, const void * src);
-int neuik_Object_Free__TextEditConfig(void ** cfg);
+int neuik_Object_Free__TextEditConfig(void * cfg);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -380,12 +380,12 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__TextEditConfig(
-	void  ** cfgPtr)
+	void * cfgPtr)
 {
-	int                     eNum       = 0;
+	int                    eNum       = 0;
 	NEUIK_TextEditConfig * cfg        = NULL;
-	static char             funcName[] = "neuik_Object_Free__TextEditConfig";
-	static char           * errMsgs[]  = {"",                  // [0] no error
+	static char            funcName[] = "neuik_Object_Free__TextEditConfig";
+	static char          * errMsgs[]  = {"",                   // [0] no error
 		"Argument `cfgPtr` is NULL.",                          // [1]
 		"Argument `*cfgPtr` is invalid or an incorrect type.", // [2]
 	};
@@ -395,7 +395,7 @@ int neuik_Object_Free__TextEditConfig(
 		eNum = 1;
 		goto out;
 	}
-	cfg = (*cfgPtr);
+	cfg = (NEUIK_TextEditConfig*)cfgPtr;
 
 	if (!neuik_Object_IsClass(cfg, neuik__Class_TextEditConfig))
 	{
@@ -410,7 +410,6 @@ int neuik_Object_Free__TextEditConfig(
 	if (cfg->restrict_str != NULL) free(cfg->restrict_str);
 
 	free(cfg);
-	(*cfgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

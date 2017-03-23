@@ -292,11 +292,9 @@ int NEUIK_ButtonConfig_Copy(
 	NEUIK_ButtonConfig       * dst,
 	const NEUIK_ButtonConfig * src)
 {
-	int            eNum       = 0; /* which error to report (if any) */
-	int            csLen;
-	int            ctr;
-	static char    funcName[] = "NEUIK_ButtonConfig_Copy";
-	static char  * errMsgs[]  = {"",                       // [0] no error
+	int           eNum       = 0; /* which error to report (if any) */
+	static char   funcName[] = "NEUIK_ButtonConfig_Copy";
+	static char * errMsgs[]  = {"",                        // [0] no error
 		"Argument `src` is invalid or an incorrect type.", // [1]
 		"Argument `dst` is invalid or an incorrect type.", // [2]
 		"ButtonConfig->fontName is NULL.",                 // [3]
@@ -357,9 +355,9 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__ButtonConfig(
-	void  ** cfg)
+	void * cfg)
 {
-	return NEUIK_ButtonConfig_Free((NEUIK_ButtonConfig **)cfg);
+	return NEUIK_ButtonConfig_Free((NEUIK_ButtonConfig*)cfg);
 }
 
 
@@ -376,7 +374,6 @@ int NEUIK_ButtonConfig_Free(
 	NEUIK_ButtonConfig * cfgPtr)
 {
 	int                  eNum       = 0;
-	int                  ctr;
 	NEUIK_ButtonConfig * cfg        = NULL;
 	static char          funcName[] = "NEUIK_ButtonConfig_Free";
 	static char        * errMsgs[]  = {"",                    // [0] no error

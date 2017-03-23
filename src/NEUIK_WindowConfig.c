@@ -27,7 +27,7 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__WindowConfig(void ** cfg);
 int neuik_Object_Copy__WindowConfig(void * dst, const void * src);
-int neuik_Object_Free__WindowConfig(void ** cfg);
+int neuik_Object_Free__WindowConfig(void * cfg);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -293,9 +293,9 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__WindowConfig(
-	void  ** cfg)
+	void * cfg)
 {
-	return NEUIK_WindowConfig_Free((NEUIK_WindowConfig **)cfg);
+	return NEUIK_WindowConfig_Free((NEUIK_WindowConfig*)cfg);
 }
 
 
@@ -309,14 +309,13 @@ int neuik_Object_Free__WindowConfig(
  *
  ******************************************************************************/
 int NEUIK_WindowConfig_Free(
-		NEUIK_WindowConfig ** cfg)
+	NEUIK_WindowConfig * cfg)
 {
-	int              eNum       = 0;
-	NEUIK_WindowConfig * cfgPtr = NULL;
-	static char      funcName[] = "NEUIK_WindowConfig_Free";
-	static char    * errMsgs[]  = {"",                            // [0] no error
-		"Argument `cfg` is NULL.",                                // [1]
-		"Argument `*cfg` does not implement WindowConfig class.", // [2]
+	int           eNum       = 0;
+	static char   funcName[] = "NEUIK_WindowConfig_Free";
+	static char * errMsgs[]  = {"",                              // [0] no error
+		"Argument `cfg` is NULL.",                               // [1]
+		"Argument `cfg` does not implement WindowConfig class.", // [2]
 	};
 
 	if (cfg == NULL)
@@ -324,16 +323,14 @@ int NEUIK_WindowConfig_Free(
 		eNum = 1;
 		goto out;
 	}
-	cfgPtr = (*cfg);
 
-	if (!neuik_Object_IsClass(cfgPtr, neuik__Class_WindowConfig))
+	if (!neuik_Object_IsClass(cfg, neuik__Class_WindowConfig))
 	{
 		eNum = 2;
 		goto out;
 	}
 
-	free(cfgPtr);
-	(*cfg) = NULL;
+	free(cfg);
 out:
 	if (eNum > 0)
 	{

@@ -66,7 +66,7 @@ int
 
 int 
 	NEUIK_Window_Free(
-			NEUIK_Window ** wPtr);
+			NEUIK_Window * wPtr);
 int 
 	NEUIK_Window_Create(
 			NEUIK_Window * w);

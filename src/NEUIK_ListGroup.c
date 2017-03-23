@@ -32,8 +32,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__ListGroup(void ** fgPtr);
-int neuik_Object_Free__ListGroup(void ** fgPtr);
+int neuik_Object_New__ListGroup(void ** lgPtr);
+int neuik_Object_Free__ListGroup(void * lgPtr);
 
 int neuik_Element_GetMinSize__ListGroup(NEUIK_Element, RenderSize*);
 int neuik_Element_CaptureEvent__ListGroup(NEUIK_Element lgElem, SDL_Event * ev);
@@ -265,7 +265,7 @@ int NEUIK_NewListGroup(
  *
  ******************************************************************************/
 int neuik_Object_Free__ListGroup(
-	void  ** lgPtr)
+	void * lgPtr)
 {
 	int               eNum       = 0;    /* which error to report (if any) */
 	NEUIK_ListGroup * lg         = NULL;
@@ -281,25 +281,24 @@ int neuik_Object_Free__ListGroup(
 		eNum = 1;
 		goto out;
 	}
+	lg = (NEUIK_ListGroup*)lgPtr;
 
-	if (!neuik_Object_IsClass(*lgPtr, neuik__Class_ListGroup))
+	if (!neuik_Object_IsClass(lg, neuik__Class_ListGroup))
 	{
 		eNum = 2;
 		goto out;
 	}
-	lg = *lgPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(lg->objBase.superClassObj)))
+	if(neuik_Object_Free(lg->objBase.superClassObj))
 	{
 		eNum = 3;
 		goto out;
 	}
 
 	free(lg);
-	(*lgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

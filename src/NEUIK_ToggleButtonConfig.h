@@ -22,19 +22,17 @@
 
 
 typedef struct {
-		neuik_Object       objBase;         /* this structure is requied to be an neuik object */
-		NEUIK_FontSet    * fontSet;         /* NEUIK_FontSet */
-		int                fontSize;        /* point size to use for the TTF_Font */
-		int                fontBold;        /* (bool) use bold style */
-		int                fontItalic;      /* (bool) use italic style */
-		char             * fontName;        /* font name for the TTF_Font */
-		NEUIK_ColorStop ** gradCS;          /* background color used when not selected */
-		NEUIK_ColorStop ** gradCSPressed;   /* background color used when selected */
-		NEUIK_Color        fgColor;         /* foreground color used when not pressed */
-		NEUIK_Color        fgColorPressed;  /* foreground color used when pressed */
-		NEUIK_Color        borderColor;     /* color used for the button border */
-		NEUIK_Color        borderColorDark; /* color used for the button border */
-		int                fontEmWidth;     /* number of pixels required for an `M` of this font */
+		neuik_Object    objBase;         /* this structure is requied to be an neuik object */
+		NEUIK_FontSet * fontSet;         /* NEUIK_FontSet */
+		int             fontSize;        /* point size to use for the TTF_Font */
+		int             fontBold;        /* (bool) use bold style */
+		int             fontItalic;      /* (bool) use italic style */
+		char          * fontName;        /* font name for the TTF_Font */
+		NEUIK_Color     fgColor;         /* foreground color used when not pressed */
+		NEUIK_Color     fgColorPressed;  /* foreground color used when pressed */
+		NEUIK_Color     borderColor;     /* color used for the button border */
+		NEUIK_Color     borderColorDark; /* color used for the button border */
+		int             fontEmWidth;     /* number of pixels required for an `M` of this font */
 } NEUIK_ToggleButtonConfig;
 
 

@@ -33,7 +33,7 @@ extern int neuik__isInitialized;
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__ListRow(void ** rowPtr);
-int neuik_Object_Free__ListRow(void ** rowPtr);
+int neuik_Object_Free__ListRow(void * rowPtr);
 
 int neuik_Element_GetMinSize__ListRow(NEUIK_Element, RenderSize*);
 int neuik_Element_CaptureEvent__ListRow(NEUIK_Element rowElem, SDL_Event * ev);
@@ -407,7 +407,7 @@ int NEUIK_ListRow_IsSelected(
  *
  ******************************************************************************/
 int neuik_Object_Free__ListRow(
-	void  ** rowPtr)
+	void * rowPtr)
 {
 	int             eNum       = 0;    /* which error to report (if any) */
 	NEUIK_ListRow * row        = NULL;
@@ -423,25 +423,24 @@ int neuik_Object_Free__ListRow(
 		eNum = 1;
 		goto out;
 	}
+	row = (NEUIK_ListRow*)rowPtr;
 
-	if (!neuik_Object_IsClass(*rowPtr, neuik__Class_ListRow))
+	if (!neuik_Object_IsClass(row, neuik__Class_ListRow))
 	{
 		eNum = 2;
 		goto out;
 	}
-	row = *rowPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(row->objBase.superClassObj)))
+	if(neuik_Object_Free(row->objBase.superClassObj))
 	{
 		eNum = 3;
 		goto out;
 	}
 
 	free(row);
-	(*rowPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

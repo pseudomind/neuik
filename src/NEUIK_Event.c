@@ -71,7 +71,7 @@ int neuik_FreeAllWindows()
 	{
 		if (neuik_windows.windows[ctr] != NULL)
 		{
-			if (NEUIK_Window_Free(&neuik_windows.windows[ctr]))
+			if (NEUIK_Window_Free(neuik_windows.windows[ctr]))
 			{
 				eNum = 1;
 				goto out;

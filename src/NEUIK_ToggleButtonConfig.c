@@ -31,7 +31,7 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__ToggleButtonConfig(void ** cfg);
 int neuik_Object_Copy__ToggleButtonConfig(void * dst, const void * src);
-int neuik_Object_Free__ToggleButtonConfig(void ** cfg);
+int neuik_Object_Free__ToggleButtonConfig(void * cfg);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -114,10 +114,6 @@ NEUIK_ToggleButtonConfig * NEUIK_GetDefaultToggleButtonConfig()
 	static int                        isInitialized  = 0;
 	static char                     * dFontName      = NULL;
 	NEUIK_ToggleButtonConfig        * rvCfg          = NULL;
-	static NEUIK_ColorStop            cs0  = {COLOR_LGRAY,  0.0};
-	static NEUIK_ColorStop            cs1  = {COLOR_MLGRAY, 1.0};
-	static NEUIK_ColorStop            css0 = {COLOR_DDGRAY,  0.0};
-	static NEUIK_ColorStop            css1 = {COLOR_MDGRAY, 1.0};
 	/* default ButtonConfig */
 	static NEUIK_ToggleButtonConfig   dCfg = {
 		{0, 0, NULL, NULL, NULL}, // neuik_Object       objBase
@@ -126,8 +122,6 @@ NEUIK_ToggleButtonConfig * NEUIK_GetDefaultToggleButtonConfig()
 		0,                        // int                fontBold
 		0,                        // int                fontItalic
 		NULL,                     // char             * fontName
-		NULL,                     // NEUIK_ColorStop ** gradCS;
-		NULL,                     // NEUIK_ColorStop ** gradCSPressed
 		COLOR_LBLACK,             // SDL_Color          fgColor
 		COLOR_LWHITE,             // SDL_Color          fgColorPressed
 		COLOR_GRAY,               // SDL_Color          borderColor
@@ -174,36 +168,6 @@ NEUIK_ToggleButtonConfig * NEUIK_GetDefaultToggleButtonConfig()
 			eNum = 2;
 			goto out;
 		}
-
-		/*--------------------------------------------------------------------*/
-		/* Create the NULL-terminated ColorStop array for creating a gradient */
-		/*--------------------------------------------------------------------*/
-		dCfg.gradCS = (NEUIK_ColorStop **)malloc(3*sizeof(NEUIK_ColorStop*));
-		if (dCfg.gradCS == NULL)
-		{
-			eNum = 4;
-			goto out;
-		}
-
-		dCfg.gradCS[0] = &cs0;
-		dCfg.gradCS[1] = &cs1;
-		dCfg.gradCS[2] = NULL;
-
-		/*--------------------------------------------------------------------*/
-		/* Create the NULL-terminated ColorStop array for creating a gradient */
-		/*--------------------------------------------------------------------*/
-		dCfg.gradCSPressed = (NEUIK_ColorStop **)malloc(3*sizeof(NEUIK_ColorStop*));
-		if (dCfg.gradCSPressed == NULL)
-		{
-			eNum = 4;
-			goto out;
-		}
-
-		dCfg.gradCSPressed[0] = &css0;
-		dCfg.gradCSPressed[1] = &css1;
-		dCfg.gradCSPressed[2] = NULL;
-
-
 		rvCfg = &dCfg;
 	}
 	else
@@ -332,17 +296,13 @@ int NEUIK_ToggleButtonConfig_Copy(
 	NEUIK_ToggleButtonConfig       * dst,
 	const NEUIK_ToggleButtonConfig * src)
 {
-	int            eNum       = 0; /* which error to report (if any) */
-	int            csLen;
-	int            ctr;
-	static char    funcName[] = "NEUIK_ToggleButtonConfig_Copy";
-	static char  * errMsgs[]  = {"",                       // [0] no error
+	int           eNum       = 0; /* which error to report (if any) */
+	static char   funcName[] = "NEUIK_ToggleButtonConfig_Copy";
+	static char * errMsgs[]  = {"",                        // [0] no error
 		"Argument `src` is invalid or an incorrect type.", // [1]
 		"Argument `dst` is invalid or an incorrect type.", // [2]
 		"ToggleButtonConfig->fontName is NULL.",           // [3]
 		"Failure in String_Duplicate.",                    // [4]
-		"`src->gradCS` or `src->gradCSSelect` is NULL.",   // [5]
-		"Failed to allocate memory.",                      // [6]
 	};
 
 	if (!neuik_Object_IsClass(src, neuik__Class_ToggleButtonConfig))
@@ -353,11 +313,6 @@ int NEUIK_ToggleButtonConfig_Copy(
 	if (!neuik_Object_IsClass(dst, neuik__Class_ToggleButtonConfig))
 	{
 		eNum = 2;
-		goto out;
-	}
-	else if (src->gradCS == NULL || src->gradCSPressed == NULL )
-	{
-		eNum = 5;
 		goto out;
 	}
 
@@ -376,74 +331,6 @@ int NEUIK_ToggleButtonConfig_Copy(
 	{
 		eNum = 4;
 		goto out;
-	}
-
-	/*--------------------------------------------------------------------*/
-	/* Create the NULL-terminated ColorStop array for creating a gradient */
-	/*--------------------------------------------------------------------*/
-	/* first determine the length of the ColorStop array */
-	for (csLen = 0;; csLen++)
-	{
-		if (src->gradCS[csLen] == NULL) break;
-	}
-
-	dst->gradCS = (NEUIK_ColorStop **)malloc((1+csLen)*sizeof(NEUIK_ColorStop*));
-	if (dst->gradCS == NULL)
-	{
-		eNum = 6;
-		goto out;
-	}
-	for (ctr = 0;; ctr++)
-	{
-		if (src->gradCS[ctr] == NULL)
-		{
-			/* this is the final NULL terminating pointer */
-			dst->gradCS[ctr] = NULL;
-			break;
-		}
-
-		/* otherwise allocate memory for a ColorStop and copy over values */
-		dst->gradCS[ctr] = (NEUIK_ColorStop *)malloc(sizeof(NEUIK_ColorStop));
-		if (dst->gradCS[ctr] == NULL)
-		{
-			eNum = 6;
-			goto out;
-		}
-		dst->gradCS[ctr] = src->gradCS[ctr];
-	}
-
-	/*--------------------------------------------------------------------*/
-	/* Create the NULL-terminated ColorStop array for creating a gradient */
-	/*--------------------------------------------------------------------*/
-	/* first determine the length of the ColorStop array */
-	for (csLen = 0;; csLen++)
-	{
-		if (src->gradCSPressed[csLen] == NULL) break;
-	}
-
-	dst->gradCSPressed = (NEUIK_ColorStop **)malloc((1+csLen)*sizeof(NEUIK_ColorStop*));
- 	if (dst->gradCSPressed == NULL)
-	{
-		eNum = 6;
-		goto out;
-	}
-	for (ctr = 0;; ctr++)
-	{
-		if (src->gradCSPressed[ctr] == NULL)
-		{
-			/* this is the final NULL terminating pointer */
-			dst->gradCSPressed[ctr] = NULL;
-			break;
-		}
-
-		/* otherwise allocate memory for a ColorStop and copy over values */
-		dst->gradCSPressed[ctr] = (NEUIK_ColorStop *)malloc(sizeof(NEUIK_ColorStop));
-		if (dst->gradCSPressed[ctr] == NULL)
-		{
-			eNum = 6;
-			goto out;
-		}
-		dst->gradCSPressed[ctr] = src->gradCSPressed[ctr];
 	}
 
 	dst->fgColor         = src->fgColor;
@@ -471,32 +358,15 @@ out:
  *  Returns:       Non-zero if an error occurs.
  *
  ******************************************************************************/
-// int neuik_Object_Free__ToggleButtonConfig(
-// 	void  ** cfgPtr)
-// {
-// 	return NEUIK_ToggleButtonConfig_Free((NEUIK_ToggleButtonConfig **)cfgPtr);
-// }
-
-
-/*******************************************************************************
- *
- *  Name:          neuik_Object_Free__ToggleButtonConfig
- *
- *  Description:   Free memory allocated for this object and NULL out pointer.
- *
- *  Returns:       Non-zero if an error occurs.
- *
- ******************************************************************************/
 int neuik_Object_Free__ToggleButtonConfig(
-	void  ** cfgPtr)
+	void * cfgPtr)
 {
 	int                        eNum       = 0;
-	int                        ctr;
 	NEUIK_ToggleButtonConfig * cfg        = NULL;
 	static char                funcName[] = "neuik_Object_Free__ToggleButtonConfig";
-	static char              * errMsgs[]  = {"",               // [0] no error
-		"Argument `cfgPtr` is NULL.",                          // [1]
-		"Argument `*cfgPtr` is invalid or an incorrect type.", // [2]
+	static char              * errMsgs[]  = {"",              // [0] no error
+		"Argument `cfgPtr` is NULL.",                         // [1]
+		"Argument `cfgPtr` is invalid or an incorrect type.", // [2]
 	};
 
 	if (cfgPtr == NULL)
@@ -504,7 +374,7 @@ int neuik_Object_Free__ToggleButtonConfig(
 		eNum = 1;
 		goto out;
 	}
-	cfg = (*cfgPtr);
+	cfg = (NEUIK_ToggleButtonConfig*)cfgPtr;
 
 	if (!neuik_Object_IsClass(cfg, neuik__Class_ToggleButtonConfig))
 	{
@@ -517,32 +387,7 @@ int neuik_Object_Free__ToggleButtonConfig(
 	/*------------------------------------------------------------------------*/
 	if (cfg->fontName != NULL) free(cfg->fontName);
 
-	if (cfg->gradCS != NULL)
-	{
-		for (ctr = 0;; ctr++)
-		{
-			/* look for the terminating NULL pointer */
-			if (cfg->gradCS[ctr] == NULL) break;
-			/* otherwise; free the colorStop */
-			free(cfg->gradCS[ctr]);
-		}
-		free(cfg->gradCS);
-	}
-
-	if (cfg->gradCSPressed != NULL)
-	{
-		for (ctr = 0;; ctr++)
-		{
-			/* look for the terminating NULL pointer */
-			if (cfg->gradCSPressed[ctr] == NULL) break;
-			/* otherwise; free the colorStop */
-			free(cfg->gradCSPressed[ctr]);
-		}
-		free(cfg->gradCSPressed);
-	}
-
 	free(cfg);
-	(*cfgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

@@ -29,7 +29,7 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__TextEntryConfig(void ** cfg);
 int neuik_Object_Copy__TextEntryConfig(void * dst, const void * src);
-int neuik_Object_Free__TextEntryConfig(void ** cfg);
+int neuik_Object_Free__TextEntryConfig(void * cfg);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -380,7 +380,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__TextEntryConfig(
-	void  ** cfgPtr)
+	void * cfgPtr)
 {
 	int                     eNum       = 0;
 	NEUIK_TextEntryConfig * cfg        = NULL;
@@ -395,7 +395,7 @@ int neuik_Object_Free__TextEntryConfig(
 		eNum = 1;
 		goto out;
 	}
-	cfg = (*cfgPtr);
+	cfg = (NEUIK_TextEntryConfig*)cfgPtr;
 
 	if (!neuik_Object_IsClass(cfg, neuik__Class_TextEntryConfig))
 	{
@@ -410,7 +410,6 @@ int neuik_Object_Free__TextEntryConfig(
 	if (cfg->restrict_str != NULL) free(cfg->restrict_str);
 
 	free(cfg);
-	(*cfgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

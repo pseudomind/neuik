@@ -36,8 +36,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__Image(void ** wPtr);
-int neuik_Object_Free__Image(void ** wPtr);
+int neuik_Object_New__Image(void ** imgPtr);
+int neuik_Object_Free__Image(void * imgPtr);
 
 int           neuik_Element_GetMinSize__Image(NEUIK_Element, RenderSize*);
 SDL_Texture * neuik_Element_Render__Image(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -242,7 +242,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Image(
-	void  ** imgPtr)  /* [out] the image to free */
+	void * imgPtr)  /* [out] the image to free */
 {
 	int           eNum       = 0; /* which error to report (if any) */
 	NEUIK_Image * img        = NULL;
@@ -258,28 +258,29 @@ int neuik_Object_Free__Image(
 		eNum = 3;
 		goto out;
 	}
+	img = (NEUIK_Image*)imgPtr;
 
-	if (!neuik_Object_IsClass(*imgPtr, neuik__Class_Image))
+	if (!neuik_Object_IsClass(img, neuik__Class_Image))
 	{
 		eNum = 1;
 		goto out;
 	}
-	img = (NEUIK_Image *)(*imgPtr);
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(img->objBase.superClassObj)))
+	if(neuik_Object_Free(img->objBase.superClassObj))
 	{
 		eNum = 2;
 		goto out;
 	}
 	if(img->image != NULL) SDL_FreeSurface(img->image);
-	if(neuik_Object_Free((void**)&(img->cfg)))
+	if(neuik_Object_Free(img->cfg))
 	{
 		eNum = 2;
 		goto out;
 	}
+	free(img);
 out:
 	if (eNum > 0)
 	{

@@ -55,7 +55,7 @@ int
 
 int 
 	NEUIK_WindowConfig_Free(
-			NEUIK_WindowConfig ** cfg);
+			NEUIK_WindowConfig * cfg);
 
 void 
 	NEUIK_WindowConfig_SetBGColor(

@@ -24,6 +24,12 @@ typedef int neuik_SetID;
 typedef int neuik_ClassID;
 
 typedef enum {
+	NEUIK_EVENTSTATE_NOT_CAPTURED,
+	NEUIK_EVENTSTATE_CAPTURED,
+	NEUIK_EVENTSTATE_OBJECT_FREED,
+} neuik_EventState;
+
+typedef enum {
 	NEUIK_FATALERROR_NO_ERROR,
 	NEUIK_FATALERROR_RUNAWAY_RECURSION,
 	NEUIK_FATALERROR_SIGSEGV_CAPTURED,
@@ -42,7 +48,7 @@ typedef struct {
 	/* Copy(): Copy the contents of one object into another */
 	int  (*Copy)  (void *, const void *);
 	/* Free(): Free the allocated memory of an object */
-	int  (*Free)  (void **);
+	int  (*Free)  (void *);
 } neuik_Class_BaseFuncs;
 
 typedef struct {
@@ -133,7 +139,7 @@ int
 
 int 
 	neuik_Object_Free(
-			void ** objPtr);
+			void * objPtr);
 
 int
 	neuik_Object_IsNEUIKObject(

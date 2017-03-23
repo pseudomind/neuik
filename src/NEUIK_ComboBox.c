@@ -33,8 +33,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__ComboBox(void ** wPtr);
-int neuik_Object_Free__ComboBox(void ** wPtr);
+int neuik_Object_New__ComboBox(void ** cbPtr);
+int neuik_Object_Free__ComboBox(void * cbPtr);
 int neuik_Element_GetMinSize__ComboBox(NEUIK_Element, RenderSize*);
 int neuik_Element_CaptureEvent__ComboBox(NEUIK_Element, SDL_Event*);
 SDL_Texture * neuik_Element_Render__ComboBox(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -254,7 +254,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__ComboBox(
-	void  ** cbPtr)  /* [out] the comboBox to free */
+	void * cbPtr)  /* [out] the comboBox to free */
 {
 	int            eNum       = 0; /* which error to report (if any) */
 	NEUIK_ComboBox * cb        = NULL;
@@ -270,31 +270,30 @@ int neuik_Object_Free__ComboBox(
 		eNum = 3;
 		goto out;
 	}
+	cb = (NEUIK_ComboBox*)cbPtr;
 
-	if (!neuik_Object_IsClass(*cbPtr, neuik__Class_ComboBox))
+	if (!neuik_Object_IsClass(cb, neuik__Class_ComboBox))
 	{
 		eNum = 1;
 		goto out;
 	}
-	cb = (NEUIK_ComboBox*)(*cbPtr);
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(cb->objBase.superClassObj)))
+	if(neuik_Object_Free(cb->objBase.superClassObj))
 	{
 		eNum = 2;
 		goto out;
 	}
 	if(cb->aEntry != NULL) free(cb->aEntry);
-	if(neuik_Object_Free((void**)&(cb->cfg)))
+	if(neuik_Object_Free(cb->cfg))
 	{
 		eNum = 2;
 		goto out;
 	}
 
 	free(cb);
-	(*cbPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

@@ -392,7 +392,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__TextEntry(
-	void  ** tePtr)  /* [out] the button to free */
+	void * tePtr)  /* [out] the button to free */
 {
 	int               eNum       = 0; /* which error to report (if any) */
 	NEUIK_TextEntry * te         = NULL;
@@ -408,18 +408,18 @@ int neuik_Object_Free__TextEntry(
 		eNum = 3;
 		goto out;
 	}
+	te = (NEUIK_TextEntry*)tePtr;
 
-	if (!neuik_Object_IsClass(*tePtr, neuik__Class_TextEntry))
+	if (!neuik_Object_IsClass(te, neuik__Class_TextEntry))
 	{
 		eNum = 1;
 		goto out;
 	}
-	te = (NEUIK_TextEntry*)(*tePtr);
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(te->objBase.superClassObj)))
+	if(neuik_Object_Free(te->objBase.superClassObj))
 	{
 		eNum = 2;
 		goto out;
@@ -429,14 +429,13 @@ int neuik_Object_Free__TextEntry(
 	if (te->textTex  != NULL) SDL_DestroyTexture(te->textTex);
 	if (te->textRend != NULL) SDL_DestroyRenderer(te->textRend);
 
-	if(neuik_Object_Free((void**)&(te->cfg)))
+	if(neuik_Object_Free(te->cfg))
 	{
 		eNum = 2;
 		goto out;
 	}
 
 	free(te);
-	(*tePtr) = NULL;
 out:
 	if (eNum > 0)
 	{

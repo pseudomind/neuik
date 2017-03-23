@@ -272,7 +272,6 @@ int neuik_Object_Free__Frame(
 	}
 
 	free(frame);
-	(*fPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

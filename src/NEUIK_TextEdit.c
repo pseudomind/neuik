@@ -43,8 +43,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__TextEdit(void ** wPtr);
-int neuik_Object_Free__TextEdit(void ** wPtr);
+int neuik_Object_New__TextEdit(void ** tePtr);
+int neuik_Object_Free__TextEdit(void * tePtr);
 
 int           neuik_Element_GetMinSize__TextEdit(NEUIK_Element, RenderSize*);
 int           neuik_Element_CaptureEvent__TextEdit(NEUIK_Element, SDL_Event*);
@@ -427,15 +427,15 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__TextEdit(
-	void  ** tePtr)  /* [out] the button to free */
+	void * tePtr)  /* [out] the button to free */
 {
 	int              eNum       = 0; /* which error to report (if any) */
 	NEUIK_TextEdit * te         = NULL;
 	static char      funcName[] = "neuik_Object_Free__TextEdit";
 	static char    * errMsgs[]  = {"",              // [0] no error
-		"Argument `btnPtr` is not of Button class.", // [1]
-		"Failure in function `neuik_Object_Free`.",  // [2]
-		"Argument `btnPtr` is NULL.",                // [3]
+		"Argument `tePtr` is not of Button class.", // [1]
+		"Failure in function `neuik_Object_Free`.", // [2]
+		"Argument `tePtr` is NULL.",                // [3]
 	};
 
 	if (tePtr == NULL)
@@ -443,18 +443,18 @@ int neuik_Object_Free__TextEdit(
 		eNum = 3;
 		goto out;
 	}
+	te = (NEUIK_TextEdit*)tePtr;
 
-	if (!neuik_Object_IsClass(*tePtr, neuik__Class_TextEdit))
+	if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
 	{
 		eNum = 1;
 		goto out;
 	}
-	te = (NEUIK_TextEdit*)(*tePtr);
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(te->objBase.superClassObj)))
+	if(neuik_Object_Free(te->objBase.superClassObj))
 	{
 		eNum = 2;
 		goto out;
@@ -463,15 +463,15 @@ int neuik_Object_Free__TextEdit(
 	if (te->textSurf != NULL) SDL_FreeSurface(te->textSurf);
 	if (te->textTex  != NULL) SDL_DestroyTexture(te->textTex);
 	if (te->textRend != NULL) SDL_DestroyRenderer(te->textRend);
+	#pragma message("TODO: Free TextBlock Data")
 
-	if(neuik_Object_Free((void**)&(te->cfg)))
+	if(neuik_Object_Free(te->cfg))
 	{
 		eNum = 2;
 		goto out;
 	}
 
 	free(te);
-	(*tePtr) = NULL;
 out:
 	if (eNum > 0)
 	{

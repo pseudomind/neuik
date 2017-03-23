@@ -32,7 +32,7 @@ extern int neuik__isInitialized;
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__FlowGroup(void ** fgPtr);
-int neuik_Object_Free__FlowGroup(void ** fgPtr);
+int neuik_Object_Free__FlowGroup(void * fgPtr);
 
 int neuik_Element_GetMinSize__FlowGroup(NEUIK_Element, RenderSize*);
 SDL_Texture * neuik_Element_Render__FlowGroup(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -257,7 +257,7 @@ int NEUIK_NewFlowGroup(
  *
  ******************************************************************************/
 int neuik_Object_Free__FlowGroup(
-	void  ** fgPtr)
+	void * fgPtr)
 {
 	int               eNum       = 0;    /* which error to report (if any) */
 	NEUIK_FlowGroup * fg         = NULL;
@@ -274,24 +274,23 @@ int neuik_Object_Free__FlowGroup(
 		goto out;
 	}
 
-	if (!neuik_Object_IsClass(*fgPtr, neuik__Class_FlowGroup))
+	if (!neuik_Object_IsClass(fgPtr, neuik__Class_FlowGroup))
 	{
 		eNum = 2;
 		goto out;
 	}
-	fg = *fgPtr;
+	fg = (NEUIK_FlowGroup*)fgPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(fg->objBase.superClassObj)))
+	if(neuik_Object_Free(fg->objBase.superClassObj))
 	{
 		eNum = 3;
 		goto out;
 	}
 
 	free(fg);
-	(*fgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

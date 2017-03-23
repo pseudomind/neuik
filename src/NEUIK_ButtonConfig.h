@@ -47,7 +47,7 @@ int
 
 int 
 	NEUIK_ButtonConfig_Free(
-			NEUIK_ButtonConfig ** cfgPtr);
+			NEUIK_ButtonConfig * cfgPtr);
 
 
 #endif /* NEUIK_BUTTON_CONFIG_H */

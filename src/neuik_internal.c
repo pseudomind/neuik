@@ -463,14 +463,14 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free(
-	void ** objPtr)
+	void * objPtr)
 {
-	int                  eNum               = 0;
-	int               (* freeFunc)(void **) = NULL;
-	neuik_Class        * objClass           = NULL;
-	neuik_Object_Base  * objBase            = NULL;
-	static char          funcName[]         = "neuik_Object_Free";
-	static char        * errMsgs[]          = {"",        // [0] no error
+	int                  eNum              = 0;
+	int               (* freeFunc)(void *) = NULL;
+	neuik_Class        * objClass          = NULL;
+	neuik_Object_Base  * objBase           = NULL;
+	static char          funcName[]        = "neuik_Object_Free";
+	static char        * errMsgs[]         = {"",         // [0] no error
 		"Argument `objPtr` is not a valid NEUIK Object.", // [1]
 		"Argument `objClass` is NULL.",                   // [2]
 		"Argument `objPtr` does not implement `Free().`", // [3]

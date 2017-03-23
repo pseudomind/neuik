@@ -32,8 +32,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__Stack(void ** hgPtr);
-int neuik_Object_Free__Stack(void ** hgPtr);
+int neuik_Object_New__Stack(void ** stkPtr);
+int neuik_Object_Free__Stack(void * stkPtr);
 
 int neuik_Element_CaptureEvent__Stack(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_GetMinSize__Stack(NEUIK_Element, RenderSize*);
@@ -248,7 +248,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Stack(
-	void  ** objPtr)
+	void * stkPtr)
 {
 	int           eNum       = 0;    /* which error to report (if any) */
 	NEUIK_Stack * stk        = NULL;
@@ -259,30 +259,29 @@ int neuik_Object_Free__Stack(
 		"Failure in function `neuik_Object_Free`.", // [3]
 	};
 
-	if (objPtr == NULL)
+	if (stkPtr == NULL)
 	{
 		eNum = 1;
 		goto out;
 	}
+	stk = (NEUIK_Stack*)stkPtr;
 
-	if (!neuik_Object_IsClass(*objPtr, neuik__Class_Stack))
+	if (!neuik_Object_IsClass(stk, neuik__Class_Stack))
 	{
 		eNum = 2;
 		goto out;
 	}
-	stk = *objPtr;
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(stk->objBase.superClassObj)))
+	if(neuik_Object_Free(stk->objBase.superClassObj))
 	{
 		eNum = 3;
 		goto out;
 	}
 
 	free(stk);
-	(*objPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

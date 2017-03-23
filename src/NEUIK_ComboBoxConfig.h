@@ -21,19 +21,17 @@
 #include "neuik_internal.h"
 
 typedef struct {
-		neuik_Object        objBase;         /* this structure is requied to be an neuik object */
-		NEUIK_FontSet     * fontSet;         /* NEUIK_FontSet */
-		int                 fontSize;        /* point size to use for the TTF_Font */
-		int                 fontBold;        /* (bool) use bold style */
-		int                 fontItalic;      /* (bool) use italic style */
-		char              * fontName;        /* font name for the TTF_Font */
-		NEUIK_ColorStop  ** gradCS;          /* background color used when not selected */
-		NEUIK_ColorStop  ** gradCSSelect;    /* background color used when selected */
-		NEUIK_Color         fgColor;         /* foreground color used when not selected */
-		NEUIK_Color         fgColorSelect;   /* foreground color used when selected */
-		NEUIK_Color         borderColor;     /* color used for the button border */
-		NEUIK_Color         borderColorDark; /* color used for the button border */
-		int                 fontEmWidth;     /* nuber of pixels required for an `M` of this font */
+		neuik_Object    objBase;         /* this structure is requied to be an neuik object */
+		NEUIK_FontSet * fontSet;         /* NEUIK_FontSet */
+		int             fontSize;        /* point size to use for the TTF_Font */
+		int             fontBold;        /* (bool) use bold style */
+		int             fontItalic;      /* (bool) use italic style */
+		char          * fontName;        /* font name for the TTF_Font */
+		NEUIK_Color     fgColor;         /* foreground color used when not selected */
+		NEUIK_Color     fgColorSelect;   /* foreground color used when selected */
+		NEUIK_Color     borderColor;     /* color used for the button border */
+		NEUIK_Color     borderColorDark; /* color used for the button border */
+		int             fontEmWidth;     /* nuber of pixels required for an `M` of this font */
 } NEUIK_ComboBoxConfig;
 
 NEUIK_ComboBoxConfig *NEUIK_GetDefaultComboBoxConfig();
@@ -49,7 +47,7 @@ int
 
 int 
 	NEUIK_ComboBoxConfig_Free(
-			NEUIK_ComboBoxConfig ** cfgPtr);
+			NEUIK_ComboBoxConfig * cfgPtr);
 
 
 #endif /* NEUIK_COMBOBOX_CONFIG_H */

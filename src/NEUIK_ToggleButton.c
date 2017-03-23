@@ -34,8 +34,8 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
 /*----------------------------------------------------------------------------*/
-int neuik_Object_New__ToggleButton(void ** wPtr);
-int neuik_Object_Free__ToggleButton(void ** wPtr);
+int neuik_Object_New__ToggleButton(void ** btnPtr);
+int neuik_Object_Free__ToggleButton(void * btnPtr);
 int neuik_Element_GetMinSize__ToggleButton(NEUIK_Element, RenderSize*);
 int neuik_Element_CaptureEvent__ToggleButton(NEUIK_Element, SDL_Event*);
 SDL_Texture * neuik_Element_Render__ToggleButton(NEUIK_Element, RenderSize*, SDL_Renderer*);
@@ -255,7 +255,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__ToggleButton(
-	void  ** btnPtr)  /* [out] the button to free */
+	void * btnPtr)  /* [out] the button to free */
 {
 	int                  eNum       = 0; /* which error to report (if any) */
 	NEUIK_ToggleButton * btn        = NULL;
@@ -271,31 +271,30 @@ int neuik_Object_Free__ToggleButton(
 		eNum = 3;
 		goto out;
 	}
+	btn = (NEUIK_ToggleButton*)btnPtr;
 
-	if (!neuik_Object_IsClass(*btnPtr, neuik__Class_ToggleButton))
+	if (!neuik_Object_IsClass(btn, neuik__Class_ToggleButton))
 	{
 		eNum = 1;
 		goto out;
 	}
-	btn = (NEUIK_ToggleButton*)(*btnPtr);
 
 	/*------------------------------------------------------------------------*/
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(&(btn->objBase.superClassObj)))
+	if(neuik_Object_Free(btn->objBase.superClassObj))
 	{
 		eNum = 2;
 		goto out;
 	}
 	if(btn->text != NULL) free(btn->text);
-	if(neuik_Object_Free((void**)&(btn->cfg)))
+	if(neuik_Object_Free(btn->cfg))
 	{
 		eNum = 2;
 		goto out;
 	}
 
 	free(btn);
-	(*btnPtr) = NULL;
 out:
 	if (eNum > 0)
 	{

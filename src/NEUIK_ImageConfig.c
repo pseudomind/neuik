@@ -27,7 +27,7 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__ImageConfig(void ** cfg);
 int neuik_Object_Copy__ImageConfig(void * dst, const void * src);
-int neuik_Object_Free__ImageConfig(void ** cfg);
+int neuik_Object_Free__ImageConfig(void * cfg);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -333,7 +333,7 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__ImageConfig(
-	void  ** cfgPtr)
+	void * cfgPtr)
 {
 	int                 eNum       = 0;
 	NEUIK_ImageConfig * cfg        = NULL;
@@ -348,7 +348,7 @@ int neuik_Object_Free__ImageConfig(
 		eNum = 1;
 		goto out;
 	}
-	cfg = (*cfgPtr);
+	cfg = (NEUIK_ImageConfig*)cfgPtr;
 
 	if (!neuik_Object_IsClass(cfg, neuik__Class_ImageConfig))
 	{
@@ -360,7 +360,6 @@ int neuik_Object_Free__ImageConfig(
 	/* The object is what it says it is and it is still allocated.            */
 	/*------------------------------------------------------------------------*/
 	free(cfg);
-	(*cfgPtr) = NULL;
 out:
 	if (eNum > 0)
 	{
