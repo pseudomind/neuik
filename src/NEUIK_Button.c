@@ -1266,17 +1266,16 @@ neuik_EventState neuik_Element_CaptureEvent__Button(
 				eBase->eSt.focusstate = NEUIK_FOCUSSTATE_SELECTED;
 				btn->selected         = 1;
 				btn->wasSelected      = 1;
+				evCaputred            = NEUIK_EVENTSTATE_CAPTURED;
 				neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)btn);
 				neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_CLICK);
-				
-				evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 				if (!neuik_Object_IsNEUIKObject_NoError(btn))
 				{
 					/* The object was freed/corrupted by the callback */
 					evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
 					goto out;
 				}
-				neuik_Element_RequestRedraw((NEUIK_Element)btn);
+				neuik_Element_RequestRedraw(btn);
 				goto out;
 			}
 		}
@@ -1306,6 +1305,7 @@ neuik_EventState neuik_Element_CaptureEvent__Button(
 			btn->wasSelected      = 0;
 			btn->clickOrigin      = 0;
 			evCaputred            = NEUIK_EVENTSTATE_CAPTURED;
+			neuik_Element_RequestRedraw(btn);
 			goto out;
 		}
 		break;
@@ -1334,7 +1334,7 @@ neuik_EventState neuik_Element_CaptureEvent__Button(
 
 			if (btn->wasSelected != btn->selected)
 			{
-				neuik_Element_RequestRedraw((NEUIK_Element)btn);
+				neuik_Element_RequestRedraw(btn);
 			}
 			btn->wasSelected = btn->selected;
 			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
