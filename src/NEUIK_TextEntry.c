@@ -553,32 +553,45 @@ int NEUIK_TextEntry_SetText(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Conditionally free button text before setting the new contents         */
-	/*------------------------------------------------------------------------*/
-	if (te->text != NULL) {
-		free(te->text);
-	}
-
-	/*------------------------------------------------------------------------*/
 	/* Set the new TextEntry text contents                                    */
 	/*------------------------------------------------------------------------*/
 	if (text == NULL){
-		/* button will contain no text */
-		te->text = NULL;
+		/* textentry will contain no text */
+		if (te->textAllocSize > 0)
+		{
+			te->text[0] = '\0';
+		}
 	}
 	else if (text[0] == '\0')
 	{
-		/* button will contain no text */
-		te->text = NULL;
+		/* textentry will contain no text */
+		if (te->textAllocSize > 0)
+		{
+			te->text[0] = '\0';
+		}
 	}
 	else
 	{
 		textLen = strlen(text);
-		sLen += textLen;
-		te->text = (char*)malloc(sLen*sizeof(char));
-		if (te->text == NULL) {
-			eNum = 2;
-			goto out;
+		if (textLen > te->textAllocSize)
+		{
+			sLen += textLen;
+			if (te->text != NULL) {
+				te->text = (char*)realloc(te->text, sLen*sizeof(char));
+				if (te->text == NULL) {
+					eNum = 2;
+					goto out;
+				}
+			}
+			else
+			{
+				te->text = (char*)malloc(sLen*sizeof(char));
+				if (te->text == NULL) {
+					eNum = 2;
+					goto out;
+				}
+			}
+			te->textAllocSize = sLen;
 		}
 		/* Allocation successful */
 		strcpy(te->text, text);
@@ -588,6 +601,8 @@ int NEUIK_TextEntry_SetText(
 	te->highlightBegin = -1;
 	te->highlightStart = -1;
 	te->highlightEnd   = -1;
+	te->cursorPos      =  0;
+	te->cursorX        =  0;
 	te->clickOrigin    =  0;
 	te->clickHeld      =  0;
 	neuik_Element_RequestRedraw((NEUIK_Element)te);
