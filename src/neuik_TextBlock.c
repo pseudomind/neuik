@@ -51,7 +51,7 @@ const double       DefaultBlockFracitonFree = 0.05; /* 5% */
 
 int neuik_NewTextBlockData(
 	neuik_TextBlockData ** dataPtr,
-	unsigned int           blockSize)
+	size_t                 blockSize)
 {
 	int                   eNum       = 0; /* which error to report (if any) */
 	neuik_TextBlockData * data       = NULL;
@@ -104,8 +104,8 @@ out:
 
 int neuik_NewTextBlock(
 	neuik_TextBlock ** tblkPtr,
-	unsigned int       blockSize,
-	unsigned int       chapterSize)
+	size_t             blockSize,
+	size_t             chapterSize)
 {
 	int               eNum       = 0; /* which error to report (if any) */
 	neuik_TextBlock * tblk       = NULL;
@@ -199,8 +199,8 @@ int neuik_TextBlock_AppendDataBlock(
 	neuik_TextBlock * tblk)
 {
 	int                   eNum       = 0; /* which error to report (if any) */
-	unsigned int          nChapters;
-	unsigned int          nChaptersOld;
+	size_t                nChapters;
+	size_t                nChaptersOld;
 	neuik_TextBlockData * lastBlock;
 	static char           funcName[] = "neuik_TextBlock_AppendDataBlock";
 	static char         * errMsgs[]  = {"",              // [0] no error
@@ -269,12 +269,12 @@ int neuik_TextBlock_SetText(
 	neuik_TextBlock * tblk,
 	const char      * text)
 {
-	int                   textLen;
+	size_t                textLen;
 	neuik_TextBlockData * aBlock;
-	unsigned int          charCtr;
-	unsigned int          writeCtr         = 0;
-	unsigned int          lineCtr          = 1;
-	unsigned int          nBlocksRequried  = 0;
+	size_t                charCtr;
+	size_t                writeCtr         = 0;
+	size_t                lineCtr          = 1;
+	size_t                nBlocksRequried  = 0;
 	unsigned int          maxInitBlockFill = (unsigned int)(
 		(1.0 - DefaultBlockFracitonFree) * (double)(DefaultBlockSize));
 	int                   eNum       = 0; /* which error to report (if any) */
@@ -442,7 +442,7 @@ out:
 
 int neuik_TextBlock_GetLineCount(
 	neuik_TextBlock * tblk,
-	unsigned int    * nLines)
+	size_t          * nLines)
 {
 	int           eNum       = 0; /* which error to report (if any) */
 	static char   funcName[] = "neuik_TextBlock_GetLineCount";
@@ -484,13 +484,13 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlockData_GetLineStartOffset__noErrChecks (
 	neuik_TextBlockData * data,
-	unsigned int          lineNo,
-	unsigned int        * offset)
+	size_t                lineNo,
+	size_t              * offset)
 {
-	unsigned int position;
-	unsigned int final;
-	unsigned int lineCtr;
-	int          hasErr  = 0;
+	size_t position;
+	size_t final;
+	size_t lineCtr;
+	int    hasErr  = 0;
 
 	if (data->bytesInUse > data->bytesAllocated)
 	{
@@ -545,7 +545,7 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_GetLineStartBlockData__noErrChecks (
 	neuik_TextBlock      * tblk,
-	unsigned int           lineNo,
+	size_t                 lineNo,
 	neuik_TextBlockData ** blockPtr)
 {
 	int                   hasErr   = 0;
@@ -611,9 +611,9 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_GetPositionLineStart__noErrChecks (
 	neuik_TextBlock      * tblk,
-	unsigned int           lineNo,
+	size_t                 lineNo,
 	neuik_TextBlockData ** blockPtr,
-	unsigned int         * offset)
+	size_t               * offset)
 {
 	int hasErr = 0;
 
@@ -650,15 +650,15 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_GetPositionInLine__noErrChecks (
 	neuik_TextBlock      * tblk,
-	unsigned int           lineNo,
-	unsigned int           byteNo,
+	size_t                 lineNo,
+	size_t                 byteNo,
 	neuik_TextBlockData ** blockPtr,
-	unsigned int         * offset)
+	size_t               * offset)
 {
 	int                   hasErr   = 0;
-	unsigned int          byteCtr  = 0;
-	unsigned int          position = 0;
-	unsigned int          final    = 0;
+	size_t                byteCtr  = 0;
+	size_t                position = 0;
+	size_t                final    = 0;
 	neuik_TextBlockData * data     = NULL;
 	neuik_TextBlockData * block    = NULL;
 
@@ -745,7 +745,7 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_HasLine(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo,
+	size_t            lineNo,
 	int             * hasLine) /* [out] set to 1 if it has the line; else 0 */
 {
 	int           eNum       = 0; /* which error to report (if any) */
@@ -788,13 +788,13 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_GetLineLength__noErrChecks(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo,
-	unsigned int    * length)
+	size_t            lineNo,
+	size_t          * length)
 {
 	int                   hasErr   = 0;
-	unsigned int          offset   = 0;
-	unsigned int          position = 0;
-	unsigned int          final    = 0;
+	size_t                offset   = 0;
+	size_t                position = 0;
+	size_t                final    = 0;
 	neuik_TextBlockData * data     = NULL;
 	neuik_TextBlockData * block    = NULL;
 
@@ -874,8 +874,8 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_GetLineLength(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo,
-	unsigned int    * length)
+	size_t            lineNo,
+	size_t          * length)
 {
 	int               eNum       = 0; /* which error to report (if any) */
 	static char       funcName[] = "neuik_TextBlock_GetLineLength";
@@ -920,15 +920,15 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_GetLine(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo,
+	size_t            lineNo,
 	char           ** lineData)
 {
 	int                   eNum     = 0; /* which error to report (if any) */
 	char                * writeStr = NULL;
-	unsigned int          length;
-	unsigned int          position = 0;
-	unsigned int          writePos = 0; /* character index to write to */
-	unsigned int          final    = 0;
+	size_t                length;
+	size_t                position = 0;
+	size_t                writePos = 0; /* character index to write to */
+	size_t                final    = 0;
 	neuik_TextBlockData * data     = NULL;
 	static char           funcName[] = "neuik_TextBlock_GetLine";
 	static char         * errMsgs[]  = {"",                       // [0] no error
@@ -1047,21 +1047,21 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_GetSection(
 	neuik_TextBlock  * tblk,
-	unsigned int       startLineNo,
-	unsigned int       startLinePos,
-	unsigned int       endLineNo,
-	unsigned int       endLinePos,
+	size_t             startLineNo,
+	size_t             startLinePos,
+	size_t             endLineNo,
+	size_t             endLinePos,
 	char            ** secData)
 {
 	neuik_TextBlockData * startBlock;
 	neuik_TextBlockData * endBlock;
-	unsigned int          copyCtr;
-	unsigned int          writeCtr;
-	unsigned int          copySize;
-	unsigned int          startLineLen;
-	unsigned int          endLineLen;
-	unsigned int          startPosition;
-	unsigned int          endPosition;
+	size_t                copyCtr;
+	size_t                writeCtr;
+	size_t                copySize;
+	size_t                startLineLen;
+	size_t                endLineLen;
+	size_t                startPosition;
+	size_t                endPosition;
 	char                  copyChar;
 	char                * writeStr = NULL;
 	int                   eNum       = 0; /* which error to report (if any) */
@@ -1196,7 +1196,7 @@ out:
 int
 	neuik_TextBlock_ReplaceLine(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
+			size_t            lineNo,
 			const char      * lineData);
 
 /*----------------------------------------------------------------------------*/
@@ -1205,7 +1205,7 @@ int
 int
 	neuik_TextBlock_DeleteLine(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo);
+			size_t            lineNo);
 
 /*----------------------------------------------------------------------------*/
 /* Insert a line before the specified line number                             */
@@ -1213,7 +1213,7 @@ int
 int
 	neuik_TextBlock_InsertLine(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
+			size_t            lineNo,
 			const char      * lineData);
 
 /*----------------------------------------------------------------------------*/
@@ -1222,7 +1222,7 @@ int
 int
 	neuik_TextBlock_InsertLineAfter(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
+			size_t            lineNo,
 			const char      * lineData);
 
 /*----------------------------------------------------------------------------*/
@@ -1230,15 +1230,15 @@ int
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_InsertChar(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo,
-	unsigned int      byteNo,
+	size_t            lineNo,
+	size_t            byteNo,
 	char              newChar)
 {
 	neuik_TextBlockData * aBlock;
-	unsigned int          copyCtr;
-	unsigned int          lineLen;
-	unsigned int          lineBreakByte = 0;
-	unsigned int          position;
+	size_t                copyCtr;
+	size_t                lineLen;
+	size_t                lineBreakByte = 0;
+	size_t                position;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_InsertChar";
 	static char         * errMsgs[]  = {"",                            // [0] no error
@@ -1343,23 +1343,23 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_InsertText(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo,       /* line in which to insert text */
-	unsigned int      linePos,      /* position within the line to insert */
+	size_t            lineNo,       /* line in which to insert text */
+	size_t            linePos,      /* position within the line to insert */
 	const char      * text,         /* text section to be inserted */
-	unsigned int    * finalLineNo,  /* line where resulting insert completed */
-	unsigned int    * finalLinePos) /* line position where insert completed */
+	size_t          * finalLineNo,  /* line where resulting insert completed */
+	size_t          * finalLinePos) /* line position where insert completed */
 {
-	int                   textLen;
 	neuik_TextBlockData * aBlock;
-	unsigned int          copyCtr;
-	unsigned int          charCtr;
-	unsigned int          lineLen;
-	unsigned int          startPosition;
-	unsigned int          startOfCopy;
-	unsigned int          endOfCopy;
-	unsigned int          writeCtr         = 0;
-	unsigned int          posCtr           = 0;
-	unsigned int          lineCtr          = 0;
+	size_t                textLen;
+	size_t                copyCtr;
+	size_t                charCtr;
+	size_t                lineLen;
+	size_t                startPosition;
+	size_t                startOfCopy;
+	size_t                endOfCopy;
+	size_t                writeCtr         = 0;
+	size_t                posCtr           = 0;
+	size_t                lineCtr          = 0;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_InsertText";
 	static char         * errMsgs[]  = {"",                            // [0] no error
@@ -1591,14 +1591,14 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_DeleteChar(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo,
-	unsigned int      byteNo)
+	size_t            lineNo,
+	size_t            byteNo)
 {
 	neuik_TextBlockData * aBlock;
-	unsigned int          copyCtr;
-	unsigned int          lineLen;
-	unsigned int          lineBreakByte = 0;
-	unsigned int          position;
+	size_t                copyCtr;
+	size_t                lineLen;
+	size_t                lineBreakByte = 0;
+	size_t                position;
 	char                  remChar;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_DeleteChar";
@@ -1685,13 +1685,13 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_MergeLines(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo)
+	size_t            lineNo)
 {
 	neuik_TextBlockData * aBlock;
 	neuik_TextBlockData * aBlock2;
-	unsigned int          lineLen;
-	unsigned int          position;
-	unsigned int          position2;
+	size_t                lineLen;
+	size_t                position;
+	size_t                position2;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_MergeLines";
 	static char         * errMsgs[]  = {"",                            // [0] no error
@@ -1779,21 +1779,21 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_DeleteSection(
 	neuik_TextBlock * tblk,
-	unsigned int      startLineNo,
-	unsigned int      startLinePos,
-	unsigned int      endLineNo,
-	unsigned int      endLinePos)
+	size_t            startLineNo,
+	size_t            startLinePos,
+	size_t            endLineNo,
+	size_t            endLinePos)
 {
 	neuik_TextBlockData * startBlock;
 	neuik_TextBlockData * endBlock;
-	unsigned int          checkCtr;
-	unsigned int          copyCtr;
-	unsigned int          copyOffset;
-	unsigned int          endOfCopy;
-	unsigned int          startLineLen;
-	unsigned int          endLineLen;
-	unsigned int          startPosition;
-	unsigned int          endPosition;
+	size_t                checkCtr;
+	size_t                copyCtr;
+	size_t                copyOffset;
+	size_t                endOfCopy;
+	size_t                startLineLen;
+	size_t                endLineLen;
+	size_t                startPosition;
+	size_t                endPosition;
 	char                  remChar;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_DeleteSection";
@@ -1850,7 +1850,10 @@ int neuik_TextBlock_DeleteSection(
 	}
 
 	printf("Deleting Section from [%u:%u] to [%u:%u]\n",
-		startLineNo, startLinePos, endLineNo, endLinePos);
+		(unsigned int)(startLineNo), 
+		(unsigned int)(startLinePos), 
+		(unsigned int)(endLineNo), 
+		(unsigned int)(endLinePos));
 
 	if (startBlock == endBlock)
 	{
@@ -1924,15 +1927,15 @@ out:
 /*----------------------------------------------------------------------------*/
 int neuik_TextBlock_ReplaceChar(
 	neuik_TextBlock * tblk,
-	unsigned int      lineNo,
-	unsigned int      byteNo,
+	size_t            lineNo,
+	size_t            byteNo,
 	char              newChar)
 {
 	neuik_TextBlockData * aBlock;
-	unsigned int          copyCtr;
-	unsigned int          lineLen;
-	unsigned int          lineBreakByte = 0;
-	unsigned int          position;
+	size_t                copyCtr;
+	size_t                lineLen;
+	size_t                lineBreakByte = 0;
+	size_t                position;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_ReplaceChar";
 	static char         * errMsgs[]  = {"",                            // [0] no error
@@ -2040,8 +2043,8 @@ out:
 int
 	neuik_TextBlock_ReplaceChars(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos,
+			size_t            lineNo,
+			size_t            linePos,
 			char            * newString);
 
 /*----------------------------------------------------------------------------*/

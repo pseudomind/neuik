@@ -422,7 +422,7 @@ SDL_Texture * neuik_Element_Render__ListGroup(
 		eNum = 6;
 		goto out;
 	}
-	yFree = rSize->h; /* free Y-px: start with the full ht. and deduct as used */
+	yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
 
 	/*------------------------------------------------------------------------*/
 	/* Check to see if the requested draw size of the element has changed     */

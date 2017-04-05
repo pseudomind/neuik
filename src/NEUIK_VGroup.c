@@ -610,7 +610,7 @@ SDL_Texture * neuik_Element_Render__VGroup(
 		eNum = 6;
 		goto out;
 	}
-	yFree = rSize->h; /* free Y-px: start with the full ht. and deduct as used */
+	yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
 
 	/*------------------------------------------------------------------------*/
 	/* Check to see if the requested draw size of the element has changed     */
@@ -722,7 +722,7 @@ SDL_Texture * neuik_Element_Render__VGroup(
 		}
 
 		/* calculate the number of horizontal px per 1.0 of HScaling */
-		vFillPx = (int)((float)(yFree) / tScale);
+		vFillPx = (float)((int)(yFree/tScale));
 
 		/*--------------------------------------------------------------------*/
 		/* Render and place the child elements                                */
@@ -769,7 +769,7 @@ SDL_Texture * neuik_Element_Render__VGroup(
 			if (eCfg->VFill)
 			{
 				/* This element is configured to fill space vertically */
-				ySize = vFillPx * (eCfg->VScale) - (eCfg->PadTop + eCfg->PadBottom);
+				ySize = (int)(vFillPx * (eCfg->VScale)) - (eCfg->PadTop + eCfg->PadBottom);
 				rs.h  = ySize;
 			}
 

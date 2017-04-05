@@ -34,25 +34,25 @@ typedef struct {
 		void                 * textRend;      /*  `SDL_Renderer*` */ 
 		char                 * text;
 		neuik_TextBlock      * textBlk;
-		unsigned long          textLen;       /* current length of the text */
-		int                    textAllocSize; /* current mem alloc for text */
-		unsigned int           cursorLine;    /* line on which the cursor is */
-		unsigned int           cursorPos;     /* position of cursor within line */
+		size_t                 textLen;       /* current length of the text */
+		size_t                 textAllocSize; /* current mem alloc for text */
+		size_t                 cursorLine;    /* line on which the cursor is */
+		size_t                 cursorPos;     /* position of cursor within line */
 		int                    cursorX;       /* px pos of cursor (not considering pan) */
 		int                    selected;
 		int                    wasSelected;
 		int                    highlightIsSet;
-		unsigned long          highlightBeginPos;
-		unsigned long          highlightBeginLine;
-		unsigned long          highlightStartPos;
-		unsigned long          highlightStartLine;
-		unsigned long          highlightEndPos;
-		unsigned long          highlightEndLine;
+		size_t                 highlightBeginPos;
+		size_t                 highlightBeginLine;
+		size_t                 highlightStartPos;
+		size_t                 highlightStartLine;
+		size_t                 highlightEndPos;
+		size_t                 highlightEndLine;
 		int                    panX;          /* px of text pan */
 		int                    panCursor;     /* px pos of cursor (may cause view to move) */
 		int                    isActive;
-		unsigned long          clickOrigin;     /* cursorPos @ start of select click */
-		unsigned long          clickOriginLine; /* cursorLine @ start of select click */
+		size_t                 clickOrigin;     /* cursorPos @ start of select click */
+		size_t                 clickOriginLine; /* cursorLine @ start of select click */
 		int                    clickHeld;       /* click being held following select click */
 		int                    needsRedraw;
 		unsigned int           timeLastClick;

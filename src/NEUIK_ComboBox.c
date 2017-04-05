@@ -424,7 +424,7 @@ int NEUIK_MakeComboBox(
 	NEUIK_ComboBox ** cbPtr,  /* [out] The newly created NEUIK_ComboBox.  */
 	const char    * text)    /* [in]  Initial comboBox text. */
 {
-	int            sLen       = 1;
+	size_t         sLen       = 1;
 	int            eNum       = 0; /* which error to report (if any) */
 	NEUIK_ComboBox * cb        = NULL;
 	static char    funcName[] = "NEUIK_MakeComboBox";
@@ -487,7 +487,7 @@ int NEUIK_ComboBox_SetText(
 		NEUIK_ComboBox * cb,
 		const char   * text)
 {
-	int            sLen = 1;
+	size_t         sLen = 1;
 	int            eNum = 0; /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_ComboBox_SetText";
 	static char  * errMsgs[] = {"",                // [0] no error
@@ -790,9 +790,9 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 	/*------------------------------------------------------------------------*/
 	/* Render the comboBox down arrow                                         */
 	/*------------------------------------------------------------------------*/
-	arrowSize.w = (0.5*(float)(rSize->h - 2));
+	arrowSize.w = (int)((0.5*(float)(rSize->h - 2)));
 	if (arrowSize.w % 2 == 0) arrowSize.w--; /* make sure width is an odd number */
-	arrowSize.h = (0.3*(float)(rSize->h - 2));
+	arrowSize.h = (int)((0.3*(float)(rSize->h - 2)));
 	if (arrowSize.h % 2 == 0) arrowSize.h--; /* make sure height is an odd number */
 
 	aTex = NEUIK_RenderArrowDown(*fgClr, rend, arrowSize);
@@ -832,21 +832,21 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 				rect.x = 6;
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 
 			case NEUIK_HJUSTIFY_CENTER:
 				rect.x = (int) ((float)(rSize->w - (1 + rSize->h) - textW)/2.0);
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 
 			case NEUIK_HJUSTIFY_RIGHT:
 				rect.x = (int) (rSize->w - textW - (7 + rSize->h));
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 		}
 

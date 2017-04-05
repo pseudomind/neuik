@@ -13,6 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#include <stdio.h>
+#include <string.h>
+
 #include "NEUIK_error.h"
 #include "NEUIK_TextEntry.h"
 #include "NEUIK_TextEntry_internal.h"
@@ -213,8 +216,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 	int                     eNum         = 0; /* which error to report (if any) */
 	int                     lastW        = 0; /* position of previous char */
 	int                     normWidth    = 0;
-	unsigned long           oldCursorPos = 0;
-	unsigned long           ctr;
+	size_t                  oldCursorPos = 0;
+	size_t                  ctr;
 	char                    aChar;
 	char                  * clipText     = NULL;
 	TTF_Font              * font         = NULL;
@@ -793,12 +796,12 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
 {
 	neuik_EventState     evCaptured   = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	int                  eNum         = 0; /* which error to report (if any) */
-	unsigned long        inpLen       = 0;  /* length of text input */
-	unsigned long        newSize      = 0;  /* realloated text buf size */
-	unsigned long        stopPos;
-	unsigned long        hlOffset;         /* highlight offset (for copy) */
-	unsigned long        aPos;
-	unsigned long        ctr;
+	size_t               inpLen       = 0;  /* length of text input */
+	size_t               newSize      = 0;  /* realloated text buf size */
+	size_t               stopPos;
+	size_t               hlOffset;         /* highlight offset (for copy) */
+	size_t               aPos;
+	size_t               ctr;
 	char                 aChar;
 	char               * clipText     = NULL;
 	SDL_TextInputEvent * textInpEv;
@@ -985,12 +988,12 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 	int                 evCaptured   = 0;
 	int                 doRedraw     = 0;
 	int                 eNum         = 0; /* which error to report (if any) */
-	unsigned long       inpLen       = 0;  /* length of text input */
-	unsigned long       newSize      = 0;  /* realloated text buf size */
-	unsigned long       stopPos;
-	unsigned long       hlOffset;         /* highlight offset (for copy) */
-	unsigned long       aPos;
-	unsigned long       ctr;
+	size_t              inpLen       = 0;  /* length of text input */
+	size_t              newSize      = 0;  /* realloated text buf size */
+	size_t              stopPos;
+	size_t              hlOffset;         /* highlight offset (for copy) */
+	size_t              aPos;
+	size_t              ctr;
 	char                aChar;
 	char              * clipText     = NULL;
 	SDL_Keymod          keyMod;

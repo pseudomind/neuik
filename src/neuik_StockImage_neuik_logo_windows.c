@@ -13,40 +13,21 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef NEUIK_PROGRESSBAR_H
-#define NEUIK_PROGRESSBAR_H
 
-#include "NEUIK_Event.h"
-#include "NEUIK_Element.h"
-#include "NEUIK_ProgressBarConfig.h"
+// #include <SDL.h>
+#include "NEUIK_Image.h"
 
-
-typedef struct {
-		neuik_Object              objBase; /* this structure is requied to be an neuik object */
-		NEUIK_ProgressBarConfig * cfg;
-		NEUIK_ProgressBarConfig * cfgPtr;  /* if NULL, the non-Pointer version is used */
-		char                      fracText[50];
-		double                    frac;
-		int                       selected;
-		int                       wasSelected;
-		int                       isActive;
-		int                       clickOrigin;
-		int                       needsRedraw;
-} NEUIK_ProgressBar;
-
-
-int NEUIK_NewProgressBar(
-	NEUIK_ProgressBar ** pbPtr);
-
-int 
-	NEUIK_ProgressBar_GetFraction(
-			NEUIK_ProgressBar  * pb,
-			double             * frac);
-
-int 
-	NEUIK_ProgressBar_SetFraction(
-			NEUIK_ProgressBar  * pb,
-			double               frac);
-
-
-#endif /* NEUIK_PROGRESSBAR_H */
+/*******************************************************************************
+ *
+ *  Name:          neuik_GetStockImage_neuik_logo
+ *
+ *  Description:   Return a pointer to the .
+ *
+ *  Returns:       NULL if there is a problem; otherwise a valid string
+ *
+ ******************************************************************************/
+int neuik_GetStockImage_neuik_logo(
+	NEUIK_Image ** imgPtr)
+{
+	return 1;
+}

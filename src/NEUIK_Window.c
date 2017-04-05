@@ -163,12 +163,6 @@ int NEUIK_NewWindow(
 		NULL,
 		&(w->objBase));
 
-	if (NEUIK_MakeImage_FromStock(&icon, NEUIK_STOCKIMAGE_NEUIK_ICON))
-	{
-		eNum = 4;
-		goto out;
-	}
-
 	/* initialize pointers to NULL */
 	w->win         = NULL;
 	w->rend        = NULL;
@@ -178,7 +172,7 @@ int NEUIK_NewWindow(
 	w->elem        = NULL;
 	w->focused     = NULL;
 	w->popups      = NULL;
-	w->icon        = icon;
+	w->icon        = NULL;
 
 	/* set default values */
 	w->posX        = -1;
@@ -192,6 +186,12 @@ int NEUIK_NewWindow(
 
 	w->eHT       = NEUIK_NewEventHandlerTable();
 	w->eCT       = NEUIK_NewCallbackTable();
+
+	if (!NEUIK_MakeImage_FromStock(&icon, NEUIK_STOCKIMAGE_NEUIK_ICON))
+	{
+		w->icon = icon;
+	}
+
 	if (NEUIK_NewWindowConfig(&w->cfg))
 	{
 		eNum = 2;
@@ -1848,7 +1848,7 @@ int NEUIK_Window_SetTitle(
 	NEUIK_Window  * w, 
 	const char    * title)
 {
-	int           tLen       = 1; /* title length */
+	size_t        tLen       = 1; /* title length */
 	int           eNum       = 0; /* which error to report (if any) */
 	static char   funcName[] = "NEUIK_Window_SetTitle";
 	static char * errMsgs[]  = {"",                      // [0] no error

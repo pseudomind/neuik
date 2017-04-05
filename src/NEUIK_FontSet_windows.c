@@ -36,14 +36,15 @@ int NEUIK_GetTTFLocation(
 	const char  * fName, /* Base font name */
 	char       ** loc)   /* Location of the desired font */
 {
-	int           eNum      = 0; /* which error to report (if any) */
-	struct stat   statRes;
-	static int    baseLen   = 0;
-	static char   sysDir[]  = "C:\\Windows\\Fonts\\";
-	static char * errMsgs[] = {"",                    // [0] no error
-		"GetTTFLocation: Base fontName is NULL/empty.\n", // [1]
-		"GetTTFLocation: Failed to allocate memory.\n",   // [2]
-		"GetTTFLocation: Pointer to `loc` is NULL.\n",    // [3]
+	int             eNum      = 0; /* which error to report (if any) */
+	struct stat     statRes;
+	static size_t   baseLen   = 0;
+	static char     sysDir[]  = "C:\\Windows\\Fonts\\";
+	static char     funcName[] = "NEUIK_GetTTFLocation";
+	static char   * errMsgs[] = {"",        // [0] no error
+		"Base fontName is NULL/empty.", // [1]
+		"Failed to allocate memory.",   // [2]
+		"Pointer to `loc` is NULL.",    // [3]
 	};
 
 	if (baseLen == 0)
@@ -90,9 +91,175 @@ int NEUIK_GetTTFLocation(
 out:
 	if (eNum > 0)
 	{
-		NEUIK_RaiseError(errMsgs[eNum]);
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
 
+	return eNum;
+}
+
+
+/*******************************************************************************
+*
+*  Name:          NEUIK_GetBoldTTFLocation
+*
+*  Description:   Determines the location of the desired system font.
+*
+*  Returns:       A non-zero value if there is an error. Not finding the
+*                 desired font is not considered an error however, in such a
+*                 case the location argument will be set to NULL.
+*
+******************************************************************************/
+int NEUIK_GetBoldTTFLocation(
+	const char  * fName, /* Base font name */
+	char       ** loc)   /* Location of the desired font */
+{
+	int           eNum   = 0; /* which error to report (if any) */
+	size_t        fLen   = 0;
+	char        * bfName = NULL;
+	static char   funcName[] = "NEUIK_GetBoldTTFLocation";
+	static char * errMsgs[] = { "",            // [0] no error
+		"Base fontName is NULL/empty.",        // [1]
+		"Failed to allocate memory",           // [2]
+		"Failure in `NEUIK_GetTTFLocation()`", // [3]
+	};
+
+	if (fName == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	fLen = strlen(fName);
+	bfName = malloc((fLen + 2)*(sizeof(char)));
+	if (bfName == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	sprintf(bfName, "%sb", fName);
+
+	if (NEUIK_GetTTFLocation(bfName, loc))
+	{
+		eNum = 3;
+		goto out;
+	}
+out:
+	if (eNum != 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	if (bfName != NULL) free(bfName);
+	return eNum;
+}
+
+/*******************************************************************************
+*
+*  Name:          NEUIK_GetItalicTTFLocation
+*
+*  Description:   Determines the location of the desired system font.
+*
+*  Returns:       A non-zero value if there is an error. Not finding the
+*                 desired font is not considered an error however, in such a
+*                 case the location argument will be set to NULL.
+*
+******************************************************************************/
+int NEUIK_GetItalicTTFLocation(
+	const char  * fName, /* Base font name */
+	char       ** loc)   /* Location of the desired font */
+{
+	int           eNum = 0; /* which error to report (if any) */
+	size_t        fLen = 0;
+	char        * ifName = NULL;
+	static char   funcName[] = "NEUIK_GetItalicTTFLocation";
+	static char * errMsgs[] = { "",            // [0] no error
+		"Base fontName is NULL/empty.",        // [1]
+		"Failed to allocate memory",           // [2]
+		"Failure in `NEUIK_GetTTFLocation()`", // [3]
+	};
+
+	if (fName == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	fLen = strlen(fName);
+	ifName = malloc((fLen + 2)*(sizeof(char)));
+	if (ifName == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	sprintf(ifName, "%si", fName);
+
+	if (NEUIK_GetTTFLocation(ifName, loc))
+	{
+		eNum = 3;
+		goto out;
+	}
+out:
+	if (eNum != 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	if (ifName != NULL) free(ifName);
+	return eNum;
+}
+
+/*******************************************************************************
+*
+*  Name:          NEUIK_GetBoldItalicTTFLocation
+*
+*  Description:   Determines the location of the desired system font.
+*
+*  Returns:       A non-zero value if there is an error. Not finding the
+*                 desired font is not considered an error however, in such a
+*                 case the location argument will be set to NULL.
+*
+******************************************************************************/
+int NEUIK_GetBoldItalicTTFLocation(
+	const char  * fName, /* Base font name */
+	char       ** loc)   /* Location of the desired font */
+{
+	int           eNum = 0; /* which error to report (if any) */
+	size_t        fLen = 0;
+	char        * zfName = NULL;
+	static char   funcName[] = "NEUIK_GetBoldItalicTTFLocation";
+	static char * errMsgs[] = { "",            // [0] no error
+		"Base fontName is NULL/empty.",        // [1]
+		"Failed to allocate memory",           // [2]
+		"Failure in `NEUIK_GetTTFLocation()`", // [3]
+	};
+
+	if (fName == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	fLen = strlen(fName);
+	zfName = malloc((fLen + 2)*(sizeof(char)));
+	if (zfName == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	sprintf(zfName, "%sz", fName);
+
+	if (NEUIK_GetTTFLocation(zfName, loc))
+	{
+		eNum = 3;
+		goto out;
+	}
+out:
+	if (eNum != 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	if (zfName != NULL) free(zfName);
 	return eNum;
 }

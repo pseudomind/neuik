@@ -26,8 +26,9 @@ neuik_Class ** neuik_AllClasses = NULL;
 
 neuik_FatalError neuik_Fatal = NEUIK_FATALERROR_NO_ERROR;
 
-static sigjmp_buf sigjmp_buffer;
-
+#ifndef WIN32
+	static sigjmp_buf sigjmp_buffer;
+#endif /* WIN32*/
 
 /*******************************************************************************
  *
@@ -76,7 +77,7 @@ int neuik_RegisterClassSet(
 	neuik_Set  ** newSet)         /* (out) The unique setID for this class set */
 {
 	int           ctr;
-	int           sLen;
+	size_t        sLen;
 	int           eNum       = 0;
 	neuik_Set   * thisSet    = NULL;
 	static char   funcName[] = "neuik_RegisterClassSet";
@@ -239,7 +240,7 @@ int neuik_RegisterClass(
 	neuik_Class           ** newClass)         /* (out) Store a pointer to the new class */
 {
 	int           ctr;
-	int           sLen;
+	size_t        sLen;
 	int           eNum       = 0;
 	neuik_Class * thisClass  = NULL;
 	static char   funcName[] = "neuik_RegisterClass";
@@ -531,20 +532,21 @@ int NEUIK_Object_Free(
 	return neuik_Object_Free(objPtr);
 }
 
-/*******************************************************************************
- *
- *  Name:          neuik_Object_IsNEUIKObject_capture_segv
- *
- *  Description:   Captures SIGSEGV signals and returns the program flow back
- *                 to the original function.
- *
- ******************************************************************************/
-void neuik_Object_IsNEUIKObject_capture_segv(
-	int sig_num)
-{
-	siglongjmp(sigjmp_buffer, 1);
-}
-
+#ifndef WIN32
+	/*******************************************************************************
+	 *
+	 *  Name:          neuik_Object_IsNEUIKObject_capture_segv
+	 *
+	 *  Description:   Captures SIGSEGV signals and returns the program flow back
+	 *                 to the original function.
+	 *
+	******************************************************************************/
+	void neuik_Object_IsNEUIKObject_capture_segv(
+		int sig_num)
+	{
+		siglongjmp(sigjmp_buffer, 1);
+	}
+#endif /* WIN32 */
 
 /*******************************************************************************
  *
@@ -574,6 +576,7 @@ int	neuik_Object_IsNEUIKObject(
 	}
 	objBase = (neuik_Object_Base*)(objPtr);
 
+#ifndef WIN32
 	if (sigsetjmp(sigjmp_buffer, 1))
 	{
 		/*--------------------------------------------------------------------*/
@@ -585,6 +588,7 @@ int	neuik_Object_IsNEUIKObject(
 	}
 
 	signal(SIGSEGV, neuik_Object_IsNEUIKObject_capture_segv);
+#endif /* WIN32 */
 	if ( (objBase->object).mustBe_1337  != 1337 ||
 		 (objBase->object).mustBe_90210 != 90210)
 	{
@@ -597,8 +601,10 @@ out:
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		isNObj = 0;
 	}
-out2:
+#ifndef WIN32
+	out2:
 	signal(SIGSEGV, NULL);
+#endif /* WIN32 */
 	return isNObj;
 }
 

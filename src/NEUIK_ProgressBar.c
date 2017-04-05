@@ -747,9 +747,9 @@ SDL_Texture * neuik_Element_Render__ProgressBar(
 			}
 			for (ctr = 0; ctr < nClrs-1; ctr++)
 			{
-				deltaPP[ctr].r = (cs[ctr+1]->color).r - (cs[ctr]->color).r;
-				deltaPP[ctr].g = (cs[ctr+1]->color).g - (cs[ctr]->color).g;
-				deltaPP[ctr].b = (cs[ctr+1]->color).b - (cs[ctr]->color).b;
+				deltaPP[ctr].r = (float)((cs[ctr+1]->color).r - (cs[ctr]->color).r);
+				deltaPP[ctr].g = (float)((cs[ctr+1]->color).g - (cs[ctr]->color).g);
+				deltaPP[ctr].b = (float)((cs[ctr+1]->color).b - (cs[ctr]->color).b);
 			}
 		}
 
@@ -902,21 +902,21 @@ SDL_Texture * neuik_Element_Render__ProgressBar(
 				rect.x = 6;
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 
 			case NEUIK_HJUSTIFY_CENTER:
 				rect.x = (int) ((float)(rSize->w - textW)/2.0);
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 
 			case NEUIK_HJUSTIFY_RIGHT:
 				rect.x = (int) (rSize->w - textW - 6);
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 		}
 

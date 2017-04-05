@@ -708,7 +708,7 @@ SDL_Texture * neuik_Element_Render__ListRow(
 		eNum = 6;
 		goto out;
 	}
-	xFree = rSize->w; /* free X-px: start with the full width and deduct as used */
+	xFree = (float)(rSize->w); /* free X-px: start with the full width and deduct as used */
 
 	/*------------------------------------------------------------------------*/
 	/* Check to see if the requested draw size of the element has changed     */
@@ -850,7 +850,7 @@ SDL_Texture * neuik_Element_Render__ListRow(
 		}
 
 		/* calculate the number of horizontal px per 1.0 of HScaling */
-		hFillPx = (int)((float)(xFree) / tScale);
+		hFillPx = (float)((int)((float)(xFree) / tScale));
 
 		/*--------------------------------------------------------------------*/
 		/* Render and place the child elements                                */
@@ -885,7 +885,7 @@ SDL_Texture * neuik_Element_Render__ListRow(
 				eNum = 4;
 				goto out;
 			}
-			xSize = rs.w;
+			xSize = (float)(rs.w);
 
 			/*----------------------------------------------------------------*/
 			/* Check for and apply if necessary Horizontal and Veritcal fill  */
@@ -899,7 +899,7 @@ SDL_Texture * neuik_Element_Render__ListRow(
 			{
 				/* This element is configured to fill space horizontally */
 				xSize = hFillPx * (eCfg->HScale) - (eCfg->PadLeft + eCfg->PadRight);
-				rs.w  = xSize;
+				rs.w  = (int)(xSize);
 			}
 
 			/*----------------------------------------------------------------*/
@@ -907,7 +907,7 @@ SDL_Texture * neuik_Element_Render__ListRow(
 			/* is necessary as the location of this object will propagate to  */
 			/* its child objects.                                             */
 			/*----------------------------------------------------------------*/
-			rect.x = xPos + eCfg->PadLeft;
+			rect.x = (int)(xPos + eCfg->PadLeft);
 			rect.y = yPos + eCfg->PadTop;
 			rect.w = rs.w;
 			rect.h = rs.h;

@@ -15,6 +15,7 @@
  ******************************************************************************/
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -425,7 +426,7 @@ int NEUIK_MakeButton(
 	NEUIK_Button ** btnPtr,  /* [out] The newly created NEUIK_Button.  */
 	const char    * text)    /* [in]  Initial button text. */
 {
-	int            sLen       = 1;
+	size_t         sLen       = 1;
 	int            eNum       = 0; /* which error to report (if any) */
 	NEUIK_Button * btn        = NULL;
 	static char    funcName[] = "NEUIK_MakeButton";
@@ -488,7 +489,7 @@ int NEUIK_Button_SetText(
 		NEUIK_Button * btn,
 		const char   * text)
 {
-	int            sLen = 1;
+	size_t         sLen = 1;
 	int            eNum = 0; /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_Button_SetText";
 	static char  * errMsgs[] = {"",               // [0] no error
@@ -838,7 +839,11 @@ int NEUIK_Button_Configure(
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
 				/*------------------------------------------------------------*/
-				if (ns == EOF || ns < 4) 
+			#ifndef WIN32
+				if (ns == EOF || ns < 4)
+			#else
+				if (ns < 4)
+			#endif /* WIN32 */
 				{
 					NEUIK_RaiseError(funcName, errMsgs[8]);
 					continue;
@@ -876,7 +881,11 @@ int NEUIK_Button_Configure(
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
 				/*------------------------------------------------------------*/
-				if (ns == EOF || ns < 4) 
+			#ifndef WIN32
+				if (ns == EOF || ns < 4)
+			#else
+				if (ns < 4)
+			#endif /* WIN32 */
 				{
 					NEUIK_RaiseError(funcName, errMsgs[10]);
 					continue;
@@ -902,7 +911,11 @@ int NEUIK_Button_Configure(
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
 				/*------------------------------------------------------------*/
-				if (ns == EOF || ns < 1) 
+			#ifndef WIN32
+				if (ns == EOF || ns < 1)
+			#else
+				if (ns < 1)
+			#endif /* WIN32 */
 				{
 					NEUIK_RaiseError(funcName, errMsgs[12]);
 					continue;
@@ -1175,21 +1188,21 @@ SDL_Texture * neuik_Element_Render__Button(
 				rect.x = 6;
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 
 			case NEUIK_HJUSTIFY_CENTER:
 				rect.x = (int) ((float)(rSize->w - textW)/2.0);
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 
 			case NEUIK_HJUSTIFY_RIGHT:
 				rect.x = (int) (rSize->w - textW - 6);
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 				break;
 		}
 

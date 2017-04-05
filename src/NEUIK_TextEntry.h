@@ -32,19 +32,19 @@ typedef struct {
 		void                  * textTex;       /*  `SDL_Texture *` */ 
 		void                  * textRend;      /*  `SDL_Renderer*` */ 
 		char                  * text;
-		unsigned long           textLen;       /* current length of the text */
-		int                     textAllocSize; /* current mem alloc for text */
-		unsigned long           cursorPos;     /* position of cursor in text */
+		size_t                  textLen;       /* current length of the text */
+		size_t                  textAllocSize; /* current mem alloc for text */
+		size_t                  cursorPos;     /* position of cursor in text */
 		int                     cursorX;       /* px pos of cursor (not considering pan) */
 		int                     selected;
 		int                     wasSelected;
-		unsigned long           highlightBegin;
-		unsigned long           highlightStart;
-		unsigned long           highlightEnd;
+		size_t                  highlightBegin;
+		size_t                  highlightStart;
+		size_t                  highlightEnd;
 		int                     panX;          /* px of text pan */
 		int                     panCursor;     /* px pos of cursor (may cause view to move) */
 		int                     isActive;
-		unsigned long           clickOrigin;   /* cursorPos @ start of select click */
+		size_t                  clickOrigin;   /* cursorPos @ start of select click */
 		int                     clickHeld;     /* click being held following select click */
 		int                     needsRedraw;
 		unsigned int            timeLastClick;

@@ -297,7 +297,7 @@ int NEUIK_MakeTextEntry(
 	NEUIK_TextEntry ** tePtr, /* [out] The newly created NEUIK_TextEntry. */
 	const char       * text)  /* [in]  Initial TextEntry text. */
 {
-	int               sLen       = 1;
+	size_t            sLen       = 1;
 	int               eNum       = 0; /* which error to report (if any) */
 	NEUIK_TextEntry * te         = NULL;
 	static char       funcName[] = "NEUIK_MakeTextEntry";
@@ -537,8 +537,8 @@ int NEUIK_TextEntry_SetText(
 		NEUIK_TextEntry * te,
 		const char      * text)
 {
-	int             sLen    = 1;
-	unsigned long   textLen = 0;
+	size_t          sLen    = 1;
+	size_t          textLen = 0;
 	int             eNum    = 0; /* which error to report (if any) */
 	static char     funcName[] = "NEUIK_TextEntry_SetText";
 	static char   * errMsgs[] = {"",                // [0] no error
@@ -1079,7 +1079,7 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 				rect.x = 0;
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;
-				rect.h = 1.1*textH;
+				rect.h = (int)(1.1*textH);
 
 				textW = 0;
 				textH = 0;
@@ -1119,7 +1119,7 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 			rect.x = 0;
 			rect.y = (int) ((float)(rSize->h - textH)/2.0);
 			rect.w = textWFull;
-			rect.h = 1.1*textH;
+			rect.h = (int)(1.1*textH);
 
 			SDL_RenderCopy(te->textRend, tTex, NULL, &rect);
 

@@ -530,12 +530,12 @@ int NEUIK_Element_Configure(
 			}
 			else if (!strcmp("VScale", name))
 			{
-				eCfg->VScale = atof(value);
+				eCfg->VScale = (float)(atof(value));
 				doRedraw = 1;
 			}
 			else if (!strcmp("HScale", name))
 			{
-				eCfg->HScale = atof(value);
+				eCfg->HScale = (float)(atof(value));
 				doRedraw = 1;
 			}
 			else if (!strcmp("HJustify", name))
@@ -1959,10 +1959,10 @@ int neuik_Element_RedrawBackgroundGradient(
 		}
 		for (ctr = 0; ctr < nClrs-1; ctr++)
 		{
-			deltaPP[ctr].r = (cs[ctr+1]->color).r - (cs[ctr]->color).r;
-			deltaPP[ctr].g = (cs[ctr+1]->color).g - (cs[ctr]->color).g;
-			deltaPP[ctr].b = (cs[ctr+1]->color).b - (cs[ctr]->color).b;
-			deltaPP[ctr].a = (cs[ctr+1]->color).a - (cs[ctr]->color).a;
+			deltaPP[ctr].r = (float)((cs[ctr+1]->color).r - (cs[ctr]->color).r);
+			deltaPP[ctr].g = (float)((cs[ctr+1]->color).g - (cs[ctr]->color).g);
+			deltaPP[ctr].b = (float)((cs[ctr+1]->color).b - (cs[ctr]->color).b);
+			deltaPP[ctr].a = (float)((cs[ctr+1]->color).a - (cs[ctr]->color).a);
 		}
 	}
 

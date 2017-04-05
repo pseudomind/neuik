@@ -325,7 +325,7 @@ int NEUIK_MakeTextEdit(
 	NEUIK_TextEdit ** tePtr, /* [out] The newly created NEUIK_TextEdit. */
 	const char      * text)  /* [in]  Initial TextEdit text. */
 {
-	int              sLen       = 1;
+	size_t           sLen       = 1;
 	int              eNum       = 0; /* which error to report (if any) */
 	NEUIK_TextEdit * te         = NULL;
 	static char      funcName[] = "NEUIK_MakeTextEdit";
@@ -573,11 +573,11 @@ int NEUIK_TextEdit_SetText(
 		NEUIK_TextEdit * te,
 		const char     * text)
 {
-	int             sLen    = 1;
-	unsigned long   textLen = 0;
-	int             eNum    = 0; /* which error to report (if any) */
-	static char     funcName[] = "NEUIK_TextEdit_SetText";
-	static char   * errMsgs[] = {"",                      // [0] no error
+	size_t        sLen    = 1;
+	size_t        textLen = 0;
+	int           eNum    = 0; /* which error to report (if any) */
+	static char   funcName[] = "NEUIK_TextEdit_SetText";
+	static char * errMsgs[] = {"",                      // [0] no error
 		"Argument `te` is not of TextEdit class.",        // [1]
 		"Failure to allocate memory.",                    // [2]
 		"Failure in function `neuik_TextBlock_SetText`.", // [3]
@@ -927,9 +927,9 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	int                    hlWidth    = 0;    /* highlight bg Width */
 	int                    eNum       = 0;    /* which error to report (if any) */
 	int                    hasText    = 1;
-	unsigned int           lineLen;
-	unsigned int           lineCtr;
-	unsigned int           nLines;
+	size_t                 lineLen;
+	size_t                 lineCtr;
+	size_t                 nLines;
 	char                 * lineBytes  = NULL;
 	SDL_Rect               rect;
 	const NEUIK_Color    * fgClr      = NULL;
@@ -1122,7 +1122,7 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 				/*----------------------------------------------------------------*/
 				/* Create an SDL_Surface for the text within the element          */
 				/*----------------------------------------------------------------*/
-				textHFull = 1.1*textH;
+				textHFull = (int)(1.1*textH);
 				te->textSurf = SDL_CreateRGBSurface(0, textW+1, textHFull, 32, 0, 0, 0, 0);
 				if (te->textSurf == NULL)
 				{
@@ -1303,7 +1303,7 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 				/* This is a blank line but the cursor may be present.        */
 				/*------------------------------------------------------------*/
 				TTF_SizeText(font, " ", &textW, &textH);
-				textHFull = 1.1*textH;
+				textHFull = (int)(1.1*textH);
 
 				/*------------------------------------------------------------*/
 				/* Condtionally draw the cursor line into the textedit.       */

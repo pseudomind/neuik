@@ -511,8 +511,8 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 		/* necessary as the location of this object will propagate to its     */
 		/* child objects.                                                     */
 		/*--------------------------------------------------------------------*/
-		rect.x = xPos + eCfg->PadLeft;
-		rect.y = yPos + eCfg->PadTop;
+		rect.x = (int)(xPos + eCfg->PadLeft);
+		rect.y = (int)(yPos + eCfg->PadTop);
 		rect.w = rs.w;
 		rect.h = rs.h;
 		rl.x = (eBase->eSt.rLoc).x + rect.x;
@@ -587,7 +587,7 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 
 			vctr  = 0;        /* valid element counter */
 			xPos  = 0;
-			xFree = rSize->w; /* free X-px: start @ full width; deduct as used */
+			xFree = (float)(rSize->w); /* free X-px: start @ full width; deduct as used */
 			finalInd = nextInd;
 			
 			/*----------------------------------------------------------------*/
@@ -657,14 +657,14 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 
 				eCfg = eCfgs[ctr];
 				rs   = eSizes[ctr];
-				xSize = rs.w;
+				xSize = (float)(rs.w);
 
 				/*------------------------------------------------------------*/
 				/* Update the stored location before rendering the element.   */
 				/* This is necessary as the location of this object will      */
 				/* propagate to its child objects.                            */
 				/*------------------------------------------------------------*/
-				rect.x = xPos + eCfg->PadLeft;
+				rect.x = (int)(xPos) + eCfg->PadLeft;
 				rect.y = yPos + eCfg->PadTop;
 				rect.w = rs.w;
 				rect.h = rs.h;

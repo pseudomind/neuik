@@ -13,6 +13,9 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#include <stdio.h>
+#include <string.h>
+
 #include "NEUIK_error.h"
 #include "NEUIK_TextEdit.h"
 #include "NEUIK_TextEdit_internal.h"
@@ -226,11 +229,11 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	int                    yRel         = 0;
 	int                    yPos         = 0;
 	int                    shift_held   = 0;
-	unsigned int           lineLen      = 0;
-	unsigned int           nLines       = 0;
-	unsigned int           clickLine    = 0;
-	unsigned long          oldCursorPos = 0;
-	unsigned long          ctr          = 0;
+	size_t                 lineLen      = 0;
+	size_t                 nLines       = 0;
+	size_t                 clickLine    = 0;
+	size_t                 oldCursorPos = 0;
+	size_t                 ctr          = 0;
 	char                   aChar        = 0;
 	char                 * lineBytes    = NULL;
 	TTF_Font             * font         = NULL;
@@ -338,7 +341,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		/* Determine the line of text in which the click occurred             */
 		/*--------------------------------------------------------------------*/
 		TTF_SizeText(font, " ", &textW, &textH);
-		textHFull = 1.1*textH;
+		textHFull = (int)(1.1*textH);
 
 		yPos = 6; /* <-- this is the offset from the top where text begins */
 		if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
@@ -595,7 +598,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/* Determine the line of text in which the click occurred         */
 			/*----------------------------------------------------------------*/
 			TTF_SizeText(font, " ", &textW, &textH);
-			textHFull = 1.1*textH;
+			textHFull = (int)(1.1*textH);
 
 			yPos = 6; /* <-- this is the offset from the top where text begins */
 			if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
@@ -856,7 +859,7 @@ int neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 {
 	int                  evCaptured = 0;
 	int                  eNum       = 0; /* which error to report (if any) */
-	unsigned long        inpLen     = 0; /* length of text input */
+	size_t               inpLen     = 0; /* length of text input */
 	char               * clipText   = NULL;
 	SDL_TextInputEvent * textInpEv  = NULL;
 	NEUIK_TextEdit     * te         = NULL;
@@ -909,7 +912,7 @@ int neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 			te->cursorLine, te->cursorPos, textInpEv->text[0]))
 		{
 			printf("InsertChar `%c` at [%u:%u]\n", textInpEv->text[0],
-				te->cursorLine, te->cursorPos);
+				(unsigned int)(te->cursorLine), (unsigned int)(te->cursorPos));
 			eNum = 5;
 			goto out;
 		}
@@ -950,8 +953,8 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	int                 evCaptured = 0;
 	int                 doRedraw   = 0;
 	int                 eNum       = 0; /* which error to report (if any) */
-	unsigned int        lineLen    = 0;
-	unsigned int        nLines     = 0;
+	size_t              lineLen    = 0;
+	size_t              nLines     = 0;
 	char              * clipText   = NULL;
 	SDL_Keymod          keyMod;
 	SDL_KeyboardEvent * keyEv;

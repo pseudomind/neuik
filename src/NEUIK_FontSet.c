@@ -26,13 +26,14 @@
 /* the list.                                                                  */
 /*----------------------------------------------------------------------------*/
 static char * defaultFontBaseNames[] = {
-	"Verdana",        /* OSX   */
-	"Helvetica",      /* OSX   */
-	"Tahoma",         /* OSX   */
-	"Arial",          /* OSX   */
-	"DejaVuSans",     /* Linux */
-	"LiberationSans", /* Linux */
-	"Ubuntu",         /* Linux */
+	"verdana",        /* Windows */
+	"Verdana",        /* OSX     */
+	"Helvetica",      /* OSX     */
+	"Tahoma",         /* OSX     */
+	"Arial",          /* OSX     */
+	"DejaVuSans",     /* Linux   */
+	"LiberationSans", /* Linux   */
+	"Ubuntu",         /* Linux   */
 	NULL,
 };
 
@@ -467,7 +468,7 @@ neuik_ptrTo_TTF_Font NEUIK_FontSet_GetFont(
 	int             useBold,   /* (bool) whether font should be bold */
 	int             useItalic) /* (bool) whether font should be italic */
 {
-	int                 ctr        = 0;
+	unsigned int        ctr        = 0;
 	int                 eNum       = 0; /* which error to report (if any) */
 	NEUIK_FontFileSet * ffs        = NULL;
 	static char         funcName[] = "NEUIK_FontSet_GetFont";

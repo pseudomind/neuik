@@ -5,3 +5,4 @@
 /scripts/*.pyc
 /scripts/.waf-*
 /examples/bin/*
+/VS2015/*

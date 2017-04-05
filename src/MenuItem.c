@@ -24,7 +24,7 @@
 NEUIK_MenuItem* NEUIK_NewMenuItem(
 	const char *name)
 {
-	int sLen = 1;
+	size_t sLen = 1;
 	NEUIK_MenuItem *rvM = NULL;
 
 	rvM = (NEUIK_MenuItem*) malloc(sizeof(NEUIK_MenuItem));
@@ -112,7 +112,7 @@ int NEUIK_MenuItem_GetSize(
 	}
 
 	TTF_SizeText(font, mItem->name, &tW, &tH);
-	rSize->w = tW + (1.5)*mItem->cfg->fontEmWidth;
+	rSize->w = tW + (int)((1.5)*mItem->cfg->fontEmWidth);
 	rSize->h = mItem->cfg->height;
 
 	/*------------------------------------------------------------------------*/
@@ -327,10 +327,10 @@ SDL_Texture*  NEUIK_RenderMenuItem(
 	tTex = NEUIK_RenderText(mi->name, font, *fgClr, rend, &textW, &textH);
 	if (tTex == NULL) goto out;
 
-	rect.x = (int) ((float)(rs.w - textW)/2.0) + 0.3*mi->cfg->fontEmWidth;
-	rect.y = (int) ((float)(rs.h - textH)/2.0);
+	rect.x = (int)(((float)(rs.w - textW)/2.0) + 0.3*mi->cfg->fontEmWidth);
+	rect.y = (int)((float)(rs.h - textH)/2.0);
 	rect.w = textW;
-	rect.h = 1.1*textH;
+	rect.h = (int)(1.1*textH);
 	SDL_RenderCopy(rend, tTex, NULL, &rect);
 
 	/*------------------------------------------------------------------------*/

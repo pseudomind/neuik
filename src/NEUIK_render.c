@@ -96,11 +96,11 @@ SDL_Texture * NEUIK_RenderArrowDown(
 	SDL_SetRenderDrawColor(iRend, color.r, color.g, color.b, 255);
 
 	/* dw/dh */
-	slope = (((float)rSize.w - 1)/2.0)  /  ((float)rSize.h - 1);
+	slope = (float)((((float)rSize.w - 1)/2.0)  /  ((float)rSize.h - 1));
 
 	for (ctr = 0; ctr < rSize.h; ctr++)
 	{
-		slopeAdj  = slope * ((float)(ctr));
+		slopeAdj  = (int)(slope * ((float)(ctr)));
 		SDL_RenderDrawLine(iRend, slopeAdj, ctr, rSize.w - (1 + slopeAdj), ctr);
 	}
 	SDL_RenderDrawPoint(iRend, rSize.w/2, rSize.h - 1);
@@ -366,9 +366,9 @@ SDL_Texture * NEUIK_RenderGradient(
 		}
 		for (ctr = 0; ctr < nClrs-1; ctr++)
 		{
-			deltaPP[ctr].r = (cs[ctr+1]->color).r - (cs[ctr]->color).r;
-			deltaPP[ctr].g = (cs[ctr+1]->color).g - (cs[ctr]->color).g;
-			deltaPP[ctr].b = (cs[ctr+1]->color).b - (cs[ctr]->color).b;
+			deltaPP[ctr].r = (float)((cs[ctr+1]->color).r - (cs[ctr]->color).r);
+			deltaPP[ctr].g = (float)((cs[ctr+1]->color).g - (cs[ctr]->color).g);
+			deltaPP[ctr].b = (float)((cs[ctr+1]->color).b - (cs[ctr]->color).b);
 		}
 	}
 
@@ -640,7 +640,7 @@ void String_Duplicate(
 		char        **dst, 
 		const char   *src)
 {
-	int sLen = 1;
+	size_t  sLen = 1;
 	if (dst == NULL) return; /* unreportable failure */
 	if (src == NULL)
 	{

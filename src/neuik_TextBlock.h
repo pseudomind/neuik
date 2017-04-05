@@ -19,22 +19,22 @@
 // #include "NEUIK_defs.h"
 
 typedef struct {
-	unsigned int   firstLineNo;    /* 0 = start of */
-	unsigned int   nLines;         /* number of actual lines in block */
-	unsigned int   bytesAllocated; /* max size of text block (number of characters) */
-	unsigned int   bytesInUse;     /* number of allocated bytes that are currently used */
-	char         * data;           
-	void         * previousBlock;  /* NULL = first block */
-	void         * nextBlock;      /* NULL = last block  */
+	size_t   firstLineNo;    /* 0 = start of */
+	size_t   nLines;         /* number of actual lines in block */
+	size_t   bytesAllocated; /* max size of text block (number of characters) */
+	size_t   bytesInUse;     /* number of allocated bytes that are currently used */
+	char   * data;           
+	void   * previousBlock;  /* NULL = first block */
+	void   * nextBlock;      /* NULL = last block  */
 } neuik_TextBlockData;
 
 typedef struct {
-	unsigned int           blockSize;         /* the number of blocks per chapter */
-	unsigned int           chapterSize;       /* the number of blocks per chapter */
-	unsigned int           nDataBlocks;       /* the number of data blocks in the TextBlock */
-	unsigned int           nLines;            /* total number of lines in the TextBlock */
-	unsigned int           nChapters;         /* total number of chapters in the TextBlock */
-	unsigned int           chaptersAllocated; /* size of allocated chapter array */
+	size_t                 blockSize;         /* the number of blocks per chapter */
+	size_t                 chapterSize;       /* the number of blocks per chapter */
+	size_t                 nDataBlocks;       /* the number of data blocks in the TextBlock */
+	size_t                 nLines;            /* total number of lines in the TextBlock */
+	size_t                 nChapters;         /* total number of chapters in the TextBlock */
+	size_t                 chaptersAllocated; /* size of allocated chapter array */
 	neuik_TextBlockData *  firstBlock;
 	neuik_TextBlockData *  lastBlock;
 	neuik_TextBlockData ** chapters;      /*  */
@@ -43,8 +43,8 @@ typedef struct {
 int
 	neuik_NewTextBlock(
 			neuik_TextBlock ** tblkPtr,
-			unsigned int       blockSize,
-			unsigned int       chapterSize);
+			size_t             blockSize,
+			size_t             chapterSize);
 
 int 
 	neuik_TextBlock_SetText(
@@ -57,7 +57,7 @@ int
 int
 	neuik_TextBlock_GetLineCount(
 			neuik_TextBlock * tblk,
-			unsigned int    * nLines);
+			size_t          * nLines);
 
 /*----------------------------------------------------------------------------*/
 /* Check to see if a line number is contained by a TextBlock                  */
@@ -65,7 +65,7 @@ int
 int
 	neuik_TextBlock_HasLine(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
+			size_t            lineNo,
 			int             * hasLine);
 
 /*----------------------------------------------------------------------------*/
@@ -74,8 +74,8 @@ int
 int 
 	neuik_TextBlock_GetLineLength(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int    * length);
+			size_t            lineNo,
+			size_t          * length);
 
 /*----------------------------------------------------------------------------*/
 /* Get a copy of the text contained by a line in a TextBlock                  */
@@ -83,7 +83,7 @@ int
 int
 	neuik_TextBlock_GetLine(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
+			size_t            lineNo,
 			char           ** lineData);
 
 /*----------------------------------------------------------------------------*/
@@ -92,10 +92,10 @@ int
 int
 	neuik_TextBlock_GetSection(
 			neuik_TextBlock * tblk,
-			unsigned int      startLineNo,
-			unsigned int      startLinePos,
-			unsigned int      endLineNo,
-			unsigned int      endLinePos,
+			size_t            startLineNo,
+			size_t            startLinePos,
+			size_t            endLineNo,
+			size_t            endLinePos,
 			char           ** secData);
 
 /*----------------------------------------------------------------------------*/
@@ -104,7 +104,7 @@ int
 int
 	neuik_TextBlock_ReplaceLine(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
+			size_t            lineNo,
 			const char      * lineData);
 
 /*----------------------------------------------------------------------------*/
@@ -113,7 +113,7 @@ int
 int
 	neuik_TextBlock_DeleteLine(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo);
+			size_t            lineNo);
 
 /*----------------------------------------------------------------------------*/
 /* Insert a line before the specified line number                             */
@@ -121,7 +121,7 @@ int
 int
 	neuik_TextBlock_InsertLine(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
+			size_t            lineNo,
 			const char      * lineData);
 
 /*----------------------------------------------------------------------------*/
@@ -130,7 +130,7 @@ int
 int
 	neuik_TextBlock_InsertLineAfter(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
+			size_t            lineNo,
 			const char      * lineData);
 
 /*----------------------------------------------------------------------------*/
@@ -139,8 +139,8 @@ int
 int 
 	neuik_TextBlock_InsertChar(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos,
+			size_t            lineNo,
+			size_t            linePos,
 			char              newChar);
 
 /*----------------------------------------------------------------------------*/
@@ -149,11 +149,11 @@ int
 int 
 	neuik_TextBlock_InsertText(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,        /* line in which to insert text */
-			unsigned int      linePos,       /* position within the line to insert */
+			size_t            lineNo,        /* line in which to insert text */
+			size_t            linePos,       /* position within the line to insert */
 			const char      * text,          /* text section to be inserted */ 
-			unsigned int    * finalLineNo,   /* line where resulting insert completed */
-			unsigned int    * finalLinePos); /* line position where insert completed */
+			size_t          * finalLineNo,   /* line where resulting insert completed */
+			size_t          * finalLinePos); /* line position where insert completed */
 
 /*----------------------------------------------------------------------------*/
 /* Delete a character at a position                                           */
@@ -161,8 +161,8 @@ int
 int
 	neuik_TextBlock_DeleteChar(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos);
+			size_t            lineNo,
+			size_t            linePos);
 
 /*----------------------------------------------------------------------------*/
 /* Delete a number of characters at a position                                */
@@ -170,10 +170,10 @@ int
 int
 	neuik_TextBlock_DeleteSection(
 			neuik_TextBlock * tblk,
-			unsigned int      startLineNo,
-			unsigned int      startLinePos,
-			unsigned int      endLineNo,
-			unsigned int      endLinePos);
+			size_t            startLineNo,
+			size_t            startLinePos,
+			size_t            endLineNo,
+			size_t            endLinePos);
 
 /*----------------------------------------------------------------------------*/
 /* Replace a character at the specified position with another                 */
@@ -181,8 +181,8 @@ int
 int 
 	neuik_TextBlock_ReplaceChar(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos,
+			size_t            lineNo,
+			size_t            linePos,
 			char              newChar);
 
 /*----------------------------------------------------------------------------*/
@@ -192,8 +192,8 @@ int
 int
 	neuik_TextBlock_ReplaceChars(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo,
-			unsigned int      linePos,
+			size_t            lineNo,
+			size_t            linePos,
 			char            * newString);
 
 /*----------------------------------------------------------------------------*/
@@ -203,7 +203,7 @@ int
 int
 	neuik_TextBlock_MergeLines(
 			neuik_TextBlock * tblk,
-			unsigned int      lineNo);
+			size_t            lineNo);
 
 /*----------------------------------------------------------------------------*/
 /* Refactoring an object allows it to perform housekeeping so that it can     */

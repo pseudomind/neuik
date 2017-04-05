@@ -41,7 +41,7 @@
 NEUIK_Menu * NEUIK_NewMenu(
 		const char *name)
 {
-	int sLen = 1;
+	size_t sLen = 1;
 	NEUIK_Menu *rvM = NULL;
 
 	rvM = (NEUIK_Menu*) malloc(sizeof(NEUIK_Menu));
@@ -416,7 +416,7 @@ SDL_Texture * NEUIK_RenderMenu(
 	rect.x = (int) ((float)(mainSize.w - textW)/2.0);
 	rect.y = (int) ((float)(bgRect.h - textH)/2.0);
 	rect.w = textW;
-	rect.h = 1.1*textH;
+	rect.h = (int)(1.1*textH);
 	SDL_RenderCopy(rend, tTex, NULL, &rect);
 
 	/*------------------------------------------------------------------------*/
