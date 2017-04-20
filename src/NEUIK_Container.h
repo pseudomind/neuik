@@ -34,6 +34,8 @@ typedef struct {
 		unsigned int           n_used;       /* number of element slots in use */
 		neuik_Container_Type   cType;        /* identify the container as single or multi */
 		int                    shownIfEmpty; /* [bool] whether container is visible without children shown */
+		enum neuik_VJustify    VJustify;     /* Vertical   justification */
+		enum neuik_HJustify    HJustify;     /* Horizontal justification */
 } NEUIK_Container;
 
 
@@ -46,6 +48,12 @@ int
 	NEUIK_Container_AddElements(
 			NEUIK_Element cont,
 			NEUIK_Element elem0,
+			...);
+
+int
+	NEUIK_Container_Configure(
+			NEUIK_Element   cont,
+			const char    * set0,
 			...);
 
 int 

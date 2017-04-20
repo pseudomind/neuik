@@ -69,21 +69,21 @@ NEUIK_ElementBackground neuik_default_ElementBackground = {
 };
 
 NEUIK_ElementConfig neuik_default_ElementConfig = {
-	 1.0,                  /* Scale Factor : 0 = Doesn't stretch; other value does */
-	 1.0,                  /* Scale Factor : 0 = Doesn't stretch; other value does */
-	 0,                    /* Element fills Vertically   : 1 = true; 0 = false */
-	 0,                    /* Element fills Horizontally : 1 = true; 0 = false */
-	NEUIK_VJUSTIFY_CENTER, /* Vertical   justification */
-	NEUIK_HJUSTIFY_CENTER, /* Horizontal justification */
-	 0,                    /* Pad the top of the element with transparent space */
-	 0,                    /* Pad the bottom of the element with transparent space */
-	 0,                    /* Pad the left of the element with transparent space */
-	 0,                    /* Pad the right of the element with transparent space */
-	-1,                    /* Minimum Width */
-	-1,                    /* Maximum Width */
-	-1,                    /* Minimum Height */
-	-1,                    /* Maximum Height */
-	 1,                    /* Element is being shown */
+	 1.0,                   /* Scale Factor : 0 = Doesn't stretch; other value does */
+	 1.0,                   /* Scale Factor : 0 = Doesn't stretch; other value does */
+	 0,                     /* Element fills Vertically   : 1 = true; 0 = false */
+	 0,                     /* Element fills Horizontally : 1 = true; 0 = false */
+	NEUIK_VJUSTIFY_DEFAULT, /* Vertical   justification */
+	NEUIK_HJUSTIFY_DEFAULT, /* Horizontal justification */
+	 0,                     /* Pad the top of the element with transparent space */
+	 0,                     /* Pad the bottom of the element with transparent space */
+	 0,                     /* Pad the left of the element with transparent space */
+	 0,                     /* Pad the right of the element with transparent space */
+	-1,                     /* Minimum Width */
+	-1,                     /* Maximum Width */
+	-1,                     /* Minimum Height */
+	-1,                     /* Maximum Height */
+	 1,                     /* Element is being shown */
 };
 
 NEUIK_ElementState neuik_default_ElementState = {
@@ -330,31 +330,42 @@ void neuik_Element_Configure_capture_segv(
 	exit(1);
 }
 
-/* This list of named sets must be terminated by a NULL pointer */
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Element_Configure
+ *
+ *  Description:   Configure one or more settings for an element.
+ *
+ *                 NOTE: This list of settings must be terminated by a NULL
+ *                 pointer.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
 int NEUIK_Element_Configure(
-	NEUIK_Element    elem,
-	const char     * set0,
+	NEUIK_Element   elem,
+	const char    * set0,
 	...)
 {
-	int                    ctr;
-	int                    nCtr;
-	int                    isBool;
-	int                    boolVal    = 0;
-	int                    doRedraw   = 0;
-	int                    typeMixup;
-	va_list                args;
-	char                 * strPtr     = NULL;
-	char                 * name       = NULL;
-	char                 * value      = NULL;
-	const char           * set        = NULL;
-	char                   buf[4096];
-	NEUIK_ElementBase    * eBase      = NULL; 
-	NEUIK_ElementConfig  * eCfg       = NULL;
+	int                   ctr;
+	int                   nCtr;
+	int                   isBool;
+	int                   boolVal    = 0;
+	int                   doRedraw   = 0;
+	int                   typeMixup;
+	va_list               args;
+	char                * strPtr     = NULL;
+	char                * name       = NULL;
+	char                * value      = NULL;
+	const char          * set        = NULL;
+	char                  buf[4096];
+	NEUIK_ElementBase   * eBase      = NULL;
+	NEUIK_ElementConfig * eCfg       = NULL;
 	/*------------------------------------------------------------------------*/
 	/* If a `name=value` string with an unsupported name is found, check to   */
 	/* see if a boolName was mistakenly used instead.                         */
 	/*------------------------------------------------------------------------*/
-	static char          * boolNames[] = {
+	static char         * boolNames[] = {
 		"FillAll",
 		"HFill",
 		"VFill",
@@ -365,7 +376,7 @@ int NEUIK_Element_Configure(
 	/* If a boolName string with an unsupported name is found, check to see   */
 	/* if a supported nameValue type was mistakenly used instead.             */
 	/*------------------------------------------------------------------------*/
-	static char          * valueNames[] = {
+	static char         * valueNames[] = {
 		"HScale",
 		"VScale",
 		"HJustify",
@@ -377,20 +388,20 @@ int NEUIK_Element_Configure(
 		"PadAll",
 		NULL,
 	};
-	static char            funcName[] = "NEUIK_Element_Configure";
-	static char          * errMsgs[] = {"",                                 // [ 0] no error
-		"Argument `elemPtr` caused `neuik_Object_GetClassObject` to fail.", // [ 1]
-		"NamedSet.name is NULL, skipping.",                                 // [ 2]
-		"NamedSet.name is blank, skipping.",                                // [ 3]
-		"NamedSet.name type unknown, skipping.",                            // [ 4]
-		"`name=value` string is too long.",                                 // [ 5]
-		"Set string is empty.",                                             // [ 6]
-		"HJustify value is invalid.",                                       // [ 7]
-		"VJustify value is invalid.",                                       // [ 8]
-		"BoolType name unknown, skipping.",                                 // [ 9]
-		"Invalid `name=value` string.",                                     // [10]
-		"ValueType name used as BoolType, skipping.",                       // [11]
-		"BoolType name used as ValueType, skipping.",                       // [12]
+	static char           funcName[] = "NEUIK_Element_Configure";
+	static char         * errMsgs[] = {"",                               // [ 0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [ 1]
+		"NamedSet.name is NULL, skipping.",                              // [ 2]
+		"NamedSet.name is blank, skipping.",                             // [ 3]
+		"NamedSet.name type unknown, skipping.",                         // [ 4]
+		"`name=value` string is too long.",                              // [ 5]
+		"Set string is empty.",                                          // [ 6]
+		"HJustify value is invalid.",                                    // [ 7]
+		"VJustify value is invalid.",                                    // [ 8]
+		"BoolType name unknown, skipping.",                              // [ 9]
+		"Invalid `name=value` string.",                                  // [10]
+		"ValueType name used as BoolType, skipping.",                    // [11]
+		"BoolType name used as ValueType, skipping.",                    // [12]
 	};
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -555,6 +566,11 @@ int NEUIK_Element_Configure(
 					eCfg->HJustify = NEUIK_HJUSTIFY_RIGHT;
 					doRedraw = 1;
 				}
+				else if (!strcmp("default", value))
+				{
+					eCfg->HJustify = NEUIK_HJUSTIFY_DEFAULT;
+					doRedraw = 1;
+				}
 				else 
 				{
 					NEUIK_RaiseError(funcName, errMsgs[7]);
@@ -575,6 +591,11 @@ int NEUIK_Element_Configure(
 				else if (!strcmp("bottom", value))
 				{
 					eCfg->VJustify = NEUIK_VJUSTIFY_BOTTOM;
+					doRedraw = 1;
+				}
+				else if (!strcmp("default", value))
+				{
+					eCfg->VJustify = NEUIK_VJUSTIFY_DEFAULT;
 					doRedraw = 1;
 				}
 				else 

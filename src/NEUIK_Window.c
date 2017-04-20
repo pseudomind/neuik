@@ -1586,6 +1586,7 @@ int NEUIK_Window_Redraw(
 				rLoc.y = eCfg->PadTop;
 				break;
 			case NEUIK_VJUSTIFY_CENTER:
+			case NEUIK_VJUSTIFY_DEFAULT:
 				rLoc.y = w->sizeH/2 - (rSize.h/2);
 				break;
 			case NEUIK_VJUSTIFY_BOTTOM:
@@ -1598,6 +1599,7 @@ int NEUIK_Window_Redraw(
 				rLoc.x = eCfg->PadLeft;
 				break;
 			case NEUIK_HJUSTIFY_CENTER:
+			case NEUIK_HJUSTIFY_DEFAULT:
 				rLoc.x = w->sizeW/2 - (rSize.w/2);
 				break;
 			case NEUIK_HJUSTIFY_RIGHT:

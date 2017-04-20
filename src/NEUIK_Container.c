@@ -195,6 +195,8 @@ int neuik_Object_New__Container(
 	cont->n_used       = 0;
 	cont->cType        = NEUIK_CONTAINER_UNSET;
 	cont->shownIfEmpty = 0;
+	cont->VJustify     = NEUIK_VJUSTIFY_CENTER;
+	cont->HJustify     = NEUIK_HJUSTIFY_CENTER;
 
 	/*------------------------------------------------------------------------*/
 	/* Create first level Base SuperClass Object                              */
@@ -1061,3 +1063,239 @@ out2:
 	return eNum;
 }
 
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Container_Configure
+ *
+ *  Description:   Configure one or more settings for a container.
+ *
+ *                 NOTE: This list of settings must be terminated by a NULL
+ *                 pointer.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Container_Configure(
+	NEUIK_Element   cont,
+	const char    * set0,
+	...)
+{
+	int               ctr;
+	// int               nCtr;
+	int               isBool;
+	int               boolVal    = 0;
+	int               doRedraw   = 0;
+	int               typeMixup;
+	va_list           args;
+	char            * strPtr     = NULL;
+	char            * name       = NULL;
+	char            * value      = NULL;
+	const char      * set        = NULL;
+	char              buf[4096];
+	NEUIK_Container * cBase      = NULL;
+	/*------------------------------------------------------------------------*/
+	/* If a `name=value` string with an unsupported name is found, check to   */
+	/* see if a boolName was mistakenly used instead.                         */
+	/*------------------------------------------------------------------------*/
+	// static char     * boolNames[] = {
+	// 	NULL,
+	// };
+	/*------------------------------------------------------------------------*/
+	/* If a boolName string with an unsupported name is found, check to see   */
+	/* if a supported nameValue type was mistakenly used instead.             */
+	/*------------------------------------------------------------------------*/
+	// static char     * valueNames[] = {
+	// 	"HJustify",
+	// 	"VJustify",
+	// 	NULL,
+	// };
+	static char       funcName[] = "NEUIK_Container_Configure";
+	static char     * errMsgs[]  = {"",                                  // [ 0] no error
+		"Argument `cont` caused `neuik_Object_GetClassObject` to fail.", // [ 1]
+		"NamedSet.name is NULL, skipping.",                              // [ 2]
+		"NamedSet.name is blank, skipping.",                             // [ 3]
+		"NamedSet.name type unknown, skipping.",                         // [ 4]
+		"`name=value` string is too long.",                              // [ 5]
+		"Set string is empty.",                                          // [ 6]
+		"HJustify value is invalid.",                                    // [ 7]
+		"VJustify value is invalid.",                                    // [ 8]
+		"BoolType name unknown, skipping.",                              // [ 9]
+		"Invalid `name=value` string.",                                  // [10]
+		"ValueType name used as BoolType, skipping.",                    // [11]
+		"BoolType name used as ValueType, skipping.",                    // [12]
+	};
+
+	if (neuik_Object_GetClassObject(cont, neuik__Class_Container, (void**)&cBase))
+	{
+		NEUIK_RaiseError(funcName, errMsgs[1]);
+		return 1;
+	}
+
+	set = set0;
+
+	va_start(args, set0);
+
+	for (ctr = 0;; ctr++)
+	{
+		isBool = 0;
+		name   = NULL;
+		value  = NULL;
+
+		if (set == NULL) break;
+
+		// #ifndef NO_NEUIK_SIGNAL_TRAPPING
+		// 	signal(SIGSEGV, neuik_Element_Configure_capture_segv);
+		// #endif
+
+		if (strlen(set) > 4095)
+		{
+			// #ifndef NO_NEUIK_SIGNAL_TRAPPING
+			// 	signal(SIGSEGV, NULL);
+			// #endif
+			NEUIK_RaiseError(funcName, errMsgs[5]);
+			set = va_arg(args, const char *);
+			continue;
+		}
+		else
+		{
+			// #ifndef NO_NEUIK_SIGNAL_TRAPPING
+			// 	signal(SIGSEGV, NULL);
+			// #endif
+			strcpy(buf, set);
+			/* Find the equals and set it to '\0' */
+			strPtr = strchr(buf, '=');
+			if (strPtr == NULL)
+			{
+				/*------------------------------------------------------------*/
+				/* Bool type configuration (or a mistake)                     */
+				/*------------------------------------------------------------*/
+				if (buf[0] == 0)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[6]);
+				}
+
+				isBool  = 1;
+				boolVal = 1;
+				name    = buf;
+				if (buf[0] == '!')
+				{
+					boolVal = 0;
+					name    = buf + 1;
+				}
+			}
+			else
+			{
+				*strPtr = 0;
+				strPtr++;
+				if (*strPtr == 0)
+				{
+					/* `name=value` string is missing a value */
+					NEUIK_RaiseError(funcName, errMsgs[10]);
+					set = va_arg(args, const char *);
+					continue;
+				}
+				name  = buf;
+				value = strPtr;
+			}
+		}
+
+		if (!isBool)
+		{
+			if (name == NULL)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[2]);
+			}
+			else if (name[0] == 0)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[3]);
+			}
+			else if (!strcmp("HJustify", name))
+			{
+				if (!strcmp("left", value))
+				{
+					cBase->HJustify = NEUIK_HJUSTIFY_LEFT;
+					doRedraw = 1;
+				}
+				else if (!strcmp("center", value))
+				{
+					cBase->HJustify = NEUIK_HJUSTIFY_CENTER;
+					doRedraw = 1;
+				}
+				else if (!strcmp("right", value))
+				{
+					cBase->HJustify = NEUIK_HJUSTIFY_RIGHT;
+					doRedraw = 1;
+				}
+				else if (!strcmp("default", value))
+				{
+					cBase->HJustify = NEUIK_HJUSTIFY_DEFAULT;
+					doRedraw = 1;
+				}
+				else
+				{
+					NEUIK_RaiseError(funcName, errMsgs[7]);
+				}
+			}
+			else if (!strcmp("VJustify", name))
+			{
+				if (!strcmp("top", value))
+				{
+					cBase->VJustify = NEUIK_VJUSTIFY_TOP;
+					doRedraw = 1;
+				}
+				else if (!strcmp("center", value))
+				{
+					cBase->VJustify = NEUIK_VJUSTIFY_CENTER;
+					doRedraw = 1;
+				}
+				else if (!strcmp("bottom", value))
+				{
+					cBase->VJustify = NEUIK_VJUSTIFY_BOTTOM;
+					doRedraw = 1;
+				}
+				else if (!strcmp("default", value))
+				{
+					cBase->VJustify = NEUIK_VJUSTIFY_DEFAULT;
+					doRedraw = 1;
+				}
+				else
+				{
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+				}
+			}
+			else
+			{
+				typeMixup = 0;
+				// for (nCtr = 0;; nCtr++)
+				// {
+				// 	if (boolNames[nCtr] == NULL) break;
+
+				// 	if (!strcmp(boolNames[nCtr], name))
+				// 	{
+				// 		typeMixup = 1;
+				// 		break;
+				// 	}
+				// }
+
+				if (typeMixup)
+				{
+					/* A bool type was mistakenly used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[12]);
+				}
+				else
+				{
+					/* An unsupported name was used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[4]);
+				}
+			}
+		}
+
+		/* before starting */
+		set = va_arg(args, const char *);
+	}
+	va_end(args);
+
+	if (doRedraw) neuik_Element_RequestRedraw(cont);
+
+	return 0;
+}

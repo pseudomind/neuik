@@ -906,6 +906,7 @@ SDL_Texture * neuik_Element_Render__ProgressBar(
 				break;
 
 			case NEUIK_HJUSTIFY_CENTER:
+			case NEUIK_HJUSTIFY_DEFAULT:
 				rect.x = (int) ((float)(rSize->w - textW)/2.0);
 				rect.y = (int) ((float)(rSize->h - textH)/2.0);
 				rect.w = textW;

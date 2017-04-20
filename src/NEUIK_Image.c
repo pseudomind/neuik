@@ -748,6 +748,7 @@ SDL_Texture * neuik_Element_Render__Image(
 				break;
 
 			case NEUIK_HJUSTIFY_CENTER:
+			case NEUIK_HJUSTIFY_DEFAULT:
 				rect.x = (int) ((float)(rSize->w - imW)/2.0);
 				rect.y = (int) ((float)(rSize->h - imH)/2.0);
 				break;

@@ -599,6 +599,21 @@ SDL_Texture * neuik_Element_Render__Stack(
 	/*------------------------------------------------------------------------*/
 	switch (eCfg->HJustify)
 	{
+		case NEUIK_HJUSTIFY_DEFAULT:
+			switch (cont->HJustify)
+			{
+				case NEUIK_HJUSTIFY_LEFT:
+					rect.x = eCfg->PadLeft;
+					break;
+				case NEUIK_HJUSTIFY_CENTER:
+				case NEUIK_HJUSTIFY_DEFAULT:
+					rect.x = rSize->w/2 - (rs.w/2);
+					break;
+				case NEUIK_HJUSTIFY_RIGHT:
+					rect.x = rSize->w - (rs.w + eCfg->PadRight);
+					break;
+			}
+			break;
 		case NEUIK_HJUSTIFY_LEFT:
 			rect.x = eCfg->PadLeft;
 			break;
@@ -612,11 +627,27 @@ SDL_Texture * neuik_Element_Render__Stack(
 
 	switch (eCfg->VJustify)
 	{
+		case NEUIK_VJUSTIFY_DEFAULT:
+			switch (cont->VJustify)
+			{
+				case NEUIK_VJUSTIFY_TOP:
+					rect.y = eCfg->PadTop;
+					break;
+				case NEUIK_VJUSTIFY_CENTER:
+				case NEUIK_VJUSTIFY_DEFAULT:
+					rect.y = (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 -
+						(rs.h/2);
+					break;
+				case NEUIK_VJUSTIFY_BOTTOM:
+					rect.y = rSize->h - (rs.h + eCfg->PadBottom);
+					break;
+			}
+			break;
 		case NEUIK_VJUSTIFY_TOP:
 			rect.y = eCfg->PadTop;
 			break;
 		case NEUIK_VJUSTIFY_CENTER:
-			rect.y = rSize->h/2 - (rs.h/2);
+			rect.y = (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 - (rs.h/2);
 			break;
 		case NEUIK_VJUSTIFY_BOTTOM:
 			rect.y = rSize->h - (rs.h + eCfg->PadBottom);

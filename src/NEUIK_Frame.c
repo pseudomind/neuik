@@ -552,9 +552,9 @@ SDL_Texture * neuik_Element_Render__Frame(
 	/* If this frame has a hidden element, just make it a small box */
 	if (!NEUIK_Element_IsShown(elem)) goto out2;
 
-	/*----------------------------------------------------------------*/
-	/* Determine whether the contained element fills the window       */
-	/*----------------------------------------------------------------*/
+	/*------------------------------------------------------------------------*/
+	/* Determine whether the contained element fills the window               */
+	/*------------------------------------------------------------------------*/
 	eCfg = neuik_Element_GetConfig(elem);
 	if (eCfg == NULL)
 	{
@@ -568,7 +568,7 @@ SDL_Texture * neuik_Element_Render__Frame(
 		{
 			/* The element fills the window vertically and horizonatally */
 			rs.w = rSize->w - (2*frame->thickness + eCfg->PadLeft + eCfg->PadRight);
-			rs.h = rSize->h - (2*frame->thickness +eCfg->PadTop  + eCfg->PadBottom);
+			rs.h = rSize->h - (2*frame->thickness + eCfg->PadTop  + eCfg->PadBottom);
 		}
 		else
 		{
@@ -599,13 +599,69 @@ SDL_Texture * neuik_Element_Render__Frame(
 		}
 	}
 
-	/*--------------------------------------------------------------------*/
-	/* Update the stored location before rendering the element. This is   */
-	/* necessary as the location of this object will propagate to its     */
-	/* child objects.                                                     */
-	/*--------------------------------------------------------------------*/
-	destRect.x = frame->thickness + eCfg->PadLeft;
-	destRect.y = frame->thickness + eCfg->PadTop;
+	/*------------------------------------------------------------------------*/
+	/* Update the stored location before rendering the element. This is       */
+	/* necessary as the location of this object will propagate to its child   */
+	/* objects.                                                               */
+	/*------------------------------------------------------------------------*/
+	switch (eCfg->HJustify)
+	{
+		case NEUIK_HJUSTIFY_DEFAULT:
+			switch (cont->HJustify)
+			{
+				case NEUIK_HJUSTIFY_LEFT:
+					destRect.x = frame->thickness + eCfg->PadLeft;
+					break;
+				case NEUIK_HJUSTIFY_CENTER:
+				case NEUIK_HJUSTIFY_DEFAULT:
+					destRect.x = rSize->w/2 - (rs.w/2);
+					break;
+				case NEUIK_HJUSTIFY_RIGHT:
+					destRect.x =  rSize->w - (rs.w + frame->thickness + eCfg->PadRight);
+					break;
+			}
+			break;
+		case NEUIK_HJUSTIFY_LEFT:
+			destRect.x = frame->thickness + eCfg->PadLeft;
+			break;
+		case NEUIK_HJUSTIFY_CENTER:
+			destRect.x = rSize->w/2 - (rs.w/2);
+			break;
+		case NEUIK_HJUSTIFY_RIGHT:
+			destRect.x =  rSize->w - (rs.w + frame->thickness + eCfg->PadRight);
+			break;
+	}
+
+	switch (eCfg->VJustify)
+	{
+		case NEUIK_VJUSTIFY_DEFAULT:
+			switch (cont->VJustify)
+			{
+				case NEUIK_VJUSTIFY_TOP:
+					// rect.y = eCfg->PadTop;
+					destRect.y = frame->thickness + eCfg->PadTop;
+					break;
+				case NEUIK_VJUSTIFY_CENTER:
+				case NEUIK_VJUSTIFY_DEFAULT:
+					destRect.y = rSize->h/2 - (rs.h/2);
+					break;
+				case NEUIK_VJUSTIFY_BOTTOM:
+					destRect.y = rSize->h - (rs.h + frame->thickness + eCfg->PadBottom);
+					break;
+			}
+			break;
+		case NEUIK_VJUSTIFY_TOP:
+			// rect.y = eCfg->PadTop;
+			destRect.y = frame->thickness + eCfg->PadTop;
+			break;
+		case NEUIK_VJUSTIFY_CENTER:
+			destRect.y = rSize->h/2 - (rs.h/2);
+			break;
+		case NEUIK_VJUSTIFY_BOTTOM:
+			destRect.y = rSize->h - (rs.h + frame->thickness + eCfg->PadBottom);
+			break;
+	}
+
 	destRect.w = rs.w;
 	destRect.h = rs.h;
 	rl.x = (eBase->eSt.rLoc).x + destRect.x;

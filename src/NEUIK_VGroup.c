@@ -780,6 +780,21 @@ SDL_Texture * neuik_Element_Render__VGroup(
 			/*----------------------------------------------------------------*/
 			switch (eCfg->HJustify)
 			{
+				case NEUIK_HJUSTIFY_DEFAULT:
+					switch (cont->HJustify)
+					{
+						case NEUIK_HJUSTIFY_LEFT:
+							rect.x = xPos + eCfg->PadLeft;
+							break;
+						case NEUIK_HJUSTIFY_CENTER:
+						case NEUIK_HJUSTIFY_DEFAULT:
+							rect.x = rSize->w/2 - (rs.w/2);
+							break;
+						case NEUIK_HJUSTIFY_RIGHT:
+							rect.x = rSize->w - (rs.w + eCfg->PadRight);
+							break;
+					}
+					break;
 				case NEUIK_HJUSTIFY_LEFT:
 					rect.x = xPos + eCfg->PadLeft;
 					break;
