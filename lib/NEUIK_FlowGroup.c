@@ -35,7 +35,7 @@ int neuik_Object_New__FlowGroup(void ** fgPtr);
 int neuik_Object_Free__FlowGroup(void * fgPtr);
 
 int neuik_Element_GetMinSize__FlowGroup(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__FlowGroup(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__FlowGroup(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -334,9 +334,10 @@ int neuik_Element_GetMinSize__FlowGroup(
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__FlowGroup(
-	NEUIK_Element    fgElem,
-	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
+	NEUIK_Element   fgElem,
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                    tempH;
 	int                    elemCount;
@@ -358,9 +359,11 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 	NEUIK_Container      * cont       = NULL;
 	NEUIK_ElementBase    * eBase      = NULL;
 	NEUIK_FlowGroup      * fg         = NULL;
+	SDL_Surface          * surf       = NULL;
 	SDL_Renderer         * rend       = NULL;
 	SDL_Rect               rect;
 	RenderLoc              rl;
+	RenderLoc              rlRel      = {0, 0}; /* renderloc relative to parent */
 	RenderSize             rs;
 	RenderSize           * eSizes     = NULL;
 	static char            funcName[] = "neuik_Element_Render__FlowGroup";
@@ -460,12 +463,13 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 			goto out;
 		}
 	}
+	surf = eBase->eSt.surf;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(fgElem))
+	if (neuik_Element_RedrawBackground(fgElem, xSurf))
 	{
 		eNum = 14;
 		goto out;
@@ -517,9 +521,11 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 		rect.h = rs.h;
 		rl.x = (eBase->eSt.rLoc).x + rect.x;
 		rl.y = (eBase->eSt.rLoc).y + rect.y;
-		neuik_Element_StoreSizeAndLocation(elem, rs, rl);
+		rlRel.x = rect.x;
+		rlRel.y = rect.y;
+		neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-		tex = neuik_Element_Render(elem, &rs, rend);
+		tex = neuik_Element_Render(elem, &rs, rend, surf);
 		if (tex == NULL)
 		{
 			eNum = 5;
@@ -670,9 +676,11 @@ SDL_Texture * neuik_Element_Render__FlowGroup(
 				rect.h = rs.h;
 				rl.x = (eBase->eSt.rLoc).x + rect.x;
 				rl.y = (eBase->eSt.rLoc).y + rect.y;
-				neuik_Element_StoreSizeAndLocation(elem, rs, rl);
+				rlRel.x = rect.x;
+				rlRel.y = rect.y;
+				neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-				tex = neuik_Element_Render(elem, &rs, rend);
+				tex = neuik_Element_Render(elem, &rs, rend, surf);
 				if (tex == NULL)
 				{
 					eNum = 5;
@@ -694,7 +702,7 @@ out2:
 	/*------------------------------------------------------------------------*/
 	ConditionallyDestroyTexture((SDL_Texture **)&(eBase->eSt.texture));
 	SDL_RenderPresent(eBase->eSt.rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, eBase->eSt.surf);
+	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
 	if (eBase->eSt.texture == NULL)
 	{
 		eNum = 7;

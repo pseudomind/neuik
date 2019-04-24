@@ -22,6 +22,7 @@
 
 #include "NEUIK_colors.h"
 #include "NEUIK_error.h"
+#include "NEUIK_render.h"
 #include "NEUIK_structs_basic.h"
 #include "NEUIK_Event.h"
 #include "NEUIK_Window.h"
@@ -102,6 +103,7 @@ NEUIK_ElementState neuik_default_ElementState = {
 	{0, 0},                  /* render size */
 	{-1, -1},                /* old render size */
 	{0, 0},                  /* render loc  */
+	{0, 0},                  /* render loc, relative to parent  */
 };
 
 
@@ -773,9 +775,10 @@ int
 
 
 SDL_Texture * neuik_Element_Render(
-	NEUIK_Element    elem, 
-	RenderSize     * rSize, 
-	SDL_Renderer   * xRend)
+	NEUIK_Element   elem, 
+	RenderSize    * rSize, 
+	SDL_Renderer  * xRend,
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	NEUIK_ElementBase * eBase;
 
@@ -786,13 +789,14 @@ SDL_Texture * neuik_Element_Render(
 	if (eBase->eFT == NULL) return NULL;
 	if (eBase->eFT->Render == NULL) return NULL;
 
-	return (eBase->eFT->Render)(elem, rSize, xRend);
+	return (eBase->eFT->Render)(elem, rSize, xRend, xSurf);
 }
 
 SDL_Texture * neuik_Element_RenderRotate(
 	NEUIK_Element   elem, 
 	RenderSize    * rSize, 
 	SDL_Renderer  * xRend,
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	double          rotation)
 {
 	NEUIK_ElementBase * eBase;
@@ -845,7 +849,7 @@ SDL_Texture * neuik_Element_RenderRotate(
 
 	if (rotation == 0.0)
 	{
-		return neuik_Element_Render(elem, rSize, xRend);
+		return neuik_Element_Render(elem, rSize, xRend, xSurf);
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -873,7 +877,7 @@ SDL_Texture * neuik_Element_RenderRotate(
 	SDL_SetRenderDrawColor(cpRend, 255, 255, 255, 0);
 	SDL_RenderClear(cpRend);
 
-	cpTex = (eBase->eFT->Render)(elem, rSize, cpRend);
+	cpTex = (eBase->eFT->Render)(elem, rSize, cpRend, xSurf);
 	if (cpTex == NULL)
 	{
 		eNum = 4;
@@ -1094,7 +1098,8 @@ out:
 void neuik_Element_StoreSizeAndLocation(
 	NEUIK_Element elem, 
 	RenderSize    rSize, 
-	RenderLoc     rLoc)
+	RenderLoc     rLoc,
+	RenderLoc     rRelLoc)
 {
 	NEUIK_ElementBase * eBase;
 
@@ -1103,8 +1108,9 @@ void neuik_Element_StoreSizeAndLocation(
 		return;
 	}
 
-	eBase->eSt.rSize = rSize;
-	eBase->eSt.rLoc  = rLoc;
+	eBase->eSt.rSize   = rSize;
+	eBase->eSt.rLoc    = rLoc;
+	eBase->eSt.rRelLoc = rRelLoc;
 }
 
 
@@ -2404,9 +2410,12 @@ int neuik_Element_RedrawBackground(
 {
 	NEUIK_ElementBase    * eBase          = NULL;
 	SDL_Renderer         * rend           = NULL;
+	SDL_Texture          * tex            = NULL;
+	SDL_Rect               srcRect;
 	enum neuik_bgstyle     bgstyle;               /* active background style */
 	NEUIK_Color          * color_solid    = NULL; /* pointer to active solid color */
 	NEUIK_ColorStop    *** color_gradient = NULL; /* color gradient to use under normal condtions */
+	RenderLoc              rRelLoc;               /* Location of element background (in parent) */
 	RenderSize             rSize;                 /* Size of the element background to fill */
 	static char            funcName[] = "neuik_Element_RedrawBackground";
 	static char            errMsg[]   =
@@ -2418,6 +2427,8 @@ int neuik_Element_RedrawBackground(
 		return 1;
 	}
 
+	rRelLoc.x  = eBase->eSt.rRelLoc.x;
+	rRelLoc.y  = eBase->eSt.rRelLoc.y;
 	rSize.w = eBase->eSt.rSize.w;
 	rSize.h = eBase->eSt.rSize.h;
 
@@ -2493,8 +2504,12 @@ int neuik_Element_RedrawBackground(
 			/*----------------------------------------------------------------*/
 			/* Fill the entire surface background with a transparent color.   */
 			/*----------------------------------------------------------------*/
+			srcRect.x = rRelLoc.x;
+			srcRect.y = rRelLoc.y;
+			srcRect.w = rSize.w;
+			srcRect.h = rSize.h;
 			tex = SDL_CreateTextureFromSurface(rend, xSurf);
-			SDL_RenderCopy(rend, tex, NULL, NULL);
+			SDL_RenderCopy(rend, tex, &srcRect, NULL);
 			SDL_RenderPresent(rend);
 			break;
 	}

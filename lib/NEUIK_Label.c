@@ -39,7 +39,7 @@ int neuik_Object_New__Label(void ** lblPtr);
 int neuik_Object_Free__Label(void * lblPtr);
 
 int           neuik_Element_GetMinSize__Label(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Label(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__Label(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -598,7 +598,8 @@ out:
 SDL_Texture * neuik_Element_Render__Label(
 	NEUIK_Element    elem, 
 	RenderSize     * rSize, /* [in] the size the tex occupies when complete */
-	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
+	SDL_Renderer   * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface    * xSurf) /* the external surface (used for transp. bg) */
 {
 	const NEUIK_Color       * fgClr      = NULL;
 	SDL_Surface             * surf       = NULL;
@@ -698,7 +699,7 @@ SDL_Texture * neuik_Element_Render__Label(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem))
+	if (neuik_Element_RedrawBackground(elem, xSurf))
 	{
 		eNum = 9;
 		goto out;

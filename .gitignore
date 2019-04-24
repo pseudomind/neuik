@@ -1,6 +1,4 @@
 /builddir
-/lib/libneuik.a
-/lib/libneuik.so
 /.lock-waf*
 /build/*
 /scripts/*.pyc

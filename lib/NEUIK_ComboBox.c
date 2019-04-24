@@ -37,7 +37,7 @@ int neuik_Object_New__ComboBox(void ** cbPtr);
 int neuik_Object_Free__ComboBox(void * cbPtr);
 int neuik_Element_GetMinSize__ComboBox(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ComboBox(NEUIK_Element, SDL_Event*);
-SDL_Texture * neuik_Element_Render__ComboBox(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__ComboBox(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -603,7 +603,8 @@ out:
 SDL_Texture * neuik_Element_Render__ComboBox(
 	NEUIK_Element    elem,
 	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
+	SDL_Renderer   * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface    * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                    eNum       = 0;    /* which error to report (if any) */
 	int                    textW      = 0;
@@ -711,7 +712,7 @@ SDL_Texture * neuik_Element_Render__ComboBox(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem))
+	if (neuik_Element_RedrawBackground(elem, xSurf))
 	{
 		eNum = 8;
 		goto out;

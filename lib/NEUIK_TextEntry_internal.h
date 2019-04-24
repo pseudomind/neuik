@@ -38,7 +38,7 @@ int neuik_Object_Free__TextEntry(void * tePtr);
 
 int                neuik_Element_GetMinSize__TextEntry(NEUIK_Element, RenderSize*);
 neuik_EventState   neuik_Element_CaptureEvent__TextEntry(NEUIK_Element, SDL_Event*);
-SDL_Texture      * neuik_Element_Render__TextEntry(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture      * neuik_Element_Render__TextEntry(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 void               neuik_Element_Defocus__TextEntry(NEUIK_Element);
 
 #endif /* NEUIK_TEXTENTRY_INTERNAL_H */

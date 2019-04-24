@@ -882,9 +882,10 @@ out:
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__TextEntry(
-	NEUIK_Element    elem,
-	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
+	NEUIK_Element   elem,
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	char                    tempChar;          /* a temporary character */
 	int                     textW      = 0;
@@ -1164,7 +1165,7 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(te))
+	if (neuik_Element_RedrawBackground(te, xSurf))
 	{
 		eNum = 8;
 		goto out;

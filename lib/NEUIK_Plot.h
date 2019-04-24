@@ -41,10 +41,10 @@ typedef struct {
 		NEUIK_Element         * visual;
 		unsigned int            n_allocated; /* number of data_set slots allocated */
 		unsigned int            n_used;      /* number of data_set slots in use */
-		neuik_PlotRangeConfig   x_range_cfg; /* identify the container as single or multi */
+		neuik_PlotRangeConfig   x_range_cfg; /* specifies plot range determination */
 		double                  x_range_min;
 		double                  x_range_max;
-		neuik_PlotRangeConfig   y_range_cfg; /* identify the container as single or multi */
+		neuik_PlotRangeConfig   y_range_cfg; /* specifies plot range determination */
 		double                  y_range_min;
 		double                  y_range_max;
 } NEUIK_Plot;

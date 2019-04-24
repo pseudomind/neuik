@@ -38,7 +38,7 @@ int neuik_Object_New__Plot2D(void ** vgPtr);
 int neuik_Object_Free__Plot2D(void * vgPtr);
 
 int neuik_Element_GetMinSize__Plot2D(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Plot2D(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__Plot2D(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -380,13 +380,15 @@ out:
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__Plot2D(
-	NEUIK_Element    pltElem,
-	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
+	NEUIK_Element   pltElem,
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
 	float                 yFree      = 0.0; /* px of space free for vFill elems */
 	RenderLoc             rl         = {0, 0};
+	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect              rect       = {0, 0, 0, 0};
 	RenderSize            rs         = {0, 0};
 	RenderSize            dwg_rs;
@@ -473,7 +475,7 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(pltElem))
+	if (neuik_Element_RedrawBackground(pltElem, xSurf))
 	{
 		eNum = 9;
 		goto out;
@@ -551,9 +553,11 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 	rect.h = rs.h;
 	rl.x = (eBase->eSt.rLoc).x + rect.x;
 	rl.y = (eBase->eSt.rLoc).y + rect.y;
-	neuik_Element_StoreSizeAndLocation(elem, rs, rl);
+	rlRel.x = rect.x;
+	rlRel.y = rect.y;
+	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	tex = neuik_Element_Render(elem, &rs, rend);
+	tex = neuik_Element_Render(elem, &rs, rend, surf);
 	if (tex == NULL)
 	{
 		eNum = 5;
@@ -585,12 +589,16 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 	NEUIK_Canvas_SetDrawColor(dwg, 0, 0, 0, 255); /* dwg ticmark label color */
 	NEUIK_Canvas_SetTextSize(dwg, 10);        /* set size of drawn text */
 
-	NEUIK_Canvas_MoveTo(dwg, 0, 0);
+	NEUIK_Canvas_MoveTo(dwg, 2, 2);
 	NEUIK_Canvas_DrawText(dwg, "100.0"); /* draw text at location */
-	NEUIK_Canvas_MoveTo(dwg, 0, 150);
+	NEUIK_Canvas_MoveTo(dwg, 2, 150);
 	NEUIK_Canvas_DrawText(dwg, "50.0");  /* draw text at location */
-	NEUIK_Canvas_MoveTo(dwg, 0, 300);
+	NEUIK_Canvas_MoveTo(dwg, 2, 300);
 	NEUIK_Canvas_DrawText(dwg, "0.0");   /* draw text at location */
+
+	/* draw y-axis vert line */ 
+	NEUIK_Canvas_MoveTo(dwg, 40, 5);
+	NEUIK_Canvas_DrawLine(dwg, 40, (dwg_rs.h-(1+5)));
 
 	#pragma message("Draw in the labels for the y-axis tic marks")
 	#pragma message("Draw in the labels for the x-axis tic marks")

@@ -48,7 +48,7 @@ int neuik_Object_Free__TextEdit(void * tePtr);
 
 int           neuik_Element_GetMinSize__TextEdit(NEUIK_Element, RenderSize*);
 int           neuik_Element_CaptureEvent__TextEdit(NEUIK_Element, SDL_Event*);
-SDL_Texture * neuik_Element_Render__TextEdit(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__TextEdit(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 void          neuik_Element_Defocus__TextEdit(NEUIK_Element);
 
 /*----------------------------------------------------------------------------*/
@@ -914,9 +914,10 @@ out:
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__TextEdit(
-	NEUIK_Element    elem,
-	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
+	NEUIK_Element   elem,
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	char                   tempChar;          /* a temporary character */
 	int                    yPos       = 0;
@@ -1061,7 +1062,7 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(te))
+	if (neuik_Element_RedrawBackground(te, xSurf))
 	{
 		eNum = 11;
 		goto out;

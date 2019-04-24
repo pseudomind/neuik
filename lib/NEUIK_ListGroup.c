@@ -37,7 +37,7 @@ int neuik_Object_Free__ListGroup(void * lgPtr);
 
 int neuik_Element_GetMinSize__ListGroup(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ListGroup(NEUIK_Element lgElem, SDL_Event * ev);
-SDL_Texture * neuik_Element_Render__ListGroup(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__ListGroup(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -352,9 +352,10 @@ int neuik_Element_GetMinSize__ListGroup(
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__ListGroup(
-	NEUIK_Element    lgElem,
-	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
+	NEUIK_Element   lgElem,
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                   tempW;
 	int                   offLeft;
@@ -370,6 +371,7 @@ SDL_Texture * neuik_Element_Render__ListGroup(
 	float                 yFree   = 0.0; /* px of space free for vFill elems */
 	float                 tScale  = 0.0; /* total vFill scaling factors */
 	RenderLoc             rl;
+	RenderLoc             rlRel   = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect              rect;
 	RenderSize            rs;
 	static RenderSize     rsZero  = {0, 0};
@@ -456,7 +458,7 @@ SDL_Texture * neuik_Element_Render__ListGroup(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(lgElem))
+	if (neuik_Element_RedrawBackground(lgElem, xSurf))
 	{
 		eNum = 9;
 		goto out;
@@ -622,9 +624,11 @@ SDL_Texture * neuik_Element_Render__ListGroup(
 			rect.h = rs.h;
 			rl.x = (eBase->eSt.rLoc).x + rect.x;
 			rl.y = (eBase->eSt.rLoc).y + rect.y;
-			neuik_Element_StoreSizeAndLocation(elem, rs, rl);
+			rlRel.x = rect.x;
+			rlRel.y = rect.y;
+			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			tex = neuik_Element_Render(elem, &rs, rend);
+			tex = neuik_Element_Render(elem, &rs, rend, surf);
 			if (tex == NULL)
 			{
 				eNum = 5;

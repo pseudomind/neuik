@@ -34,7 +34,7 @@ int neuik_Object_New__Line(void **);
 int neuik_Object_Free__Line(void *);
 
 int neuik_Element_GetMinSize__Line(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Line(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__Line(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -445,9 +445,10 @@ out:
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__Line(
-	NEUIK_Element    elem,
-	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend) /* the external renderer to prepare the texture for */
+	NEUIK_Element   elem,
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                 eNum       = 0; /* which error to report (if any) */
 	const NEUIK_Color * lClr       = NULL;
@@ -531,7 +532,7 @@ SDL_Texture * neuik_Element_Render__Line(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem))
+	if (neuik_Element_RedrawBackground(elem, xSurf))
 	{
 		eNum = 6;
 		goto out;

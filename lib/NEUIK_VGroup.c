@@ -35,7 +35,7 @@ int neuik_Object_New__VGroup(void ** vgPtr);
 int neuik_Object_Free__VGroup(void * vgPtr);
 
 int neuik_Element_GetMinSize__VGroup(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__VGroup(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__VGroup(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -534,10 +534,10 @@ out:
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__VGroup(
-	NEUIK_Element    vgElem,
-	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface    * xSurf) /* background surface from external object */
+	NEUIK_Element   vgElem,
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                   tempW   = 0;
 	int                   ctr     = 0;
@@ -551,6 +551,7 @@ SDL_Texture * neuik_Element_Render__VGroup(
 	float                 yFree   = 0.0; /* px of space free for vFill elems */
 	float                 tScale  = 0.0; /* total vFill scaling factors */
 	RenderLoc             rl      = {0, 0};
+	RenderLoc             rlRel   = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect              rect    = {0, 0, 0, 0};
 	RenderSize            rs      = {0, 0};
 	static RenderSize     rsZero  = {0, 0};
@@ -812,9 +813,11 @@ SDL_Texture * neuik_Element_Render__VGroup(
 			rect.h = rs.h;
 			rl.x = (eBase->eSt.rLoc).x + rect.x;
 			rl.y = (eBase->eSt.rLoc).y + rect.y;
-			neuik_Element_StoreSizeAndLocation(elem, rs, rl);
+			rlRel.x = rect.x;
+			rlRel.y = rect.y;
+			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			tex = neuik_Element_Render(elem, &rs, rend);
+			tex = neuik_Element_Render(elem, &rs, rend, surf);
 			if (tex == NULL)
 			{
 				eNum = 5;

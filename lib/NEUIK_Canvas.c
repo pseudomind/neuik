@@ -34,7 +34,7 @@ int neuik_Object_New__Canvas(void **);
 int neuik_Object_Free__Canvas(void *);
 
 int neuik_Element_GetMinSize__Canvas(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Canvas(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__Canvas(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -408,7 +408,8 @@ int neuik_Element_GetMinSize__Canvas(
 SDL_Texture * neuik_Element_Render__Canvas(
 	NEUIK_Element   elem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer  * xRend) /* the external renderer to prepare the texture for */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                 eNum       = 0; /* which error to report (if any) */
 	int                 ctr;            /* loop iteration counter */
@@ -505,7 +506,7 @@ SDL_Texture * neuik_Element_Render__Canvas(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem))
+	if (neuik_Element_RedrawBackground(elem, xSurf))
 	{
 		eNum = 6;
 		goto out;

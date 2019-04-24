@@ -35,7 +35,7 @@ int neuik_Object_New__Frame(void ** fPtr);
 int neuik_Object_Free__Frame(void * fPtr);
 
 int neuik_Element_GetMinSize__Frame(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Frame(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__Frame(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -409,9 +409,10 @@ out:
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__Frame(
-	NEUIK_Element    fElem, 
-	RenderSize     * rSize, 
-	SDL_Renderer   * xRend)
+	NEUIK_Element   fElem, 
+	RenderSize    * rSize, 
+	SDL_Renderer  * xRend,
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
 	int                   offLeft    = 0;
@@ -419,6 +420,7 @@ SDL_Texture * neuik_Element_Render__Frame(
 	int                   offTop     = 0;
 	int                   offBottom  = 0;
 	RenderLoc             rl         = {0, 0};
+	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	const NEUIK_Color   * bClr       = NULL; /* border color */
 	SDL_Surface         * surf       = NULL;
 	SDL_Renderer        * rend       = NULL;
@@ -514,7 +516,7 @@ SDL_Texture * neuik_Element_Render__Frame(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(fElem))
+	if (neuik_Element_RedrawBackground(fElem, xSurf))
 	{
 		eNum = 9;
 		goto out;
@@ -666,10 +668,11 @@ SDL_Texture * neuik_Element_Render__Frame(
 	destRect.h = rs.h;
 	rl.x = (eBase->eSt.rLoc).x + destRect.x;
 	rl.y = (eBase->eSt.rLoc).y + destRect.y;
+	rlRel.x = destRect.x;
+	rlRel.y = destRect.y;
+	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	neuik_Element_StoreSizeAndLocation(elem, rs, rl);
-
-	tex = neuik_Element_Render(elem, &rs, rend);
+	tex = neuik_Element_Render(elem, &rs, rend, surf);
 	if (tex != NULL)
 	{
 		SDL_RenderCopy(rend, tex, NULL, &destRect);

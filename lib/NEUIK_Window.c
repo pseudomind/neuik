@@ -1607,10 +1607,10 @@ int NEUIK_Window_Redraw(
 				break;
 		}
 
-		neuik_Element_StoreSizeAndLocation(w->elem, rSize, rLoc);
+		neuik_Element_StoreSizeAndLocation(w->elem, rSize, rLoc, rLoc);
 		if (doResize) neuik_Element_ForceRedraw(w->elem);
 
-		elemTex = neuik_Element_Render(w->elem, &rSize, w->rend);
+		elemTex = neuik_Element_Render(w->elem, &rSize, w->rend, NULL);
 		if (elemTex != NULL)
 		{
 			destRect.x = rLoc.x;
@@ -1704,7 +1704,7 @@ int NEUIK_Window_Redraw(
 			// neuik_Element_StoreSizeAndLocation(popup, rSize, rLoc);
 			if (doResize) neuik_Element_ForceRedraw(popup);
 
-			elemTex = neuik_Element_Render(popup, &rSize, w->rend);
+			elemTex = neuik_Element_Render(popup, &rSize, w->rend, NULL);
 			if (elemTex != NULL)
 			{
 				destRect.x = rLoc.x;

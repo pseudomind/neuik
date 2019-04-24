@@ -37,7 +37,7 @@ int neuik_Object_Free__CelGroup(void * cgPtr);
 
 int neuik_Element_CaptureEvent__CelGroup(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_GetMinSize__CelGroup(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__CelGroup(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__CelGroup(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -423,11 +423,13 @@ out:
 SDL_Texture * neuik_Element_Render__CelGroup(
 	NEUIK_Element   cgElem, 
 	RenderSize    * rSize, 
-	SDL_Renderer  * xRend)
+	SDL_Renderer  * xRend,
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
-	int                   ctr      = 0;
-	int                   eNum     = 0; /* which error to report (if any) */
+	int                   ctr        = 0;
+	int                   eNum       = 0; /* which error to report (if any) */
 	RenderLoc             rl;
+	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect              rect;
 	RenderSize            rs;
 	SDL_Surface         * surf       = NULL;
@@ -519,7 +521,7 @@ SDL_Texture * neuik_Element_Render__CelGroup(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(cgElem))
+	if (neuik_Element_RedrawBackground(cgElem, xSurf))
 	{
 		eNum = 9;
 		goto out;
@@ -634,9 +636,11 @@ SDL_Texture * neuik_Element_Render__CelGroup(
 		rect.h = rs.h;
 		rl.x = (eBase->eSt.rLoc).x + rect.x;
 		rl.y = (eBase->eSt.rLoc).y + rect.y;
-		neuik_Element_StoreSizeAndLocation(elem, rs, rl);
+		rlRel.x = rect.x;
+		rlRel.y = rect.y;
+		neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-		tex = neuik_Element_Render(elem, &rs, rend);
+		tex = neuik_Element_Render(elem, &rs, rend, surf);
 		if (tex == NULL)
 		{
 			eNum = 5;

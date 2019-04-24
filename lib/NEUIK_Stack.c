@@ -37,7 +37,7 @@ int neuik_Object_Free__Stack(void * stkPtr);
 
 int neuik_Element_CaptureEvent__Stack(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_GetMinSize__Stack(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Stack(NEUIK_Element, RenderSize*, SDL_Renderer*);
+SDL_Texture * neuik_Element_Render__Stack(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -422,14 +422,16 @@ out:
  *
  ******************************************************************************/
 SDL_Texture * neuik_Element_Render__Stack(
-	NEUIK_Element    stkElem, 
-	RenderSize     * rSize, 
-	SDL_Renderer   * xRend)
+	NEUIK_Element   stkElem, 
+	RenderSize    * rSize, 
+	SDL_Renderer  * xRend,
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                      ctr      = 0;
 	int                      eNum     = 0; /* which error to report (if any) */
 	int                      elemIncl;
 	RenderLoc                rl;
+	RenderLoc                rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect                 rect;
 	RenderSize               rs;
 	SDL_Surface            * surf       = NULL;
@@ -521,7 +523,7 @@ SDL_Texture * neuik_Element_Render__Stack(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(stkElem))
+	if (neuik_Element_RedrawBackground(stkElem, xSurf))
 	{
 		eNum = 9;
 		goto out;
@@ -659,9 +661,11 @@ SDL_Texture * neuik_Element_Render__Stack(
 	rect.h = rs.h;
 	rl.x = (eBase->eSt.rLoc).x + rect.x;
 	rl.y = (eBase->eSt.rLoc).y + rect.y;
-	neuik_Element_StoreSizeAndLocation(elem, rs, rl);
+	rlRel.x = rect.x;
+	rlRel.y = rect.y;
+	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	tex = neuik_Element_Render(elem, &rs, rend);
+	tex = neuik_Element_Render(elem, &rs, rend, surf);
 	if (tex == NULL)
 	{
 		eNum = 5;
