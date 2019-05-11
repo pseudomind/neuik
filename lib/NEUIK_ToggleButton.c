@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -618,8 +618,8 @@ void neuik_ToggleButton_Configure_capture_segv(
  *
  ******************************************************************************/
 int NEUIK_ToggleButton_Configure(
-	NEUIK_ToggleButton  * btn,
-	const char    * set0,
+	NEUIK_ToggleButton * tbtn,
+	const char         * set0,
 	...)
 {
 	int                   ns; /* number of items from sscanf */
@@ -662,7 +662,7 @@ int NEUIK_ToggleButton_Configure(
 	};
 	static char           funcName[] = "NEUIK_ToggleButton_Configure";
 	static char         * errMsgs[] = {"",                                 // [ 0] no error
-		"Argument `btn` does not implement Button class.",                 // [ 1]
+		"Argument `tbtn` does not implement ToggleButton class.",          // [ 1]
 		"`name=value` string is too long.",                                // [ 2]
 		"Invalid `name=value` string.",                                    // [ 3]
 		"ValueType name used as BoolType, skipping.",                      // [ 4]
@@ -678,7 +678,7 @@ int NEUIK_ToggleButton_Configure(
 		"NamedSet.name type unknown, skipping.",                           // [14]
 	};
 
-	if (!neuik_Object_IsClass(btn, neuik__Class_Button))
+	if (!neuik_Object_IsClass(tbtn, neuik__Class_ToggleButton))
 	{
 		eNum = 1;
 		goto out;
@@ -688,10 +688,10 @@ int NEUIK_ToggleButton_Configure(
 	/*------------------------------------------------------------------------*/
 	/* select the correct button config to use (pointer or internal)          */
 	/*------------------------------------------------------------------------*/
-	cfg = btn->cfg;
-	if (btn->cfgPtr != NULL)
+	cfg = tbtn->cfg;
+	if (tbtn->cfgPtr != NULL)
 	{
-		cfg = btn->cfgPtr;
+		cfg = tbtn->cfgPtr;
 	}
 
 	va_start(args, set0);
@@ -969,7 +969,7 @@ out:
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
-	if (doRedraw) neuik_Element_RequestRedraw(btn);
+	if (doRedraw) neuik_Element_RequestRedraw(tbtn);
 
 	return eNum;
 }
@@ -1361,7 +1361,6 @@ neuik_EventState neuik_Element_CaptureEvent__ToggleButton(
 			btn->selected    = 0;
 			btn->wasSelected = 0;
 			btn->clickOrigin = 0;
-			neuik_Element_RequestRedraw(btn);
 			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 		}

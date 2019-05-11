@@ -72,7 +72,7 @@ int
 			NEUIK_Element elem);
 
 int
-	NEUIK_Container_RemoveElements(
+	NEUIK_Container_DeleteElements(
 			NEUIK_Element cont);
 
 

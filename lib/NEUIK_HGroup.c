@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -372,7 +372,13 @@ int neuik_Element_GetMinSize__HGroup(
 	int                   thisMinW   = 0;   /* this HFill element's min-width */
 	int                   eNum       = 0;   /* which error to report (if any) */
 	float                 thisW      = 0.0;
-	RenderSize            rs;
+
+	int                    nAlloc     = 0;
+	int                  * elemsShown = NULL; // Free upon returning.
+	RenderSize           * elemsMinSz = NULL; // Free upon returning.
+	NEUIK_ElementConfig ** elemsCfg   = NULL; // Free upon returning.
+
+	RenderSize          * rs         = NULL;
 	NEUIK_Element         elem       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
@@ -384,6 +390,8 @@ int neuik_Element_GetMinSize__HGroup(
 		"Element_GetMinSize Failed.",                                      // [2]
 		"Element_GetConfig returned NULL.",                                // [3]
 		"Argument `hgElem` caused `neuik_Object_GetClassObject` to fail.", // [4]
+		"Failure to allocate memory.",                                     // [5]
+		"Unexpected NULL... Investigate.",                                 // [6]
 	};
 
 	rSize->w = 0;
@@ -416,36 +424,84 @@ int neuik_Element_GetMinSize__HGroup(
 	}
 
 	/*------------------------------------------------------------------------*/
+	/* Determine the number of elements within the container.                 */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0;; ctr++)
+	{
+		elem = cont->elems[ctr];
+		if (elem == NULL) break;
+	}
+	nAlloc = ctr;
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory for lists of contained element properties.             */
+	/*------------------------------------------------------------------------*/
+	elemsCfg = malloc(nAlloc*sizeof(NEUIK_ElementConfig*));
+	if (elemsCfg == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	elemsShown = malloc(nAlloc*sizeof(int));
+	if (elemsShown == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	elemsMinSz = malloc(nAlloc*sizeof(RenderSize));
+	if (elemsMinSz == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Store the current properties for the contained elements.               */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		elem = cont->elems[ctr];
+		if (elem == NULL)
+		{
+			eNum = 6;
+			goto out;
+		}
+
+		elemsShown[ctr] = NEUIK_Element_IsShown(elem);
+		if (!elemsShown[ctr]) continue;
+
+		elemsCfg[ctr] = neuik_Element_GetConfig(elem);
+		if (elemsCfg[ctr] == NULL)
+		{
+			eNum = 3;
+			goto out;
+		}
+
+		if (neuik_Element_GetMinSize(elem, &elemsMinSz[ctr]))
+		{
+			eNum = 2;
+			goto out;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
 	/* Determine the (maximum) height required by any one of the elements.    */
 	/*                                                                        */
 	/*    and                                                                 */
 	/*                                                                        */
 	/* Find the largest minimum width of all the horizontally filling items.  */
 	/*------------------------------------------------------------------------*/
-	for (ctr = 0;; ctr++)
+	for (ctr = 0; ctr < nAlloc; ctr++)
 	{
-		elem = (NEUIK_Element)cont->elems[ctr];
-		if (elem == NULL) break;
+		if (!elemsShown[ctr]) continue; /* this elem isn't shown */
 
-		eCfg = neuik_Element_GetConfig(elem);
-		if (eCfg == NULL)
-		{
-			eNum = 3;
-			goto out;
-		}
-
-		if (!NEUIK_Element_IsShown(elem)) continue;
-
-		if (neuik_Element_GetMinSize(elem, &rs) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
+		eCfg = elemsCfg[ctr];
+		rs   = &elemsMinSz[ctr];
 
 		/*--------------------------------------------------------------------*/
 		/* Get the (maximum) height required by any one of the elements       */
 		/*--------------------------------------------------------------------*/
-		tempH = rs.h + (eCfg->PadTop + eCfg->PadBottom);
+		tempH = rs->h + (eCfg->PadTop + eCfg->PadBottom);
 		if (tempH > rSize->h)
 		{
 			rSize->h = tempH;
@@ -457,7 +513,7 @@ int neuik_Element_GetMinSize__HGroup(
 		if (eCfg->HFill)
 		{
 			/* This element is fills space horizontally */
-			thisMinW = rs.w;
+			thisMinW = rs->w;
 
 			if (thisMinW > maxMinW)
 			{
@@ -470,31 +526,18 @@ int neuik_Element_GetMinSize__HGroup(
 	/* Determine the required horizontal width                                */
 	/*------------------------------------------------------------------------*/
 	vctr = 0;
-	for (ctr = 0;; ctr++)
+	for (ctr = 0; ctr < nAlloc; ctr++)
 	{
-		elem = (NEUIK_Element)cont->elems[ctr];
-		if (elem == NULL) break;
-
-		eCfg = neuik_Element_GetConfig(elem);
-		if (eCfg == NULL)
-		{
-			eNum = 3;
-			goto out;
-		}
-
-		if (!NEUIK_Element_IsShown(elem)) continue;
+		if (!elemsShown[ctr]) continue; /* this elem isn't shown */
 		vctr++;
+
+		eCfg = elemsCfg[ctr];
+		rs   = &elemsMinSz[ctr];
 
 		if (vctr > 0)
 		{
 			/* subsequent UI element is valid, add Horizontal Spacing */
 			thisW += (float)(hg->HSpacing);
-		}
-
-		if (neuik_Element_GetMinSize(elem, &rs))
-		{
-			eNum = 2;
-			goto out;
 		}
 
 		if (eCfg->HFill)
@@ -504,13 +547,17 @@ int neuik_Element_GetMinSize__HGroup(
 		}
 		else
 		{
-			thisW += (float)(rs.w);
+			thisW += (float)(rs->w);
 		}
 		thisW += (float)(eCfg->PadLeft + eCfg->PadRight);
 	}
 
 	rSize->w = (int)(thisW);
 out:
+	if (elemsCfg != NULL)   free(elemsCfg);
+	if (elemsShown != NULL) free(elemsShown);
+	if (elemsMinSz != NULL) free(elemsMinSz);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);

@@ -1130,7 +1130,7 @@ int NEUIK_Container_DeleteElements(
 		else
 		{
 			cBase->n_used--;
-			NEUIK_Object_Free(cBase->elems[ctr]);
+			neuik_Object_Free(cBase->elems[ctr]);
 			cBase->elems[ctr] = NULL;
 		}
 	}

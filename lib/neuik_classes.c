@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,6 +31,7 @@ neuik_Class * neuik__Class_ComboBox           = NULL;
 neuik_Class * neuik__Class_ComboBoxConfig     = NULL;
 neuik_Class * neuik__Class_Label              = NULL;
 neuik_Class * neuik__Class_LabelConfig        = NULL;
+neuik_Class * neuik__Class_Fill               = NULL;
 neuik_Class * neuik__Class_Line               = NULL;
 neuik_Class * neuik__Class_Plot               = NULL;
 neuik_Class * neuik__Class_Plot2D             = NULL;
@@ -47,6 +48,7 @@ neuik_Class * neuik__Class_Container          = NULL;
 neuik_Class * neuik__Class_HGroup             = NULL;
 neuik_Class * neuik__Class_VGroup             = NULL;
 neuik_Class * neuik__Class_FlowGroup          = NULL;
+neuik_Class * neuik__Class_GridLayout         = NULL;
 neuik_Class * neuik__Class_Image              = NULL;
 neuik_Class * neuik__Class_ImageConfig        = NULL;
 neuik_Class * neuik__Class_ListGroup          = NULL;

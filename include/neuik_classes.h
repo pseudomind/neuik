@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,6 +28,7 @@ extern neuik_Class * neuik__Class_Element;
 extern neuik_Class * neuik__Class_HGroup;
 extern neuik_Class * neuik__Class_VGroup;
 extern neuik_Class * neuik__Class_FlowGroup;
+extern neuik_Class * neuik__Class_GridLayout;
 extern neuik_Class * neuik__Class_Image;
 extern neuik_Class * neuik__Class_ImageConfig;
 extern neuik_Class * neuik__Class_ListGroup;
@@ -40,6 +41,7 @@ extern neuik_Class * neuik__Class_ComboBox;
 extern neuik_Class * neuik__Class_ComboBoxConfig;
 extern neuik_Class * neuik__Class_Label;
 extern neuik_Class * neuik__Class_LabelConfig;
+extern neuik_Class * neuik__Class_Fill;
 extern neuik_Class * neuik__Class_Line;
 extern neuik_Class * neuik__Class_Plot;
 extern neuik_Class * neuik__Class_Plot2D;
@@ -75,6 +77,7 @@ int neuik_RegisterClass_Container();
 int neuik_RegisterClass_HGroup();
 int neuik_RegisterClass_VGroup();
 int neuik_RegisterClass_FlowGroup();
+int neuik_RegisterClass_GridLayout();
 int neuik_RegisterClass_Image();
 int neuik_RegisterClass_ImageConfig();
 int neuik_RegisterClass_ListGroup();
@@ -86,6 +89,7 @@ int neuik_RegisterClass_ComboBox();
 int neuik_RegisterClass_ComboBoxConfig();
 int neuik_RegisterClass_Label();
 int neuik_RegisterClass_LabelConfig();
+int neuik_RegisterClass_Fill();
 int neuik_RegisterClass_Line();
 int neuik_RegisterClass_Plot();
 int neuik_RegisterClass_Plot2D();

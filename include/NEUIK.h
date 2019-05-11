@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -33,7 +33,9 @@ int NEUIK_Object_Free(
 #include "NEUIK_Element.h"
 #include "NEUIK_error.h"
 #include "NEUIK_Event.h"
+#include "NEUIK_Fill.h"
 #include "NEUIK_Frame.h"
+#include "NEUIK_GridLayout.h"
 #include "NEUIK_Image.h"
 #include "NEUIK_Label.h"
 #include "NEUIK_LabelConfig.h"

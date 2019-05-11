@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -83,6 +83,7 @@ typedef struct {
 	RenderSize              rSize;      /* Size of the rendered texture */
 	RenderSize              rSizeOld;   /* Old size of the rendered texture */
 	RenderLoc               rLoc;       /* Location of the rendered texture */
+	RenderLoc               rRelLoc;    /* Location of the rendered texture; relative to parent */
 } NEUIK_ElementState;
 
 
@@ -91,7 +92,7 @@ typedef struct {
 	int          (*GetMinSize)    (NEUIK_Element, RenderSize *);
 
 	/* Render(): Redraw the element  element  */
-	SDL_Texture* (*Render)        (NEUIK_Element, RenderSize *, SDL_Renderer *);
+	SDL_Texture* (*Render)        (NEUIK_Element, RenderSize *, SDL_Renderer *, SDL_Surface *);
 
 	/* CaptureEvent(): Determine if this element caputures a given event */
 	neuik_EventState (*CaptureEvent)  (NEUIK_Element, SDL_Event *);
@@ -158,13 +159,15 @@ SDL_Texture *
 	neuik_Element_Render(
 	 		NEUIK_Element    elem, 
 	 		RenderSize     * rSize, 
-	 		SDL_Renderer   * xRend);
+	 		SDL_Renderer   * xRend,
+	 		SDL_Surface    * xSurf);
 
 SDL_Texture * 
 	neuik_Element_RenderRotate(
 			NEUIK_Element   elem, 
 			RenderSize    * rSize, 
 			SDL_Renderer  * xRend,
+	 		SDL_Surface   * xSurf,
 			double          rotation);
 
 int
@@ -205,7 +208,8 @@ void
 	neuik_Element_StoreSizeAndLocation(
 			NEUIK_Element elem, 
 			RenderSize    rSize, 
-			RenderLoc     rLoc);
+			RenderLoc     rLoc,
+			RenderLoc     rRelLoc);
 
 int 
 	neuik_Element_TriggerCallback(

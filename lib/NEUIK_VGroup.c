@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -371,7 +371,13 @@ int neuik_Element_GetMinSize__VGroup(
 	int                   thisMinH   = 0;   /* this VFill element's min-height */
 	int                   eNum       = 0; /* which error to report (if any) */
 	float                 thisH      = 0.0;
-	RenderSize            rs;
+
+	int                    nAlloc     = 0;
+	int                  * elemsShown = NULL; // Free upon returning.
+	RenderSize           * elemsMinSz = NULL; // Free upon returning.
+	NEUIK_ElementConfig ** elemsCfg   = NULL; // Free upon returning.
+
+	RenderSize          * rs;
 	NEUIK_Element         elem       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
@@ -383,6 +389,8 @@ int neuik_Element_GetMinSize__VGroup(
 		"Element_GetMinSize Failed.",                                      // [2]
 		"Element_GetConfig returned NULL.",                                // [3]
 		"Argument `vgElem` caused `neuik_Object_GetClassObject` to fail.", // [4]
+		"Failure to allocate memory.",                                     // [5]
+		"Unexpected NULL... Investigate.",                                 // [6]
 	};
 
 	rSize->w = 0;
@@ -415,6 +423,67 @@ int neuik_Element_GetMinSize__VGroup(
 	}
 
 	/*------------------------------------------------------------------------*/
+	/* Determine the number of elements within the container.                 */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0;; ctr++)
+	{
+		elem = cont->elems[ctr];
+		if (elem == NULL) break;
+	}
+	nAlloc = ctr;
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory for lists of contained element properties.             */
+	/*------------------------------------------------------------------------*/
+	elemsCfg = malloc(nAlloc*sizeof(NEUIK_ElementConfig*));
+	if (elemsCfg == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	elemsShown = malloc(nAlloc*sizeof(int));
+	if (elemsShown == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	elemsMinSz = malloc(nAlloc*sizeof(RenderSize));
+	if (elemsMinSz == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Store the current properties for the contained elements.               */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		elem = cont->elems[ctr];
+		if (elem == NULL)
+		{
+			eNum = 6;
+			goto out;
+		}
+
+		elemsShown[ctr] = NEUIK_Element_IsShown(elem);
+		if (!elemsShown[ctr]) continue;
+
+		elemsCfg[ctr] = neuik_Element_GetConfig(elem);
+		if (elemsCfg[ctr] == NULL)
+		{
+			eNum = 3;
+			goto out;
+		}
+
+		if (neuik_Element_GetMinSize(elem, &elemsMinSz[ctr]))
+		{
+			eNum = 2;
+			goto out;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
 	/* Determine the (maximum) width required by any one of the elements.     */
 	/*                                                                        */
 	/*    and                                                                 */
@@ -422,31 +491,18 @@ int neuik_Element_GetMinSize__VGroup(
 	/* Find the largest minimum height of all the vertically filling items.   */
 	/*------------------------------------------------------------------------*/
 	vctr = 0;
-	for (ctr = 0;; ctr++)
+	for (ctr = 0; ctr < nAlloc; ctr++)
 	{
-		elem = (NEUIK_Element)cont->elems[ctr];
-		if (elem == NULL) break;
-
-		eCfg = neuik_Element_GetConfig(elem);
-		if (eCfg == NULL)
-		{
-			eNum = 3;
-			goto out;
-		}
-
-		if (!NEUIK_Element_IsShown(elem)) continue;
+		if (!elemsShown[ctr]) continue; /* this elem isn't shown */
 		vctr++;
 
-		if (neuik_Element_GetMinSize(elem, &rs) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
+		eCfg = elemsCfg[ctr];
+		rs   = &elemsMinSz[ctr];
 
 		/*--------------------------------------------------------------------*/
 		/* Get the (maximum) width required by any one of the elements        */
 		/*--------------------------------------------------------------------*/
-		tempW = rs.w + (eCfg->PadLeft + eCfg->PadRight);
+		tempW = rs->w + (eCfg->PadLeft + eCfg->PadRight);
 		if (tempW > rSize->w)
 		{
 			rSize->w = tempW;
@@ -458,7 +514,7 @@ int neuik_Element_GetMinSize__VGroup(
 		if (eCfg->VFill)
 		{
 			/* This element is fills space vertically */
-			thisMinH = rs.h;
+			thisMinH = rs->h;
 
 			if (thisMinH > maxMinH)
 			{
@@ -473,31 +529,18 @@ int neuik_Element_GetMinSize__VGroup(
 	/* Determine the required vertical height.                                */
 	/*------------------------------------------------------------------------*/
 	vctr = 0;
-	for (ctr = 0;; ctr++)
+	for (ctr = 0; ctr < nAlloc; ctr++)
 	{
-		elem = (NEUIK_Element)cont->elems[ctr];
-		if (elem == NULL) break;
-
-		eCfg = neuik_Element_GetConfig(elem);
-		if (eCfg == NULL)
-		{
-			eNum = 3;
-			goto out;
-		}
-
-		if (!NEUIK_Element_IsShown(elem)) continue;
+		if (!elemsShown[ctr]) continue; /* this elem isn't shown */
 		vctr++;
+
+		eCfg = elemsCfg[ctr];
+		rs   = &elemsMinSz[ctr];
 
 		if (vctr > 0)
 		{
 			/* subsequent UI element is valid, add Horizontal Spacing */
 			thisH += (float)(vg->VSpacing);
-		}
-
-		if (neuik_Element_GetMinSize(elem, &rs))
-		{
-			eNum = 2;
-			goto out;
 		}
 
 		if (eCfg->VFill)
@@ -507,7 +550,7 @@ int neuik_Element_GetMinSize__VGroup(
 		}
 		else
 		{
-			thisH += (float)(rs.h);
+			thisH += (float)(rs->h);
 		}
 		thisH += (float)(eCfg->PadTop + eCfg->PadBottom);
 	}

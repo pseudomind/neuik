@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -92,6 +92,7 @@ int NEUIK_Init()
 		neuik_RegisterClass_HGroup();
 		neuik_RegisterClass_VGroup();
 		neuik_RegisterClass_FlowGroup();
+		neuik_RegisterClass_GridLayout();
 		neuik_RegisterClass_Image();
 		neuik_RegisterClass_ImageConfig();
 		neuik_RegisterClass_ListGroup();
@@ -105,6 +106,7 @@ int NEUIK_Init()
 		neuik_RegisterClass_ToggleButton();
 		neuik_RegisterClass_LabelConfig();
 		neuik_RegisterClass_Label();
+		neuik_RegisterClass_Fill();
 		neuik_RegisterClass_Line();
 		neuik_RegisterClass_TextEditConfig();
 		neuik_RegisterClass_TextEdit();

@@ -1573,7 +1573,7 @@ int NEUIK_Plot_SetTitle(
 	/* Conditionally free Plot title before setting the new contents          */
 	/*------------------------------------------------------------------------*/
 	if (plot->title != NULL) {
-		NEUIK_Container_RemoveElements(plot->title);
+		NEUIK_Container_DeleteElements(plot->title);
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -1627,6 +1627,131 @@ int NEUIK_Plot_SetTitle(
 				goto out;
 			}
 			if (NEUIK_Container_AddElement(plot->title, newLabel))
+			{
+				eNum = 6;
+				goto out;
+			}
+			strPtr0++;
+			strPtr1 = strPtr0;
+		}
+	}
+
+	neuik_Element_RequestRedraw((NEUIK_Element)plot);
+out:
+	if (textCopy != NULL) free(textCopy);
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+out2:
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Plot_SetXAxisLabel
+ *
+ *  Description:   Update the x-axis label of a NEUIK_Plot.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Plot_SetXAxisLabel(
+	NEUIK_Plot * plotPtr,
+	const char * text)
+{
+	int           eNum = 0; /* which error to report (if any) */
+	char *        textCopy = NULL; /* should be freed when done */
+	char *        strPtr0  = NULL;
+	char *        strPtr1  = NULL;
+	NEUIK_Label * newLabel = NULL;
+	NEUIK_Plot  * plot     = NULL;
+	static char   funcName[] = "NEUIK_Plot_SetXAxisLabel";
+	static char * errMsgs[] = {"",                                         // [0] no error
+		"Argument `plot` does not implement Plot class.",                  // [1]
+		"Argument `plot` caused `neuik_Object_GetClassObject()` to fail.", // [2]
+		"Failure to allocate memory.",                                     // [3]
+		"Failure in `NEUIK_MakeLabel()`.",                                 // [4]
+		"Failure to `String_Duplicate()`.",                                // [5]
+		"Failure to `NEUIK_Container_AddElement()`.",                      // [6]
+	};
+
+	if (!neuik_Object_ImplementsClass(plotPtr, neuik__Class_Plot))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (neuik_Object_GetClassObject(plotPtr, neuik__Class_Plot, (void**)&plot))
+	{
+		if (neuik_HasFatalError())
+		{
+			eNum = 1;
+			goto out2;
+		}
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Conditionally free Plot title before setting the new contents          */
+	/*------------------------------------------------------------------------*/
+	if (plot->x_label != NULL) {
+		NEUIK_Container_DeleteElements(plot->x_label);
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set the new Label text contents                                        */
+	/*------------------------------------------------------------------------*/
+	if (text == NULL){
+		/* Title will contain no text */
+		goto out;
+	}
+	else if (text[0] == '\0')
+	{
+		/* Title will contain no text */
+		goto out;
+	}
+
+	String_Duplicate(&textCopy, text);
+
+	if (textCopy == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	strPtr1 = textCopy;
+	for (;;)
+	{
+		strPtr0 = strchr(strPtr1, '\n');
+		if (strPtr0 == NULL)
+		{
+			/*----------------------------------------------------------------*/
+			/* There are no more newlines in the string                       */
+			/*----------------------------------------------------------------*/
+			if (NEUIK_MakeLabel(&newLabel, strPtr0))
+			{
+				eNum = 4;
+				goto out;
+			}
+			if (NEUIK_Container_AddElement(plot->x_label, newLabel))
+			{
+				eNum = 6;
+				goto out;
+			}
+			break;
+		} 
+		else
+		{
+			*strPtr0 = '\0';
+			if (NEUIK_MakeLabel(&newLabel, strPtr1))
+			{
+				eNum = 4;
+				goto out;
+			}
+			if (NEUIK_Container_AddElement(plot->x_label, newLabel))
 			{
 				eNum = 6;
 				goto out;
