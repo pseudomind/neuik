@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -947,7 +947,8 @@ out:
  *
  *  Name:          NEUIK_Container_RemoveElement
  *
- *  Description:   Remove an element from a container.
+ *  Description:   Remove an element from a container. NOTE; This does not free
+ *                 memory associated with the element.
  *
  *  Returns:       1 if there is an error; 0 otherwise.
  *
@@ -1066,14 +1067,14 @@ out2:
 
 /*******************************************************************************
  *
- *  Name:          NEUIK_Container_RemoveElements
+ *  Name:          NEUIK_Container_DeleteElements
  *
- *  Description:   Remove all child elements from a container.
+ *  Description:   Remove and Free all child elements from a container.
  *
  *  Returns:       1 if there is an error; 0 otherwise.
  *
  ******************************************************************************/
-int NEUIK_Container_RemoveElements(
+int NEUIK_Container_DeleteElements(
 	NEUIK_Element cont)
 {
 	int               ctr;

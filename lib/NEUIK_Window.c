@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -178,7 +178,7 @@ int NEUIK_NewWindow(
 	w->posX        = -1;
 	w->posY        = -1;
 	w->sizeW       = 320;
-	w->sizeH       = 240;
+	w->sizeH       = 320;
 	w->shown       = 1;
 	w->updateTitle = 0;
 	w->updateIcon  = 0;

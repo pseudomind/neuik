@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,7 +34,9 @@ extern int neuik__isInitialized;
 int neuik_Object_New__Transformer(void ** tPtr);
 int neuik_Object_Free__Transformer(void * tPtr);
 
+int neuik__getTransformedMinSize__Transformer(NEUIK_Element, RenderSize*);
 int neuik_Element_GetMinSize__Transformer(NEUIK_Element, RenderSize*);
+neuik_EventState neuik_Element_CaptureEvent__Transformer(NEUIK_Element, SDL_Event*);
 SDL_Texture * neuik_Element_Render__Transformer(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 
 
@@ -63,7 +65,7 @@ NEUIK_Element_FuncTable neuik_Transformer_FuncTable = {
 	neuik_Element_Render__Transformer,
 
 	/* CaptureEvent(): Determine if this element caputures a given event */
-	NULL,
+	neuik_Element_CaptureEvent__Transformer,
 
 	/* Defocus(): This function will be called when an element looses focus */
 	NULL,
@@ -496,7 +498,7 @@ int NEUIK_Transformer_Configure(
  *
  *  Name:          neuik_Element_GetMinSize__Transformer
  *
- *  Description:   Returns the rendered size of a given button.
+ *  Description:   Returns the rendered size of a given transformer.
  *
  *  Returns:       1 if there is an error; 0 otherwise.
  *
@@ -596,6 +598,127 @@ int neuik_Element_GetMinSize__Transformer(
 		/* This resulting element minimum size will have the width and height */
 		/* swapped compared to its values in the unrotated state              */
 		/*--------------------------------------------------------------------*/
+
+		rs.w = rSize->h;
+		rs.h = rSize->w;
+		(*rSize) = rs;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik__getTransformedMinSize__Transformer
+ *
+ *  Description:   Returns the rendered size of transformed element.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik__getTransformedMinSize__Transformer(
+	NEUIK_Element   tElem, 
+	RenderSize    * rSize)
+{
+	int                   eNum       = 0;    /* which error to report (if any) */
+	RenderSize            rs         = {0, 0};
+	NEUIK_Element         elem       = NULL;
+	NEUIK_Transformer   * trans      = NULL;
+	NEUIK_Container     * cont       = NULL;
+	NEUIK_ElementConfig * eCfg       = NULL;
+	static char           funcName[] = "neuik__getTransformedMinSize__Transformer";
+	static char         * errMsgs[]  = {"",                               // [0] no error
+		"Argument `tElem` is not of Transformer class.",                  // [1]
+		"Argument `tElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
+		"Element_GetConfig returned NULL.",                               // [3]
+		"Failure in neuik_Element_GetSize.",                              // [4]
+	};
+
+	(*rSize) = rs;
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the required size of the resultant texture                   */
+	/*------------------------------------------------------------------------*/
+	if (!neuik_Object_IsClass(tElem, neuik__Class_Transformer))
+	{
+		eNum = 1;
+		goto out;
+	}
+	trans = (NEUIK_Transformer *)tElem;
+
+	if (neuik_Object_GetClassObject(tElem, neuik__Class_Container, (void**)&cont))
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	if (cont->elems == NULL)
+	{
+		/* This trans does not contain an element */
+		goto out;
+	}
+	else if (cont->elems[0] == NULL)
+	{
+		/* This trans does not contain an element */
+		goto out;
+	}
+	/*------------------------------------------------------------------------*/
+	/* ELSE: The transformer does contain an element.                         */
+	/*------------------------------------------------------------------------*/
+	elem = cont->elems[0];
+	eCfg = neuik_Element_GetConfig(elem);
+	if (eCfg == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	if (!NEUIK_Element_IsShown(elem))
+	{
+		/* If the contained element is hidden, then hide the transformer */
+		goto out;
+	}
+	if (neuik_Element_GetMinSize(elem, &rs) != 0)
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	rSize->w = rs.w;
+	rSize->h = rs.h;
+
+	/*------------------------------------------------------------------------*/
+	/* Check for and apply rotation if necessary.                             */
+	/*------------------------------------------------------------------------*/
+	if (trans->rotation ==    0.0 || 
+		trans->rotation ==  180.0 || 
+		trans->rotation == -180.0 ||
+		trans->rotation ==  360.0 ||
+		trans->rotation == -360.0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This resulting element minimum size will be the same as the normal */
+		/* unrotated element.                                                 */
+		/*--------------------------------------------------------------------*/
+	}
+	else if (
+		trans->rotation ==  90.0  ||
+		trans->rotation == -90.0  ||
+		trans->rotation ==  270.0 ||
+		trans->rotation == -270.0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This resulting element minimum size will have the width and height */
+		/* swapped compared to its values in the unrotated state              */
+		/*--------------------------------------------------------------------*/
+
 		rs.w = rSize->h;
 		rs.h = rSize->w;
 		(*rSize) = rs;
@@ -631,6 +754,10 @@ SDL_Texture * neuik_Element_Render__Transformer(
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
+	int                   ePadLeft   = 0;
+	int                   ePadRight  = 0;
+	int                   ePadTop    = 0;
+	int                   ePadBot    = 0;
 	RenderLoc             rl         = {0, 0};
 	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Surface         * surf       = NULL;
@@ -759,8 +886,8 @@ SDL_Texture * neuik_Element_Render__Transformer(
 		if (eCfg->HFill && eCfg->VFill)
 		{
 			/* The element fills the window vertically and horizontally */
-			rs.w = rSize->w - eCfg->PadLeft + eCfg->PadRight;
-			rs.h = rSize->h - eCfg->PadTop  + eCfg->PadBottom;
+			rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
+			rs.h = rSize->h - (eCfg->PadTop  + eCfg->PadBottom);
 		}
 		else
 		{
@@ -773,12 +900,12 @@ SDL_Texture * neuik_Element_Render__Transformer(
 			if (eCfg->HFill)
 			{
 				/* The element fills the window only horizontally */
-				rs.w = rSize->w - eCfg->PadLeft + eCfg->PadRight;
+				rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
 			}
 			else
 			{
 				/* The element fills the window only vertically  */
-				rs.h = rSize->h - eCfg->PadTop  + eCfg->PadBottom;
+				rs.h = rSize->h - (eCfg->PadTop  + eCfg->PadBottom);
 			}
 		}
 	}
@@ -852,6 +979,8 @@ SDL_Texture * neuik_Element_Render__Transformer(
 			break;
 	}
 
+	destRect.x = eCfg->PadLeft;
+	destRect.y = eCfg->PadTop;
 	destRect.w = rs.w;
 	destRect.h = rs.h;
 	rl.x = (eBase->eSt.rLoc).x + destRect.x;
@@ -864,6 +993,7 @@ SDL_Texture * neuik_Element_Render__Transformer(
 		eNum = 3;
 		goto out;
 	}
+	printf("* elemMinSize= [%d, %d]\n", rs.w, rs.h);
 
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
@@ -897,3 +1027,225 @@ out:
 	return eBase->eSt.texture;
 }
 
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_CaptureEvent__Transformer
+ *
+ *  Description:   A virtual function reimplementation of the function
+ *                 neuik_Element_CaptureEvent.
+ *
+ *  Returns:       1 if the event was captured; 0 otherwise.
+ *
+ ******************************************************************************/
+neuik_EventState neuik_Element_CaptureEvent__Transformer(
+	NEUIK_Element   tElem, 
+	SDL_Event     * ev)
+{
+	int                    ctr        = 0;
+	int                    transform  = 0;
+	float                  xFrac      = 0.0;
+	float                  yFrac      = 0.0;
+	neuik_EventState       evCaputred = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	NEUIK_Element          elem;
+	RenderLoc              eLoc;
+	RenderLoc              evPos;
+	RenderSize             eSz;
+	NEUIK_ElementBase    * eBase      = NULL;
+	NEUIK_Container      * cBase      = NULL;
+	NEUIK_Transformer    * trans      = NULL;
+	SDL_MouseMotionEvent * mouseMotEv;
+	SDL_MouseButtonEvent * mouseButEv;
+	SDL_Event            * evActive   = NULL;
+	SDL_Event              evTr; /* Transformed mouse event */
+
+	NEUIK_ElementBase    * childEBase      = NULL;
+
+	if (!neuik_Object_IsClass(tElem, neuik__Class_Transformer))
+	{
+		goto out;
+	}
+	trans = (NEUIK_Transformer *)tElem;
+
+	if (neuik_Object_GetClassObject_NoError(
+		tElem, neuik__Class_Element, (void**)&eBase)) goto out;
+
+	if (neuik_Object_GetClassObject_NoError(
+		tElem, neuik__Class_Container, (void**)&cBase)) goto out;
+
+	/*------------------------------------------------------------------------*/
+	/* Check if there is a mouse event which needs to be transformed.         */
+	/*------------------------------------------------------------------------*/
+	eLoc = eBase->eSt.rLoc;
+	eSz  = eBase->eSt.rSize;
+
+	switch (ev->type)
+	{
+	case SDL_MOUSEBUTTONDOWN:
+	case SDL_MOUSEBUTTONUP:
+		mouseButEv = (SDL_MouseButtonEvent*)(ev);
+		if (mouseButEv->y >= eLoc.y && mouseButEv->y <= eLoc.y + eSz.h)
+		{
+			if (mouseButEv->x >= eLoc.x && mouseButEv->x <= eLoc.x + eSz.w)
+			{
+				/* This mouse button action is within the transformer */
+				transform = 1;
+				evTr.button.type      = mouseButEv->type;
+				evTr.button.timestamp = mouseButEv->timestamp;
+				evTr.button.windowID  = mouseButEv->windowID;
+				evTr.button.which     = mouseButEv->which;
+				evTr.button.button    = mouseButEv->button;
+				evTr.button.state     = mouseButEv->state;
+				evTr.button.clicks    = mouseButEv->clicks;
+				evTr.button.x         = mouseButEv->x;
+				evTr.button.y         = mouseButEv->y;
+				evPos.x = mouseButEv->x;
+				evPos.y = mouseButEv->y;
+			}
+		}
+		break;
+	case SDL_MOUSEMOTION:
+		mouseMotEv = (SDL_MouseMotionEvent*)(ev);
+
+		if (mouseMotEv->y >= eLoc.y && mouseMotEv->y <= eLoc.y + eSz.h)
+		{
+			if (mouseMotEv->x >= eLoc.x && mouseMotEv->x <= eLoc.x + eSz.w)
+			{
+				/* This mouse motion is within the transformer */
+				transform = 1;
+				evTr.motion.type      = mouseMotEv->type;
+				evTr.motion.timestamp = mouseMotEv->timestamp;
+				evTr.motion.windowID  = mouseMotEv->windowID;
+				evTr.motion.which     = mouseMotEv->which;
+				evTr.motion.x         = mouseMotEv->x;
+				evTr.motion.y         = mouseMotEv->y;
+				evTr.motion.xrel      = mouseMotEv->xrel;
+				evTr.motion.yrel      = mouseMotEv->yrel;
+				evPos.x = mouseMotEv->x;
+				evPos.y = mouseMotEv->y;
+			}
+		}
+		break;
+	}
+
+	evActive = ev;
+	if (transform)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Apply the appropriate transformation(s) to the mouse event.        */
+		/*--------------------------------------------------------------------*/
+		evActive = &evTr;
+		printf("eLoc = [%d, %d]\n", eLoc.x, eLoc.y);
+		printf("eSz = [%d, %d]\n", eSz.w, eSz.h);
+		printf("evPos0 = [%d, %d]\n", evPos.x, evPos.y);
+
+		/*--------------------------------------------------------------------*/
+		/* Apply scaling transformation (if necessary).                       */
+		/*--------------------------------------------------------------------*/
+		#pragma message("[TODO] `neuik_Element_CaptureEvent__Transformer` Scaling Transform")
+
+		/*--------------------------------------------------------------------*/
+		/* Apply rotation transformation (if necessary).                      */
+		/*--------------------------------------------------------------------*/
+		if (trans->rotation ==    0.0 || 
+			trans->rotation ==  360.0 ||
+			trans->rotation == -360.0)
+		{
+			/*----------------------------------------------------------------*/
+			/* This rotation results in an unrotated element. Do nothing.     */
+			/*----------------------------------------------------------------*/
+		}
+		else if (
+			trans->rotation ==  180.0 || 
+			trans->rotation == -180.0)
+		{
+			/*----------------------------------------------------------------*/
+			/* The x & y-axis positions are flipped within this transformer.  */
+			/*----------------------------------------------------------------*/
+			evPos.x = eLoc.x + (eLoc.x + eSz.w) - evPos.x;
+			evPos.y = eLoc.y + (eLoc.y + eSz.h) - evPos.y;
+		}
+		else if (
+			trans->rotation ==  90.0  ||
+			trans->rotation == -270.0)
+		{
+			// yFrac = 1.0 - ((float)(eLoc.y) + (float)(eSz.w) - (float)(evPos.y))/(float)(eSz.w);
+			// xFrac = 1.0 + ((float)(eLoc.x) - (float)(evPos.x))/(float)(eSz.w);
+
+			// evPos.x = eLoc.x + (int)((float)(eSz.h)*yFrac);
+			// evPos.y = eLoc.y + (int)((float)(eSz.w)*xFrac); // correct
+
+			yFrac = (float)(evPos.y - eLoc.y)/(float)(eSz.h);
+			xFrac = ((float)(evPos.x) - (float)(eLoc.x))/(float)(eSz.w);
+
+
+			// yFrac = 1.0 - ((float)(eLoc.y) + (float)(eSz.h) - (float)(evPos.y))/(float)(eSz.h);
+			// xFrac = 1.0 + ((float)(eLoc.x) - (float)(evPos.x))/(float)(eSz.w);
+
+			evPos.x = eLoc.x + (int)((float)(eSz.w)*(yFrac));
+			evPos.y = eLoc.y + (int)((float)(eSz.h)*(1.0 - xFrac)); // correct
+
+			printf("evPosf = [%d, %d]\n", evPos.x, evPos.y);
+		}
+		else if (
+			trans->rotation == -90.0  ||
+			trans->rotation ==  270.0)
+		{
+			/*--------------------------------------------------------------------*/
+			/* This resulting element minimum size will have the width and height */
+			/* swapped compared to its values in the unrotated state              */
+			/*--------------------------------------------------------------------*/
+			// rs.w = rSize->h;
+			// rs.h = rSize->w;
+			// (*rSize) = rs;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Store the transformed mouse position into the transformed event.   */
+		/*--------------------------------------------------------------------*/
+		switch (ev->type)
+		{
+		case SDL_MOUSEBUTTONDOWN:
+		case SDL_MOUSEBUTTONUP:
+			/* This mouse button action is within the transformer */
+			evTr.button.x = evPos.x;
+			evTr.button.y = evPos.y;
+			break;
+		case SDL_MOUSEMOTION:
+			evTr.motion.x = evPos.x;
+			evTr.motion.y = evPos.y;
+			break;
+		}
+	}
+
+	if (cBase->elems != NULL)
+	{
+		for (ctr = 0;; ctr++)
+		{
+			elem = cBase->elems[ctr];
+			if (elem == NULL) break;
+
+			if (!NEUIK_Element_IsShown(elem)) continue;
+
+			if (neuik_Object_GetClassObject_NoError(
+				elem, neuik__Class_Element, (void**)&childEBase)) goto out;
+			eLoc = childEBase->eSt.rLoc;
+			eSz  = childEBase->eSt.rSize;
+
+			printf("childELoc = [%d, %d]\n", eLoc.x, eLoc.y);
+			printf("childESz = [%d, %d]\n", eSz.w, eSz.h);
+
+			evCaputred = neuik_Element_CaptureEvent(elem, evActive);
+			if (evCaputred == NEUIK_EVENTSTATE_OBJECT_FREED)
+			{
+				goto out;
+			}
+			if (evCaputred == NEUIK_EVENTSTATE_CAPTURED)
+			{
+				neuik_Element_SetActive(tElem, 1);
+				goto out;
+			}
+		}
+	}
+out:
+	return evCaputred;
+}
