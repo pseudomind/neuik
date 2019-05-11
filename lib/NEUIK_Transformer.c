@@ -707,6 +707,8 @@ int neuik__getTransformedMinSize__Transformer(
 		/* This resulting element minimum size will be the same as the normal */
 		/* unrotated element.                                                 */
 		/*--------------------------------------------------------------------*/
+		rSize->w += (eCfg->PadLeft + eCfg->PadRight);
+		rSize->h += (eCfg->PadTop + eCfg->PadBottom);
 	}
 	else if (
 		trans->rotation ==  90.0  ||
@@ -718,9 +720,11 @@ int neuik__getTransformedMinSize__Transformer(
 		/* This resulting element minimum size will have the width and height */
 		/* swapped compared to its values in the unrotated state              */
 		/*--------------------------------------------------------------------*/
-
 		rs.w = rSize->h;
 		rs.h = rSize->w;
+		rs.w += (eCfg->PadTop + eCfg->PadBottom);
+		rs.h += (eCfg->PadLeft + eCfg->PadRight);
+
 		(*rSize) = rs;
 	}
 out:
@@ -883,29 +887,55 @@ SDL_Texture * neuik_Element_Render__Transformer(
 
 	if (eCfg->HFill || eCfg->VFill)
 	{
-		if (eCfg->HFill && eCfg->VFill)
+		if (neuik_Element_GetMinSize__Transformer(tElem, &rs))
 		{
-			/* The element fills the window vertically and horizontally */
-			rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
-			rs.h = rSize->h - (eCfg->PadTop  + eCfg->PadBottom);
+			eNum = 3;
+			goto out;
 		}
-		else
-		{
-			if (neuik_Element_GetMinSize__Transformer(tElem, &rs))
-			{
-				eNum = 3;
-				goto out;
-			}
 
+		/*--------------------------------------------------------------------*/
+		/* Check for and apply rotation if necessary.                         */
+		/*--------------------------------------------------------------------*/
+		if (trans->rotation ==    0.0 || 
+			trans->rotation ==  180.0 || 
+			trans->rotation == -180.0 ||
+			trans->rotation ==  360.0 ||
+			trans->rotation == -360.0)
+		{
+			/*----------------------------------------------------------------*/
+			/* This resulting element minimum size will be the same as the    */
+			/* normal unrotated element.                                      */
+			/*----------------------------------------------------------------*/
 			if (eCfg->HFill)
 			{
-				/* The element fills the window only horizontally */
+				/* The element fills the window horizontally */
 				rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
 			}
-			else
+			if (eCfg->VFill)
 			{
-				/* The element fills the window only vertically  */
+				/* The element fills the window vertically  */
 				rs.h = rSize->h - (eCfg->PadTop  + eCfg->PadBottom);
+			}
+		}
+		else if (
+			trans->rotation ==  90.0  ||
+			trans->rotation == -90.0  ||
+			trans->rotation ==  270.0 ||
+			trans->rotation == -270.0)
+		{
+			/*----------------------------------------------------------------*/
+			/* This resulting element minimum size will have the width and    */
+			/* height swapped compared to its values in the unrotated state.  */
+			/*----------------------------------------------------------------*/
+			if (eCfg->HFill)
+			{
+				/* The element fills the window horizontally */
+				rs.w = rSize->h - (eCfg->PadTop + eCfg->PadBottom);
+			}
+			if (eCfg->VFill)
+			{
+				/* The element fills the window vertically  */
+				rs.h = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
 			}
 		}
 	}
@@ -979,21 +1009,59 @@ SDL_Texture * neuik_Element_Render__Transformer(
 			break;
 	}
 
-	destRect.x = eCfg->PadLeft;
-	destRect.y = eCfg->PadTop;
-	destRect.w = rs.w;
-	destRect.h = rs.h;
+	/*------------------------------------------------------------------------*/
+	/* Check for and apply rotation if necessary.                             */
+	/*------------------------------------------------------------------------*/
+	if (trans->rotation ==    0.0 ||
+		trans->rotation ==  360.0 ||
+		trans->rotation == -360.0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* No effective rotation                                              */
+		/*--------------------------------------------------------------------*/
+		destRect.x = eCfg->PadLeft;
+		destRect.y = eCfg->PadTop;
+		destRect.w = rs.w;
+		destRect.h = rs.h;
+	}
+	else if (trans->rotation ==  180.0 || 
+		     trans->rotation == -180.0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Rotated by 180 degrees (turned upside-down)                        */
+		/*--------------------------------------------------------------------*/
+		destRect.x = eCfg->PadRight;
+		destRect.y = eCfg->PadBottom;
+		destRect.w = rs.w;
+		destRect.h = rs.h;
+	}
+	else if (trans->rotation ==   90.0 || 
+		     trans->rotation == -270.0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Rotated by 90 degrees (resting on its right side).                 */
+		/*--------------------------------------------------------------------*/
+		destRect.x = eCfg->PadBottom;
+		destRect.y = eCfg->PadLeft;
+		destRect.w = rs.h;
+		destRect.h = rs.w;
+	}
+	else if (trans->rotation ==  270.0 || 
+		     trans->rotation ==  -90.0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Rotated by 270 degrees (resting on its left side).                 */
+		/*--------------------------------------------------------------------*/
+		destRect.x = eCfg->PadTop;
+		destRect.y = eCfg->PadRight;
+		destRect.w = rs.h;
+		destRect.h = rs.w;
+	}
+
 	rl.x = (eBase->eSt.rLoc).x + destRect.x;
 	rl.y = (eBase->eSt.rLoc).y + destRect.y;
 	rlRel.x = destRect.x;
 	rlRel.y = destRect.y;
-
-	if (neuik_Element_GetMinSize(elem, &rs))
-	{
-		eNum = 3;
-		goto out;
-	}
-	printf("* elemMinSize= [%d, %d]\n", rs.w, rs.h);
 
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
