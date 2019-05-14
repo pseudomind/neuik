@@ -965,8 +965,6 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 	int                    elWidth    = 0;
 	int                    ySize      = 0;
 	int                    eNum       = 0; /* which error to report (if any) */
-	int                    nValidCols = 0;
-	int                    nValidRows = 0;
 	int                  * allMaxMinH = NULL; // Free upon returning; 
 	                                          // The max min width (per row)
 	int                  * allMaxMinW = NULL; // Free upon returning; 
@@ -982,6 +980,7 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 	RenderLoc              rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect               rect       = {0, 0, 0, 0};
 	static RenderSize      rsZero     = {0, 0};
+	// RenderSize             rsMin      = {0, 0};
 	RenderSize           * rs         = NULL;
 	SDL_Surface          * surf       = NULL;
 	SDL_Renderer         * rend       = NULL;
@@ -1178,7 +1177,6 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 
 			if (!elemsValid[offset]) continue; /* no elem at this location */
 			if (!elemsShown[offset]) continue; /* this elem isn't shown */
-			nValidRows++;
 
 			eCfg = elemsCfg[offset];
 			rs   = &elemsMinSz[offset];
@@ -1204,7 +1202,6 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 
 			if (!elemsValid[offset]) continue; /* no elem at this location */
 			if (!elemsShown[offset]) continue; /* this elem isn't shown */
-			nValidCols++;
 
 			eCfg = elemsCfg[offset];
 			rs   = &elemsMinSz[offset];
@@ -1220,26 +1217,26 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 	/*------------------------------------------------------------------------*/
 	/* Determine the required minimum width.                                  */
 	/*------------------------------------------------------------------------*/
-	for (ctr = 0; ctr < grid->xDim; ctr++)
-	{
-		rSize->w += allMaxMinW[ctr];
-	}
-	if (nValidCols > 1)
-	{
-		rSize->w += grid->HSpacing*(nValidCols - 1);
-	}
+	// for (ctr = 0; ctr < grid->xDim; ctr++)
+	// {
+	// 	rsMin.w += allMaxMinW[ctr];
+	// }
+	// if (grid->xDim > 1)
+	// {
+	// 	rsMin.w += grid->HSpacing*(grid->xDim - 1);
+	// }
 
 	/*------------------------------------------------------------------------*/
 	/* Determine the required minimum height.                                 */
 	/*------------------------------------------------------------------------*/
-	for (ctr = 0; ctr < grid->yDim; ctr++)
-	{
-		rSize->h += allMaxMinH[ctr];
-	}
-	if (nValidRows > 1)
-	{
-		rSize->h += grid->VSpacing*(nValidRows - 1);
-	}
+	// for (ctr = 0; ctr < grid->yDim; ctr++)
+	// {
+	// 	rsMin.h += allMaxMinH[ctr];
+	// }
+	// if (grid->yDim > 1)
+	// {
+	// 	rsMin.h += grid->VSpacing*(grid->yDim - 1);
+	// }
 
 	/*------------------------------------------------------------------------*/
 	/* Render and place the child elements                                    */
@@ -1368,7 +1365,6 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 
 			SDL_RenderCopy(rend, tex, NULL, &rect);
 		}
-
 	}
 
 	/*------------------------------------------------------------------------*/
