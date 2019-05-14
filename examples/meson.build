@@ -29,6 +29,7 @@ examples = [
 	'23-celgroup',
 	'24-canvas',
 	'25-plot2d',
+	'26-gridLayout',
 	# '99-debug',
 ]
 

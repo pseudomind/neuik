@@ -690,7 +690,7 @@ int neuik_Element_GetMinSize__GridLayout(
 	NEUIK_Element   gridElem,
 	RenderSize    * rSize)
 {
-	static int             nCalled    = 0;
+	// static int             nCalled    = 0;
 	int                    eNum       = 0; /* which error to report (if any) */
 	int                    tempH;
 	int                    tempW;
@@ -699,13 +699,10 @@ int neuik_Element_GetMinSize__GridLayout(
 	int                    colCtr     = 0;
 	int                    offset     = 0;
 	int                    ctr        = 0;
-	int                    nValidCols = 0;
-	int                    nValidRows = 0;
 	RenderSize           * rs         = NULL;
 	NEUIK_Element          elem       = NULL;
 	NEUIK_ElementBase    * eBase      = NULL;
 	NEUIK_ElementConfig  * eCfg       = NULL;
-
 	int                  * allMaxMinH = NULL; // Free upon returning; 
 	                                          // The max min width (per row)
 	int                  * allMaxMinW = NULL; // Free upon returning; 
@@ -715,6 +712,7 @@ int neuik_Element_GetMinSize__GridLayout(
 	RenderSize           * elemsMinSz = NULL; // Free upon returning.
 	NEUIK_ElementConfig ** elemsCfg   = NULL; // Free upon returning.
 
+	static RenderSize     rsZero      = {0, 0};
 	NEUIK_Container      * cont       = NULL;
 	NEUIK_GridLayout     * grid       = NULL;
 	static char            funcName[] = "neuik_Element_GetMinSize__GridLayout";
@@ -837,6 +835,329 @@ int neuik_Element_GetMinSize__GridLayout(
 			goto out;
 		}
 
+		elemsMinSz[ctr] = rsZero;
+		if (neuik_Element_GetMinSize(elem, &elemsMinSz[ctr]))
+		{
+			eNum = 2;
+			goto out;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the maximum minimum heights required for all of the rows.    */
+	/* (i.e., for each row of elements, determine the maximum value of the    */
+	/* minimum heights required (among elements in the row)).                 */
+	/*------------------------------------------------------------------------*/
+	for (rowCtr = 0; rowCtr < grid->yDim; rowCtr++)
+	{
+		for (colCtr = 0; colCtr < grid->xDim; colCtr++)
+		{
+			offset = colCtr + rowCtr*(grid->xDim);
+
+			if (!elemsValid[offset]) continue; /* no elem at this location */
+			if (!elemsShown[offset]) continue; /* this elem isn't shown */
+
+			eCfg = elemsCfg[offset];
+			rs   = &elemsMinSz[offset];
+
+			tempH = rs->h + (eCfg->PadTop + eCfg->PadBottom);
+			if (tempH > allMaxMinH[rowCtr])
+			{
+				allMaxMinH[rowCtr] = tempH;
+			}
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the maximum minimum widths required for all of the columns.  */
+	/* (i.e., for each column of elements, determine the maximum value of the */
+	/* minimum widths required (among elements in the column)).               */
+	/*------------------------------------------------------------------------*/
+	for (colCtr = 0; colCtr < grid->xDim; colCtr++)
+	{
+		for (rowCtr = 0; rowCtr < grid->yDim; rowCtr++)
+		{
+			offset = colCtr + rowCtr*(grid->xDim);
+
+			if (!elemsValid[offset]) continue; /* no elem at this location */
+			if (!elemsShown[offset]) continue; /* this elem isn't shown */
+
+			eCfg = elemsCfg[offset];
+			rs   = &elemsMinSz[offset];
+
+			tempW = rs->w + (eCfg->PadLeft + eCfg->PadRight);
+			if (tempW > allMaxMinW[colCtr])
+			{
+				allMaxMinW[colCtr] = tempW;
+			}
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the required minimum width.                                  */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < grid->xDim; ctr++)
+	{
+		rSize->w += allMaxMinW[ctr];
+	}
+	if (grid->xDim > 1)
+	{
+		rSize->w += grid->HSpacing*(grid->xDim - 1);
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the required minimum height.                                 */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < grid->yDim; ctr++)
+	{
+		rSize->h += allMaxMinH[ctr];
+	}
+	if (grid->yDim > 1)
+	{
+		rSize->h += grid->VSpacing*(grid->yDim - 1);
+	}
+out:
+	if (allMaxMinW != NULL) free(allMaxMinW);
+	if (allMaxMinH != NULL) free(allMaxMinH);
+	if (elemsCfg != NULL)   free(elemsCfg);
+	if (elemsShown != NULL) free(elemsShown);
+	if (elemsValid != NULL) free(elemsValid);
+	if (elemsMinSz != NULL) free(elemsMinSz);
+
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	// printf("[%3d] GridLayout MinSize= [%d,%d]\n", nCalled, rSize->w, rSize->h);
+	// nCalled++;
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_Render__GridLayout
+ *
+ *  Description:   Renders a single button as an SDL_Texture*.
+ *
+ *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
+ *
+ ******************************************************************************/
+SDL_Texture * neuik_Element_Render__GridLayout(
+	NEUIK_Element   gridElem,
+	RenderSize    * rSize,    /* in/out the size the tex occupies when complete */
+	SDL_Renderer  * xRend,    /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf)    /* the external surface (used for transp. bg) */
+{
+	static int             nCalled    = 0;
+	int                    nAlloc     = 0;
+	int                    tempH      = 0;
+	int                    tempW      = 0;
+	int                    rowCtr     = 0;
+	int                    colCtr     = 0;
+	int                    offset     = 0;
+	int                    ctr        = 0;
+	int                    vctr       = 0; /* valid counter; for elements shown */
+	int                    xPos       = 0;
+	int                    yPos       = 0;
+	int                    elWidth    = 0;
+	int                    ySize      = 0;
+	int                    eNum       = 0; /* which error to report (if any) */
+	int                    nValidCols = 0;
+	int                    nValidRows = 0;
+	int                  * allMaxMinH = NULL; // Free upon returning; 
+	                                          // The max min width (per row)
+	int                  * allMaxMinW = NULL; // Free upon returning; 
+	                                          // The max min width (per column)
+	int                  * elemsValid = NULL; // Free upon returning.
+	int                  * elemsShown = NULL; // Free upon returning.
+	RenderSize           * elemsMinSz = NULL; // Free upon returning.
+	NEUIK_ElementConfig ** elemsCfg   = NULL; // Free upon returning.
+	float                  vFillPx    = 0.0;
+	float                  yFree      = 0.0; /* px of space free for vFill elems */
+	float                  tScale     = 0.0; /* total vFill scaling factors */
+	RenderLoc              rl         = {0, 0};
+	RenderLoc              rlRel      = {0, 0}; /* renderloc relative to parent */
+	SDL_Rect               rect       = {0, 0, 0, 0};
+	static RenderSize      rsZero     = {0, 0};
+	RenderSize           * rs         = NULL;
+	SDL_Surface          * surf       = NULL;
+	SDL_Renderer         * rend       = NULL;
+	SDL_Texture          * tex        = NULL; /* texture */
+	NEUIK_Container      * cont       = NULL;
+	NEUIK_ElementBase    * eBase      = NULL;
+	NEUIK_Element          elem       = NULL;
+	NEUIK_ElementConfig  * eCfg       = NULL;
+	NEUIK_GridLayout     * grid       = NULL;
+	static char            funcName[] = "neuik_Element_Render__GridLayout";
+	static char          * errMsgs[]  = {"",                                 // [0] no error
+		"Argument `gridElem` is not of GridLayout class.",                   // [1]
+		"Failure in Element_Resize().",                                      // [2]
+		"Element_GetConfig returned NULL.",                                  // [3]
+		"Element_GetMinSize Failed.",                                        // [4]
+		"Element_Render returned NULL.",                                     // [5]
+		"Invalid specified `rSize` (negative values).",                      // [6]
+		"SDL_CreateTextureFromSurface returned NULL.",                       // [7]
+		"Argument `gridElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
+		"Failure in neuik_Element_RedrawBackground().",                      // [9]
+	};
+
+	if (!neuik_Object_IsClass(gridElem, neuik__Class_GridLayout))
+	{
+		eNum = 1;
+		goto out;
+	}
+	grid = (NEUIK_GridLayout*)gridElem;
+
+	if (neuik_Object_GetClassObject(gridElem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (neuik_Object_GetClassObject(gridElem, neuik__Class_Container, (void**)&cont))
+	{
+		eNum = 8;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* check to see if the requested draw size of the element has changed     */
+	/*------------------------------------------------------------------------*/
+	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
+		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
+	{
+		if (!neuik_Element_NeedsRedraw((NEUIK_Element)grid) && eBase->eSt.texture != NULL) 
+		{
+			(*rSize) = eBase->eSt.rSize;
+			return eBase->eSt.texture;
+		}
+	}
+
+	if (rSize->w < 0 || rSize->h < 0)
+	{
+		eNum = 6;
+		goto out;
+	}
+	yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
+
+	/*------------------------------------------------------------------------*/
+	/* Check to see if the requested draw size of the element has changed     */
+	/*------------------------------------------------------------------------*/
+	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
+		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
+		/* free old ones if they are allocated.                               */
+		/*--------------------------------------------------------------------*/
+		if (neuik_Element_Resize(grid, *rSize) != 0)
+		{
+			eNum = 2;
+			goto out;
+		}
+	}
+	surf = eBase->eSt.surf;
+	rend = eBase->eSt.rend;
+
+	/*------------------------------------------------------------------------*/
+	/* Redraw the background surface before continuing.                       */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_RedrawBackground(gridElem, xSurf))
+	{
+		eNum = 9;
+		goto out;
+	}
+
+	if (cont->elems == NULL) {
+		/* there are no UI elements contained by this GridLayout */
+		goto out2;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory for the calculated maximum minimum values.             */
+	/*------------------------------------------------------------------------*/
+	allMaxMinW = malloc(grid->xDim*sizeof(int));
+	if (allMaxMinW == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	allMaxMinH = malloc(grid->yDim*sizeof(int));
+	if (allMaxMinH == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Zero out the initial maximum minimum values.                           */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < grid->xDim; ctr++)
+	{
+		allMaxMinW[ctr] = 0;
+	}
+	for (ctr = 0; ctr < grid->yDim; ctr++)
+	{
+		allMaxMinH[ctr] = 0;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory for lists of contained element properties.             */
+	/*------------------------------------------------------------------------*/
+	nAlloc = grid->xDim*grid->yDim;
+	elemsCfg = malloc(nAlloc*sizeof(NEUIK_ElementConfig*));
+	if (elemsCfg == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	elemsValid = malloc(nAlloc*sizeof(int));
+	if (elemsValid == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	elemsShown = malloc(nAlloc*sizeof(int));
+	if (elemsShown == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	elemsMinSz = malloc(nAlloc*sizeof(RenderSize));
+	if (elemsMinSz == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Store the current properties for the contained elements.               */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		/*--------------------------------------------------------------------*/
+		/* A GridLayout is different from other containers in that NULL       */
+		/* values are permitted within the elems array. The total number of   */
+		/* contained elems is defined as xDim * yDim.                         */
+		/*--------------------------------------------------------------------*/
+		elemsValid[ctr] = 0;
+		elem = cont->elems[ctr];
+		if (elem == NULL) continue;
+		elemsValid[ctr] = 1;
+
+		elemsShown[ctr] = NEUIK_Element_IsShown(elem);
+		if (!elemsShown[ctr]) continue;
+
+		elemsCfg[ctr] = neuik_Element_GetConfig(elem);
+		if (elemsCfg[ctr] == NULL)
+		{
+			eNum = 3;
+			goto out;
+		}
+
+		elemsMinSz[ctr] = rsZero;
 		if (neuik_Element_GetMinSize(elem, &elemsMinSz[ctr]))
 		{
 			eNum = 2;
@@ -919,277 +1240,52 @@ int neuik_Element_GetMinSize__GridLayout(
 	{
 		rSize->h += grid->VSpacing*(nValidRows - 1);
 	}
-out:
-	if (elemsCfg != NULL)   free(elemsCfg);
-	if (elemsShown != NULL) free(elemsShown);
-	if (elemsValid != NULL) free(elemsValid);
-	if (elemsMinSz != NULL) free(elemsMinSz);
-	if (allMaxMinW != NULL) free(allMaxMinW);
-	if (allMaxMinH != NULL) free(allMaxMinH);
-
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
-
-	printf("[%3d] GridLayout MinSize= [%d,%d]\n", nCalled, rSize->w, rSize->h);
-	nCalled++;
-	return eNum;
-}
-
-
-/*******************************************************************************
- *
- *  Name:          neuik_Element_Render__GridLayout
- *
- *  Description:   Renders a single button as an SDL_Texture*.
- *
- *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
- *
- ******************************************************************************/
-SDL_Texture * neuik_Element_Render__GridLayout(
-	NEUIK_Element   gridElem,
-	RenderSize    * rSize,    /* in/out the size the tex occupies when complete */
-	SDL_Renderer  * xRend,    /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf)    /* the external surface (used for transp. bg) */
-{
-	static int            nCalled = 0;
-	int                   tempW   = 0;
-	int                   ctr     = 0;
-	int                   vctr    = 0; /* valid counter; for elements shown */
-	int                   xPos    = 0;
-	int                   yPos    = 0;
-	int                   elWidth = 0;
-	int                   ySize   = 0;
-	int                   eNum    = 0; /* which error to report (if any) */
-	float                 vFillPx = 0.0;
-	float                 yFree   = 0.0; /* px of space free for vFill elems */
-	float                 tScale  = 0.0; /* total vFill scaling factors */
-	RenderLoc             rl      = {0, 0};
-	RenderLoc             rlRel   = {0, 0}; /* renderloc relative to parent */
-	SDL_Rect              rect    = {0, 0, 0, 0};
-	RenderSize            rs      = {0, 0};
-	static RenderSize     rsZero  = {0, 0};
-	SDL_Surface         * surf    = NULL;
-	SDL_Renderer        * rend    = NULL;
-	SDL_Texture         * tex     = NULL; /* texture */
-	NEUIK_Container     * cont    = NULL;
-	NEUIK_ElementBase   * eBase   = NULL;
-	NEUIK_Element         elem    = NULL;
-	NEUIK_ElementConfig * eCfg    = NULL;
-	NEUIK_GridLayout    * grid    = NULL;
-	static char           funcName[] = "neuik_Element_Render__GridLayout";
-	static char         * errMsgs[]  = {"",                                  // [0] no error
-		"Argument `gridElem` is not of GridLayout class.",                   // [1]
-		"Failure in Element_Resize().",                                      // [2]
-		"Element_GetConfig returned NULL.",                                  // [3]
-		"Element_GetMinSize Failed.",                                        // [4]
-		"Element_Render returned NULL.",                                     // [5]
-		"Invalid specified `rSize` (negative values).",                      // [6]
-		"SDL_CreateTextureFromSurface returned NULL.",                       // [7]
-		"Argument `gridElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
-		"Failure in neuik_Element_RedrawBackground().",                      // [9]
-	};
-
-	if (!neuik_Object_IsClass(gridElem, neuik__Class_GridLayout))
-	{
-		eNum = 1;
-		goto out;
-	}
-	grid = (NEUIK_GridLayout*)gridElem;
-
-	if (neuik_Object_GetClassObject(gridElem, neuik__Class_Element, (void**)&eBase))
-	{
-		eNum = 8;
-		goto out;
-	}
-	if (neuik_Object_GetClassObject(gridElem, neuik__Class_Container, (void**)&cont))
-	{
-		eNum = 8;
-		goto out;
-	}
 
 	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
+	/* Render and place the child elements                                    */
 	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
+	yPos = 0;
+	for (rowCtr = 0; rowCtr < grid->yDim; rowCtr++)
 	{
-		if (!neuik_Element_NeedsRedraw((NEUIK_Element)grid) && eBase->eSt.texture != NULL) 
+		xPos = 0;
+		if (rowCtr > 0)
 		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
-	if (rSize->w < 0 || rSize->h < 0)
-	{
-		eNum = 6;
-		goto out;
-	}
-	yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
-
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize((NEUIK_Element)grid, *rSize) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
-	rend = eBase->eSt.rend;
-
-	/*------------------------------------------------------------------------*/
-	/* Redraw the background surface before continuing.                       */
-	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(gridElem, xSurf))
-	{
-		eNum = 9;
-		goto out;
-	}
-
-	/*------------------------------------------------------------------------*/
-	/* Draw the UI elements into the GridLayout                               */
-	/*------------------------------------------------------------------------*/
-	if (cont->elems != NULL)
-	{
-		/*------------------------------------------------------*/
-		/* Determine the (maximum) width of any of the elements */
-		/*------------------------------------------------------*/
-		vctr    = 0;
-		elWidth = rSize->w;
-		for (ctr = 0;; ctr++)
-		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
-
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
-			{
-				eNum = 3;
-				goto out;
-			}
-
-			if (!NEUIK_Element_IsShown(elem)) continue;
-			vctr++;
-
-			if (vctr > 0)
-			{
-				/* subsequent UI element is valid, deduct Vertical Spacing */
-				yFree -= grid->VSpacing;
-			}
-
-			if (neuik_Element_GetMinSize(elem, &rs))
-			{
-				eNum = 4;
-				goto out;
-			}
-
-			tempW = rs.w + eCfg->PadLeft + eCfg->PadRight;
-			if (tempW > elWidth)
-			{
-				elWidth = tempW;
-			}
-			yFree -= rs.h + eCfg->PadTop + eCfg->PadBottom;
+			yPos += allMaxMinH[rowCtr-1] + grid->VSpacing;
 		}
 
-		if (vctr == 0)
+		for (colCtr = 0; colCtr < grid->xDim; colCtr++)
 		{
-			goto out2;
-		}
+			offset = colCtr + rowCtr*(grid->xDim);
 
-		/*-----------------------------------------------------------*/
-		/* Check if there are any elements which can fill vertically */
-		/*-----------------------------------------------------------*/
-		for (ctr = 0;; ctr++)
-		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
-
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
+			if (colCtr > 0)
 			{
-				eNum = 3;
-				goto out;
+				xPos += allMaxMinW[colCtr-1] + grid->HSpacing;
 			}
 
-			if (!NEUIK_Element_IsShown(elem)) continue;
+			if (!elemsValid[offset]) continue; /* no elem at this location */
+			if (!elemsShown[offset]) continue; /* this elem isn't shown */
 
-			if (eCfg->VFill)
-			{
-				/* This element is fills space vertically */
-				tScale += eCfg->VScale;
-				rs = rsZero; /* (0,0); use default calculated size */
-				if (neuik_Element_GetMinSize(elem, &rs))
-				{
-					eNum = 4;
-					goto out;
-				}
-				yFree += rs.h;
-			}
-		}
+			elem = cont->elems[offset];
+			eCfg = elemsCfg[offset];
+			rs   = &elemsMinSz[offset];
 
-		/* calculate the number of vertical px per 1.0 of VScaling */
-		vFillPx = (float)((int)(yFree/tScale));
-
-		/*--------------------------------------------------------------------*/
-		/* Render and place the child elements                                */
-		/*--------------------------------------------------------------------*/
-		vctr = 0;
-		for (ctr = 0;; ctr++)
-		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
-
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
-			{
-				eNum = 3;
-				goto out;
-			}
-
-			if (!NEUIK_Element_IsShown(elem)) continue;
-			vctr++;
-
-			if (vctr > 0)
-			{
-				/* add vertical spacing between subsequent elements */
-				yPos += grid->VSpacing;
-			}
-
-			/*----------------------------------------------------------------*/
-			/* Start with the default calculated element size                 */
-			/*----------------------------------------------------------------*/
-			if (neuik_Element_GetMinSize(elem, &rs))
-			{
-				eNum = 4;
-				goto out;
-			}
+			tempH = rs->h + (eCfg->PadTop + eCfg->PadBottom);
+			tempW = rs->w + (eCfg->PadLeft + eCfg->PadRight);
 
 			/*----------------------------------------------------------------*/
 			/* Check for and apply if necessary Horizontal and Veritcal fill  */
 			/*----------------------------------------------------------------*/
-			if (eCfg->HFill)
-			{
-				/* This element is configured to fill space horizontally */
-				rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
-			}
-			if (eCfg->VFill)
-			{
-				/* This element is configured to fill space vertically */
-				ySize = (int)(vFillPx * (eCfg->VScale)) - (eCfg->PadTop + eCfg->PadBottom);
-				rs.h  = ySize;
-			}
+			// if (eCfg->HFill)
+			// {
+			// 	/* This element is configured to fill space horizontally */
+			// 	rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
+			// }
+			// if (eCfg->VFill)
+			// {
+			// 	/* This element is configured to fill space vertically */
+			// 	ySize = (int)(vFillPx * (eCfg->VScale)) - (eCfg->PadTop + eCfg->PadBottom);
+			// 	rs.h  = ySize;
+			// }
 
 			/*----------------------------------------------------------------*/
 			/* Update the stored location before rendering the element. This  */
@@ -1206,10 +1302,11 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 							break;
 						case NEUIK_HJUSTIFY_CENTER:
 						case NEUIK_HJUSTIFY_DEFAULT:
-							rect.x = rSize->w/2 - (rs.w/2);
+							rect.x = (xPos + allMaxMinW[colCtr]/2) - (tempW/2);
 							break;
 						case NEUIK_HJUSTIFY_RIGHT:
-							rect.x = rSize->w - (rs.w + eCfg->PadRight);
+							rect.x = (xPos + allMaxMinW[colCtr]) - 
+								(rs->w + eCfg->PadRight);
 							break;
 					}
 					break;
@@ -1217,23 +1314,52 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 					rect.x = xPos + eCfg->PadLeft;
 					break;
 				case NEUIK_HJUSTIFY_CENTER:
-					rect.x = rSize->w/2 - (rs.w/2);
+					rect.x = (xPos + allMaxMinW[colCtr]/2) - (tempW/2);
 					break;
 				case NEUIK_HJUSTIFY_RIGHT:
-					rect.x = rSize->w - (rs.w + eCfg->PadRight);
+					rect.x = (xPos + allMaxMinW[colCtr]) - 
+						(rs->w + eCfg->PadRight);
+					break;
+			}
+			switch (eCfg->VJustify)
+			{
+				case NEUIK_VJUSTIFY_DEFAULT:
+					switch (cont->VJustify)
+					{
+						case NEUIK_VJUSTIFY_TOP:
+							rect.y = yPos + eCfg->PadTop;
+							break;
+						case NEUIK_VJUSTIFY_CENTER:
+						case NEUIK_VJUSTIFY_DEFAULT:
+							rect.y = (yPos + allMaxMinH[rowCtr]/2) - (tempH/2);
+							break;
+						case NEUIK_VJUSTIFY_BOTTOM:
+							rect.y = (yPos + allMaxMinH[rowCtr]) - 
+								(rs->h + eCfg->PadBottom);
+							break;
+					}
+					break;
+				case NEUIK_VJUSTIFY_TOP:
+					rect.y = yPos + eCfg->PadTop;
+					break;
+				case NEUIK_VJUSTIFY_CENTER:
+					rect.y = (yPos + allMaxMinH[rowCtr]/2) - (tempH/2);
+					break;
+				case NEUIK_VJUSTIFY_BOTTOM:
+					rect.y = (yPos + allMaxMinH[rowCtr]) - 
+						(rs->h + eCfg->PadBottom);
 					break;
 			}
 
-			rect.y = yPos + eCfg->PadTop;
-			rect.w = rs.w;
-			rect.h = rs.h;
+			rect.w = allMaxMinW[colCtr];
+			rect.h = allMaxMinH[rowCtr];
 			rl.x = (eBase->eSt.rLoc).x + rect.x;
 			rl.y = (eBase->eSt.rLoc).y + rect.y;
 			rlRel.x = rect.x;
 			rlRel.y = rect.y;
-			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
+			neuik_Element_StoreSizeAndLocation(elem, *rs, rl, rlRel);
 
-			tex = neuik_Element_Render(elem, &rs, rend, surf);
+			tex = neuik_Element_Render(elem, rs, rend, surf);
 			if (tex == NULL)
 			{
 				eNum = 5;
@@ -1241,9 +1367,8 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 			}
 
 			SDL_RenderCopy(rend, tex, NULL, &rect);
-
-			yPos += rs.h + (eCfg->PadTop + eCfg->PadBottom) ;
 		}
+
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -1261,6 +1386,13 @@ out2:
 
 	eBase->eSt.doRedraw = 0;
 out:
+	if (elemsCfg != NULL)   free(elemsCfg);
+	if (elemsShown != NULL) free(elemsShown);
+	if (elemsValid != NULL) free(elemsValid);
+	if (elemsMinSz != NULL) free(elemsMinSz);
+	if (allMaxMinW != NULL) free(allMaxMinW);
+	if (allMaxMinH != NULL) free(allMaxMinH);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
