@@ -31,7 +31,7 @@ int main()
 
 	NEUIK_MakeGridLayout(&gridExample, 3, 3);
 	NEUIK_GridLayout_SetVSpacing(gridExample, 10);
-	NEUIK_GridLayout_SetElementAt(gridExample, 0, 0, btnExample1);
+	// NEUIK_GridLayout_SetElementAt(gridExample, 0, 0, btnExample1);
 	NEUIK_GridLayout_SetElementAt(gridExample, 1, 0, btnExample2);
 	NEUIK_GridLayout_SetElementAt(gridExample, 2, 0, btnExample3);
 	NEUIK_GridLayout_SetElementAt(gridExample, 0, 1, btnExample4);

@@ -38,6 +38,7 @@ neuik_EventState neuik_Element_CaptureEvent__GridLayout(NEUIK_Element, SDL_Event
 int neuik_Element_GetMinSize__GridLayout(NEUIK_Element, RenderSize*);
 SDL_Texture * neuik_Element_Render__GridLayout(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
 int neuik_Element_SetWindowPointer__GridLayout(NEUIK_Element, void*);
+int neuik_Element_IsShown__GridLayout(NEUIK_Element);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -88,7 +89,8 @@ int neuik_RegisterClass_GridLayout()
 	static char  * errMsgs[]  = {"",                                       // [0] no error
 		"NEUIK library must be initialized first.",                        // [1]
 		"Failed to register `GridLayout` object class .",                  // [2]
-		"Failed to register `Element_SetWindowPointer` virtual function.", // [3]
+		"Failed to register `Element_IsShown` virtual function.",          // [3]
+		"Failed to register `Element_SetWindowPointer` virtual function.", // [4]
 	};
 
 	if (!neuik__isInitialized)
@@ -117,11 +119,20 @@ int neuik_RegisterClass_GridLayout()
 	/* Register virtual function implementations                              */
 	/*------------------------------------------------------------------------*/
 	if (neuik_VirtualFunc_RegisterImplementation(
+		&neuik_Element_vfunc_IsShown,
+		neuik__Class_GridLayout,
+		neuik_Element_IsShown__GridLayout))
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	if (neuik_VirtualFunc_RegisterImplementation(
 		&neuik_Element_vfunc_SetWindowPointer,
 		neuik__Class_GridLayout,
 		neuik_Element_SetWindowPointer__GridLayout))
 	{
-		eNum = 3;
+		eNum = 4;
 		goto out;
 	}
 out:
@@ -674,6 +685,101 @@ out:
 	}
 
 	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_IsShown__GridLayout    (redefined-vfunc)
+ *
+ *  Description:   This function reports whether or not an element is currently
+ *                 being shown.
+ *
+ *                 This operation is a virtual function redefinition.
+ *
+ *  Returns:       1 if element is shown, 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Element_IsShown__GridLayout(
+	NEUIK_Element  gridElem)
+{
+	int                 isShown  = 0;
+	int                 ctr      = 0;
+	int                 nAlloc   = 0;
+	NEUIK_Element       elem;
+	NEUIK_ElementBase * eBase;
+	NEUIK_Container   * cBase = NULL;
+	NEUIK_GridLayout  * grid  = NULL;
+	static int          nRecurse = 0; /* number of times recursively called */
+
+	nRecurse++;
+	if (nRecurse > NEUIK_MAX_RECURSION)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is likely a case of appears to be runaway recursion; report   */
+		/* an error to the user.                                              */
+		/*--------------------------------------------------------------------*/
+		neuik_Fatal = NEUIK_FATALERROR_RUNAWAY_RECURSION;
+		goto out;
+	}
+
+	if (!neuik_Object_IsClass(gridElem, neuik__Class_GridLayout))
+	{
+		goto out;
+	}
+	grid = (NEUIK_GridLayout *)(gridElem);
+
+	if (neuik_Object_GetClassObject(gridElem, neuik__Class_Container, (void**)&cBase))
+	{
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* First check if this element is being shown.                            */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Object_GetClassObject(gridElem, neuik__Class_Element, (void**)&eBase))
+	{
+		goto out;
+	}
+
+	if (!eBase->eCfg.Show) goto out;
+
+	/*------------------------------------------------------------------------*/
+	/* Check if the GridLayout has valid dimensions first...                  */
+	/*------------------------------------------------------------------------*/
+	nAlloc = grid->xDim*grid->yDim;
+	if (nAlloc == 0)
+	{
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Examine the contained elements to see if any of them are being shown.  */
+	/*------------------------------------------------------------------------*/
+	if (cBase->elems == NULL) goto out;
+
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		elem = cBase->elems[ctr];
+		if (elem == NULL) continue;
+		
+		if (NEUIK_Element_IsShown(elem))
+		{
+			if (neuik_HasFatalError())
+			{
+				goto out;
+			}
+			isShown = 1;
+			break;
+		}
+		if (neuik_HasFatalError())
+		{
+			goto out;
+		}
+	}
+out:
+	nRecurse--;
+	return isShown;
 }
 
 
