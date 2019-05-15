@@ -541,7 +541,7 @@ int NEUIK_GridLayout_SetHSpacing(
 	if (spacing == grid->HSpacing) goto out;
 
 	grid->HSpacing = spacing;
-	// neuik_Element_RequestRedraw(grid);
+	neuik_Element_RequestRedraw(grid);
 out:
 	if (eNum > 0)
 	{
@@ -590,7 +590,58 @@ int NEUIK_GridLayout_SetVSpacing(
 	if (spacing == grid->VSpacing) goto out;
 
 	grid->VSpacing = spacing;
-	// neuik_Element_RequestRedraw(grid);
+	neuik_Element_RequestRedraw(grid);
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_GridLayout_SetSpacing
+ *
+ *  Description:   Set the horizontal/vertical spacing parameters within a 
+ *                 GridLayout.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_GridLayout_SetSpacing(
+	NEUIK_GridLayout * grid,
+	int                spacing)
+{
+	int            eNum       = 0;    /* which error to report (if any) */
+	static char    funcName[] = "NEUIK_GridLayout_SetSpacing";
+	static char  * errMsgs[]  = {"",                   // [0] no error
+		"Argument `grid` is not of GridLayout class.", // [1]
+		"Argument `spacing` can not be negative.",     // [2]
+	};
+
+	if (!neuik_Object_IsClass(grid, neuik__Class_GridLayout))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (spacing < 0)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* if there is no effective change in spacing; don't do anything          */
+	/*------------------------------------------------------------------------*/
+	if (spacing == grid->HSpacing && spacing == grid->VSpacing) goto out;
+
+	grid->HSpacing = spacing;
+	grid->VSpacing = spacing;
+	neuik_Element_RequestRedraw(grid);
 out:
 	if (eNum > 0)
 	{
