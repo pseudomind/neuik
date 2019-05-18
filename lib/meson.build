@@ -1,7 +1,12 @@
 sdl2       = dependency('SDL2')
 sdl2_ttf   = dependency('SDL2_ttf')
 sdl2_image = dependency('SDL2_image')
-all_deps   = [sdl2, sdl2_ttf, sdl2_image]
+
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required : true)
+
+all_deps   = [sdl2, sdl2_ttf, sdl2_image, m_dep]
+
 libneuik_srcs = [
 	'NEUIK_neuik.c',
 	'neuik_classes.c',

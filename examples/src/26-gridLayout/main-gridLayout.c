@@ -22,15 +22,23 @@ int main()
 	}
 
 	NEUIK_MakeButton(&btnExample1, "[1]");
+	NEUIK_Element_Configure(btnExample1, "FillAll", NULL);
 	NEUIK_MakeButton(&btnExample2, "[2]");
+	NEUIK_Element_Configure(btnExample2, "FillAll", NULL);
 	NEUIK_MakeButton(&btnExample3, "[3]");
+	// NEUIK_Element_Configure(btnExample3, "FillAll", NULL);
 	NEUIK_MakeButton(&btnExample4, "[4]");
+	NEUIK_Element_Configure(btnExample4, "FillAll", NULL);
 	NEUIK_MakeButton(&btnExample5, "[5]");
+	NEUIK_Element_Configure(btnExample5, "FillAll", NULL);
 	NEUIK_MakeButton(&btnExample6, "[6]");
+	NEUIK_Element_Configure(btnExample6, "FillAll", NULL);
 	NEUIK_MakeButton(&btnExample7, "[7]");
+	NEUIK_Element_Configure(btnExample7, "FillAll", NULL);
 
 	NEUIK_MakeGridLayout(&gridExample, 3, 3);
-	NEUIK_GridLayout_SetVSpacing(gridExample, 10);
+	NEUIK_Element_Configure(gridExample, "FillAll", "PadAll=10", NULL);
+	NEUIK_GridLayout_SetSpacing(gridExample, 5);
 	// NEUIK_GridLayout_SetElementAt(gridExample, 0, 0, btnExample1);
 	NEUIK_GridLayout_SetElementAt(gridExample, 1, 0, btnExample2);
 	NEUIK_GridLayout_SetElementAt(gridExample, 2, 0, btnExample3);
