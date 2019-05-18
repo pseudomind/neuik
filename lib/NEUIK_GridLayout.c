@@ -1117,33 +1117,38 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 	int                    colCtr        = 0;
 	int                    offset        = 0;
 	int                    ctr           = 0;
-	int                    vctr          = 0; /* valid counter; for elements shown */
 	int                    xPos          = 0;
 	int                    yPos          = 0;
-	int                    elWidth       = 0;
-	int                    ySize         = 0;
+	int                    xFree         = 0; // px of space free for hFill elems
+	int                    yFree         = 0; // px of space free for vFill elems
 	int                    dH            = 0; // Change in height [px]
-	int                    eNum          = 0; /* which error to report (if any) */
-	int                    nVFill        = 0; /* number of rows which can VFill */
+	int                    dW            = 0; // Change in width [px]
+	int                    eNum          = 0; // which error to report (if any)
+	int                    nHFill        = 0; // number of cols which can HFill
+	int                    nVFill        = 0; // number of rows which can VFill
 	int                    reqResizeH    = 0; // required resize height
+	int                    reqResizeW    = 0; // required resize width
+	int                    hfillColsMinW = 0; // min width for all hFill cols
+	int                    hfillMaxMinW  = 0; // largest minimum col width 
 	int                    vfillRowsMinH = 0; // min height for all vFill rows
 	int                    vfillMaxMinH  = 0; // largest minimum row height 
 	                                          // among vertically filling rows.
+	int                  * allHFill      = NULL; // Free upon returning; 
+	                                             // Cols fills vertically? (per col)
 	int                  * allVFill      = NULL; // Free upon returning; 
 	                                             // Row fills vertically? (per row)
 	int                  * allMaxMinH    = NULL; // Free upon returning; 
 	                                             // The max min width (per row)
 	int                  * allMaxMinW    = NULL; // Free upon returning; 
 	                                             // The max min width (per column)
+	int                  * rendColW      = NULL; // Free upon returning; 
+	                                             // Rendered col width (per column)
 	int                  * rendRowH      = NULL; // Free upon returning; 
 	                                             // Rendered row height (per row)
 	int                  * elemsValid    = NULL; // Free upon returning.
 	int                  * elemsShown    = NULL; // Free upon returning.
 	RenderSize           * elemsMinSz    = NULL; // Free upon returning.
 	NEUIK_ElementConfig ** elemsCfg      = NULL; // Free upon returning.
-	float                  vFillPx       = 0.0;
-	int                    yFree         = 0;   /* px of space free for vFill elems */
-	float                  tScale        = 0.0; /* total vFill scaling factors */
 	RenderLoc              rl            = {0, 0};
 	RenderLoc              rlRel         = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect               rect          = {0, 0, 0, 0};
@@ -1257,20 +1262,26 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 		eNum = 5;
 		goto out;
 	}
+	allHFill = malloc(grid->xDim*sizeof(int));
+	if (allHFill == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
 	allVFill = malloc(grid->yDim*sizeof(int));
 	if (allVFill == NULL)
 	{
 		eNum = 5;
 		goto out;
 	}
-	// allMaxMinH = malloc(grid->yDim*sizeof(int));
-	// if (allMaxMinH == NULL)
-	// {
-	// 	eNum = 5;
-	// 	goto out;
-	// }
 	rendRowH = malloc(grid->yDim*sizeof(int));
 	if (rendRowH == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	rendColW = malloc(grid->xDim*sizeof(int));
+	if (rendColW == NULL)
 	{
 		eNum = 5;
 		goto out;
@@ -1283,6 +1294,7 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 	for (ctr = 0; ctr < grid->xDim; ctr++)
 	{
 		allMaxMinW[ctr] = 0;
+		allHFill[ctr]   = 0;
 	}
 	for (ctr = 0; ctr < grid->yDim; ctr++)
 	{
@@ -1408,20 +1420,141 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 			{
 				allMaxMinW[colCtr] = tempW;
 			}
+
+			/*----------------------------------------------------------------*/
+			/* Check if the element can fill horizontally and if so, mark the */
+			/* whole column as one that can fill horizontally.                */
+			/*----------------------------------------------------------------*/
+			if (eCfg->HFill)
+			{
+				allHFill[colCtr] = 1;
+			}
+		}
+	}
+
+	/*========================================================================*/
+	/* Calculation of rendered column widths (accounts for HFill).            */
+	/*========================================================================*/
+	/* Determine the required minimum width and the total number of columns   */
+	/* which can fill horizontally.                                           */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < grid->xDim; ctr++)
+	{
+		rsMin.w += allMaxMinW[ctr];
+		nHFill += allHFill[ctr];
+	}
+	if (grid->xDim > 1)
+	{
+		rsMin.w += grid->HSpacing*(grid->xDim - 1);
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the space occupied by all HFill columns and determine the    */
+	/* value of the largest minimum column width among horizontally filling   */
+	/* columns.                                                               */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < grid->xDim; ctr++)
+	{
+		if (allHFill[ctr])
+		{
+			hfillColsMinW += allMaxMinW[ctr];
+			if (hfillMaxMinW < allMaxMinW[ctr])
+			{
+				hfillMaxMinW = allMaxMinW[ctr];
+			}
 		}
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Determine the required minimum width.                                  */
+	/* Calculate the amount of currently unused horizontal space (beyond min) */
 	/*------------------------------------------------------------------------*/
-	// for (ctr = 0; ctr < grid->xDim; ctr++)
-	// {
-	// 	rsMin.w += allMaxMinW[ctr];
-	// }
-	// if (grid->xDim > 1)
-	// {
-	// 	rsMin.w += grid->HSpacing*(grid->xDim - 1);
-	// }
+	xFree = rSize->w - rsMin.w;
+
+	/*------------------------------------------------------------------------*/
+	/* Check if there is enough unused horizontal space to bring all HFill    */
+	/* columns to the same width.                                             */
+	/*------------------------------------------------------------------------*/
+	reqResizeW = nHFill*hfillMaxMinW - hfillColsMinW; // required resize width
+	if (xFree >= reqResizeW)
+	{
+		/*--------------------------------------------------------------------*/
+		/* There is enough space; get all HFill cols to the same size first.  */
+		/*--------------------------------------------------------------------*/
+		for (ctr = 0; ctr < grid->xDim; ctr++)
+		{
+			rendColW[ctr] = allMaxMinW[ctr];
+			if (allHFill[ctr])
+			{
+				rendColW[ctr] = hfillMaxMinW;
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Evenly divide the remaining hSpace between the hFill columns.      */
+		/*--------------------------------------------------------------------*/
+		xFree -= reqResizeW;
+
+		dW = (int)(floor( (float)(xFree)/(float)(nHFill) ));
+		if (dW > 0)
+		{
+			/*----------------------------------------------------------------*/
+			/* Increase the width of hFill columns all by the same quantity.  */
+			/*----------------------------------------------------------------*/
+			for (ctr = 0; ctr < grid->xDim; ctr++)
+			{
+				if (allHFill[ctr])
+				{
+					rendColW[ctr] += dW;
+					xFree -= dW;
+				}
+			}
+		}
+
+		if (xFree > 0)
+		{
+			/*----------------------------------------------------------------*/
+			/* Distribute the remaining hSpace to the hFill one pixel at a    */
+			/* time (starting from the left column and moving right).         */
+			/*----------------------------------------------------------------*/
+			for (ctr = 0; ctr < grid->xDim; ctr++)
+			{
+				if (allHFill[ctr])
+				{
+					rendColW[ctr] += 1;
+					xFree -= 1;
+					if (xFree == 0)
+					{
+						break;
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* Evenly divide the remaining hSpace between the hFill columns.      */
+		/*--------------------------------------------------------------------*/
+		while (xFree > 0)
+		{
+			/*----------------------------------------------------------------*/
+			/* Distribute the remaining hSpace to the hFill one pixel at a    */
+			/* time (starting from the left column and moving right).         */
+			/*----------------------------------------------------------------*/
+			for (ctr = 0; ctr < grid->xDim; ctr++)
+			{
+				if (allHFill[ctr] && rendColW[ctr] < hfillMaxMinW)
+				{
+					rendColW[ctr] += 1;
+					xFree -= 1;
+					if (xFree == 0)
+					{
+						break;
+					}
+				}
+			}
+		}
+	}
 
 	/*========================================================================*/
 	/* Calculation of rendered row heights (accounts for VFill).              */
@@ -1564,7 +1697,7 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 
 			if (colCtr > 0)
 			{
-				xPos += allMaxMinW[colCtr-1] + grid->HSpacing;
+				xPos += rendColW[colCtr-1] + grid->HSpacing;
 			}
 
 			if (!elemsValid[offset]) continue; /* no elem at this location */
@@ -1575,11 +1708,15 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 			rs   = &elemsMinSz[offset];
 
 			tempH = rendRowH[rowCtr];
-			tempW = rs->w + (eCfg->PadLeft + eCfg->PadRight);
+			tempW = rendColW[colCtr];
 
 			/*----------------------------------------------------------------*/
 			/* Check for and apply if necessary Horizontal and Vertical fill. */
 			/*----------------------------------------------------------------*/
+			if (allHFill[colCtr])
+			{
+				rs->w = tempW - (eCfg->PadLeft + eCfg->PadRight);
+			}
 			if (allVFill[rowCtr])
 			{
 				rs->h = tempH - (eCfg->PadTop + eCfg->PadBottom);
@@ -1600,10 +1737,10 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 							break;
 						case NEUIK_HJUSTIFY_CENTER:
 						case NEUIK_HJUSTIFY_DEFAULT:
-							rect.x = (xPos + allMaxMinW[colCtr]/2) - (tempW/2);
+							rect.x = (xPos + rendColW[colCtr]/2) - (tempW/2);
 							break;
 						case NEUIK_HJUSTIFY_RIGHT:
-							rect.x = (xPos + allMaxMinW[colCtr]) - 
+							rect.x = (xPos + rendColW[colCtr]) - 
 								(rs->w + eCfg->PadRight);
 							break;
 					}
@@ -1612,10 +1749,10 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 					rect.x = xPos + eCfg->PadLeft;
 					break;
 				case NEUIK_HJUSTIFY_CENTER:
-					rect.x = (xPos + allMaxMinW[colCtr]/2) - (tempW/2);
+					rect.x = (xPos + rendColW[colCtr]/2) - (tempW/2);
 					break;
 				case NEUIK_HJUSTIFY_RIGHT:
-					rect.x = (xPos + allMaxMinW[colCtr]) - 
+					rect.x = (xPos + rendColW[colCtr]) - 
 						(rs->w + eCfg->PadRight);
 					break;
 			}
@@ -1649,7 +1786,7 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 					break;
 			}
 
-			rect.w = allMaxMinW[colCtr];
+			rect.w = rendColW[colCtr];
 			rect.h = rendRowH[rowCtr];
 			rl.x = (eBase->eSt.rLoc).x + rect.x;
 			rl.y = (eBase->eSt.rLoc).y + rect.y;
@@ -1689,7 +1826,9 @@ out:
 	if (elemsMinSz != NULL) free(elemsMinSz);
 	if (allMaxMinW != NULL) free(allMaxMinW);
 	if (allMaxMinH != NULL) free(allMaxMinH);
+	if (rendColW   != NULL) free(rendColW);
 	if (rendRowH   != NULL) free(rendRowH);
+	if (allHFill   != NULL) free(allHFill);
 	if (allVFill   != NULL) free(allVFill);
 
 	if (eNum > 0)
