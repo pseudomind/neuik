@@ -26,6 +26,7 @@ typedef struct {
 		int          VSpacing;
 		unsigned int xDim;     /* The max number of grid items along the x-axis */
 		unsigned int yDim;     /* The max number of grid items along the y-axis */
+		int          squareElems; /* If elems should all be square in shape */
 		int          selected;
 		int          isActive;
 } NEUIK_GridLayout;
@@ -71,6 +72,12 @@ int
 void 
 	NEUIK_GridLayout_Deselect(
 			NEUIK_GridLayout * grid);
+
+int 
+	NEUIK_GridLayout_Configure(
+			NEUIK_GridLayout * grid,
+			const char       * set0,
+			...);
 
 
 #endif /* NEUIK_GRIDLAYOUT_H */

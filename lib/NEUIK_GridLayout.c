@@ -16,6 +16,7 @@
 #include <SDL.h>
 #include <stdlib.h>
 #include <math.h>
+#include <signal.h>
 
 #include "NEUIK_error.h"
 #include "NEUIK_render.h"
@@ -188,11 +189,12 @@ int neuik_Object_New__GridLayout(
 	}
 
 	/* Allocation successful */
-	grid->HSpacing = 1;
-	grid->VSpacing = 1;
-	grid->isActive = 0;
-	grid->xDim     = 0;
-	grid->yDim     = 0;
+	grid->HSpacing    = 1;
+	grid->VSpacing    = 1;
+	grid->isActive    = 0;
+	grid->xDim        = 0;
+	grid->yDim        = 0;
+	grid->squareElems = 0;
 
 	/*------------------------------------------------------------------------*/
 	/* Successful allocation of Memory -- Create Base Class Object            */
@@ -740,6 +742,241 @@ out:
 }
 
 
+void neuik_GridLayout_Configure_capture_segv(
+	int sig_num)
+{
+	static char funcName[] = "NEUIK_GridLayout_Configure";
+	static char errMsg[] = 
+		"SIGSEGV (segmentation fault) captured; is call `NULL` terminated?";
+
+	NEUIK_RaiseError(funcName, errMsg);
+	NEUIK_BacktraceErrors();
+	exit(1);
+}
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_GridLayout_Configure
+ *
+ *  Description:   Allows the user to set a number of configurable parameters.
+ *
+ *                 NOTE: This list of named sets must be terminated by a NULL 
+ *                 pointer
+ *
+ *  Returns:       Non-zero if an error occurs.
+ *
+ ******************************************************************************/
+int NEUIK_GridLayout_Configure(
+	NEUIK_GridLayout * grid,
+	const char       * set0,
+	...)
+{
+	int          ctr;
+	int          nCtr;
+	int          eNum      = 0; /* which error to report (if any) */
+	int          doRedraw  = 0;
+	int          isBool;
+	int          boolVal   = 0;
+	int          typeMixup;
+	char         buf[4096];
+	va_list      args;
+	char       * strPtr    = NULL;
+	char       * name      = NULL;
+	const char * set       = NULL;
+	/*------------------------------------------------------------------------*/
+	/* If a `name=value` string with an unsupported name is found, check to   */
+	/* see if a boolName was mistakenly used instead.                         */
+	/*------------------------------------------------------------------------*/
+	static char * boolNames[] = {
+		"SquareElems",
+		NULL,
+	};
+	/*------------------------------------------------------------------------*/
+	/* If a boolName string with an unsupported name is found, check to see   */
+	/* if a supported nameValue type was mistakenly used instead.             */
+	/*------------------------------------------------------------------------*/
+	static char * valueNames[] = {
+		NULL,
+	};
+	static char   funcName[] = "NEUIK_GridLayout_Configure";
+	static char * errMsgs[] = {"",                              // [0] no error
+		"Argument `grid` does not implement GridLayout class.", // [1]
+		"`name=value` string is too long.",                     // [2]
+		"Invalid `name=value` string.",                         // [3]
+		"ValueType name used as BoolType, skipping.",           // [4]
+		"BoolType name unknown, skipping.",                     // [5]
+		"NamedSet.name is NULL, skipping..",                    // [6]
+		"NamedSet.name is blank, skipping..",                   // [7]
+		"BoolType name used as ValueType, skipping.",           // [8]
+		"NamedSet.name type unknown, skipping.",                // [9]
+	};
+
+	if (!neuik_Object_IsClass(grid, neuik__Class_GridLayout))
+	{
+		eNum = 1;
+		goto out;
+	}
+	set = set0;
+
+	va_start(args, set0);
+
+	for (ctr = 0;; ctr++)
+	{
+		isBool = 0;
+		name   = NULL;
+
+		if (set == NULL) break;
+
+		#ifndef NO_NEUIK_SIGNAL_TRAPPING
+			signal(SIGSEGV, neuik_GridLayout_Configure_capture_segv);
+		#endif
+
+		if (strlen(set) > 4095)
+		{
+			#ifndef NO_NEUIK_SIGNAL_TRAPPING
+				signal(SIGSEGV, NULL);
+			#endif
+			NEUIK_RaiseError(funcName, errMsgs[2]);
+			set = va_arg(args, const char *);
+			continue;
+		}
+		else
+		{
+			#ifndef NO_NEUIK_SIGNAL_TRAPPING
+				signal(SIGSEGV, NULL);
+			#endif
+			strcpy(buf, set);
+			/* Find the equals and set it to '\0' */
+			strPtr = strchr(buf, '=');
+			if (strPtr == NULL)
+			{
+				/*------------------------------------------------------------*/
+				/* Bool type configuration (or a mistake)                     */
+				/*------------------------------------------------------------*/
+				if (buf[0] == 0)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[3]);
+				}
+
+				isBool  = 1;
+				boolVal = 1;
+				name    = buf;
+				if (buf[0] == '!')
+				{
+					boolVal = 0;
+					name    = buf + 1;
+				}
+			}
+			else
+			{
+				*strPtr = 0;
+				strPtr++;
+				if (*strPtr == 0)
+				{
+					/* `name=value` string is missing a value */
+					NEUIK_RaiseError(funcName, errMsgs[3]);
+					set = va_arg(args, const char *);
+					continue;
+				}
+				name  = buf;
+			}
+		}
+
+		if (isBool)
+		{
+			/*----------------------------------------------------------------*/
+			/* Check for boolean parameter setting.                           */
+			/*----------------------------------------------------------------*/
+			if (!strcmp("SquareElems", name))
+			{
+				if (grid->squareElems == boolVal) continue;
+
+				/* else: The previous setting was changed */
+				grid->squareElems = boolVal;
+				doRedraw = 1;
+			}
+			else 
+			{
+				/*------------------------------------------------------------*/
+				/* Bool parameter not found; may be mixup or mistake .        */
+				/*------------------------------------------------------------*/
+				typeMixup = 0;
+				for (nCtr = 0;; nCtr++)
+				{
+					if (valueNames[nCtr] == NULL) break;
+
+					if (!strcmp(valueNames[nCtr], name))
+					{
+						typeMixup = 1;
+						break;
+					}
+				}
+
+				if (typeMixup)
+				{
+					/* A value type was mistakenly used as a bool type */
+					NEUIK_RaiseError(funcName, errMsgs[4]);
+				}
+				else
+				{
+					/* An unsupported name was used as a bool type */
+					NEUIK_RaiseError(funcName, errMsgs[5]);
+				}
+			}
+		}
+		else
+		{
+			if (name == NULL)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[6]);
+			}
+			else if (name[0] == 0)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[7]);
+			}
+			else
+			{
+				typeMixup = 0;
+				for (nCtr = 0;; nCtr++)
+				{
+					if (boolNames[nCtr] == NULL) break;
+
+					if (!strcmp(boolNames[nCtr], name))
+					{
+						typeMixup = 1;
+						break;
+					}
+				}
+
+				if (typeMixup)
+				{
+					/* A bool type was mistakenly used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+				}
+				else
+				{
+					/* An unsupported name was used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[9]);
+				}
+			}
+		}
+
+		/* before starting */
+		set = va_arg(args, const char *);
+	}
+	va_end(args);
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	if (doRedraw) neuik_Element_RequestRedraw(grid);
+
+	return eNum;
+}
+
+
 /*******************************************************************************
  *
  *  Name:          neuik_Element_IsShown__GridLayout    (redefined-vfunc)
@@ -857,6 +1094,7 @@ int neuik_Element_GetMinSize__GridLayout(
 	int                    colCtr     = 0;
 	int                    offset     = 0;
 	int                    ctr        = 0;
+	int                    maxMin     = 0;    // Max Min (of widths and heights)
 	RenderSize           * rs         = NULL;
 	NEUIK_Element          elem       = NULL;
 	NEUIK_ElementBase    * eBase      = NULL;
@@ -1023,6 +1261,10 @@ int neuik_Element_GetMinSize__GridLayout(
 			{
 				allMaxMinH[rowCtr] = tempH;
 			}
+			if (tempH > maxMin)
+			{
+				maxMin = tempH;
+			}
 		}
 	}
 
@@ -1048,31 +1290,69 @@ int neuik_Element_GetMinSize__GridLayout(
 			{
 				allMaxMinW[colCtr] = tempW;
 			}
+			if (tempW > maxMin)
+			{
+				maxMin = tempW;
+			}
 		}
 	}
 
 	/*------------------------------------------------------------------------*/
 	/* Determine the required minimum width.                                  */
 	/*------------------------------------------------------------------------*/
-	for (ctr = 0; ctr < grid->xDim; ctr++)
+	if (grid->squareElems)
 	{
-		rSize->w += allMaxMinW[ctr];
+		/*--------------------------------------------------------------------*/
+		/* Square element sizing is required.                                 */
+		/*--------------------------------------------------------------------*/
+		rSize->w = grid->xDim*maxMin;
+		if (grid->xDim > 1)
+		{
+			rSize->w += grid->HSpacing*(grid->xDim - 1);
+		}
 	}
-	if (grid->xDim > 1)
+	else
 	{
-		rSize->w += grid->HSpacing*(grid->xDim - 1);
+		/*--------------------------------------------------------------------*/
+		/* Square element sizing is not required.                             */
+		/*--------------------------------------------------------------------*/
+		for (ctr = 0; ctr < grid->xDim; ctr++)
+		{
+			rSize->w += allMaxMinW[ctr];
+		}
+		if (grid->xDim > 1)
+		{
+			rSize->w += grid->HSpacing*(grid->xDim - 1);
+		}
 	}
 
 	/*------------------------------------------------------------------------*/
 	/* Determine the required minimum height.                                 */
 	/*------------------------------------------------------------------------*/
-	for (ctr = 0; ctr < grid->yDim; ctr++)
+	if (grid->squareElems)
 	{
-		rSize->h += allMaxMinH[ctr];
+		/*--------------------------------------------------------------------*/
+		/* Square element sizing is required.                                 */
+		/*--------------------------------------------------------------------*/
+		rSize->h = grid->yDim*maxMin;
+		if (grid->yDim > 1)
+		{
+			rSize->h += grid->VSpacing*(grid->yDim - 1);
+		}
 	}
-	if (grid->yDim > 1)
+	else
 	{
-		rSize->h += grid->VSpacing*(grid->yDim - 1);
+		/*--------------------------------------------------------------------*/
+		/* Square element sizing is not required.                             */
+		/*--------------------------------------------------------------------*/
+		for (ctr = 0; ctr < grid->yDim; ctr++)
+		{
+			rSize->h += allMaxMinH[ctr];
+		}
+		if (grid->yDim > 1)
+		{
+			rSize->h += grid->VSpacing*(grid->yDim - 1);
+		}
 	}
 out:
 	if (allMaxMinW != NULL) free(allMaxMinW);
