@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -774,9 +774,10 @@ int
 	NEUIK_Element_SetSize(NEUIK_Element elem, RenderSize * rSize);
 
 
-SDL_Texture * neuik_Element_Render(
+int neuik_Element_Render(
 	NEUIK_Element   elem, 
 	RenderSize    * rSize, 
+	RenderLoc     * rlMod,
 	SDL_Renderer  * xRend,
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
@@ -784,17 +785,19 @@ SDL_Texture * neuik_Element_Render(
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
 	{
-		return NULL;
+		return 1;
 	}
-	if (eBase->eFT == NULL) return NULL;
-	if (eBase->eFT->Render == NULL) return NULL;
+	if (eBase->eFT == NULL) return 1;
+	if (eBase->eFT->Render == NULL) return 1;
 
-	return (eBase->eFT->Render)(elem, rSize, xRend, xSurf);
+	return (eBase->eFT->Render)(elem, rSize, rlMod, xRend, xSurf);
 }
 
-SDL_Texture * neuik_Element_RenderRotate(
+
+int neuik_Element_RenderRotate(
 	NEUIK_Element   elem, 
 	RenderSize    * rSize, 
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,
 	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	double          rotation)
@@ -818,14 +821,18 @@ SDL_Texture * neuik_Element_RenderRotate(
 	int                 srcY       = 0;
 	int                 srcOffset  = 0;
 	SDL_Rect            destRect   = {0, 0, 0, 0};  /* destination rectangle */
+	RenderLoc           rl;
+	RenderLoc           rlAdj;             /* loc. including adjustments */
 	int                 eNum       = 0;
 	static char         funcName[] = "neuik_Element_RenderRotate";
 	static char       * errMsgs[]  = {"",                                // [0] no error
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
 		"Failed to create RGB surface.",                                 // [2]
 		"Failed to create software renderer.",                           // [3]
-		"neuik_Element_Render returned NULL.",                           // [4]
+		"Failure in `neuik_Element_Render()`",                           // [4]
 		"SDL_CreateTextureFromSurface returned NULL.",                   // [5]
+		"NEUIK_Element Function Table is NULL.",                         // [6]
+		"`Render` unimplemented in NEUIK_Element Function Table.",       // [7]
 	};
 
 	#if SDL_BYTEORDER == SDL_BIG_ENDIAN
@@ -842,15 +849,33 @@ SDL_Texture * neuik_Element_RenderRotate(
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
 	{
-		return NULL;
+		eNum = 1;
+		goto out;
 	}
-	if (eBase->eFT == NULL) return NULL;
-	if (eBase->eFT->Render == NULL) return NULL;
+	if (eBase->eFT == NULL)
+	{
+		eNum = 6;
+		goto out;
+	}
+	if (eBase->eFT->Render == NULL)
+	{
+		eNum = 7;
+		goto out;
+	}
 
 	if (rotation == 0.0)
 	{
-		return neuik_Element_Render(elem, rSize, xRend, xSurf);
+		return neuik_Element_Render(elem, rSize, rlMod, xRend, xSurf);
 	}
+
+	rl = eBase->eSt.rLoc;
+	rlAdj = rl;
+	if (rlMod != NULL)
+	{
+		rlAdj.x += rlMod->x;
+		rlAdj.y += rlMod->y;
+	}
+	rl = rlAdj;
 
 	/*------------------------------------------------------------------------*/
 	/* Create a new surface which is the size of the source texture.          */
@@ -877,16 +902,12 @@ SDL_Texture * neuik_Element_RenderRotate(
 	SDL_SetRenderDrawColor(cpRend, 255, 255, 255, 0);
 	SDL_RenderClear(cpRend);
 
-	cpTex = (eBase->eFT->Render)(elem, rSize, cpRend, xSurf);
-	if (cpTex == NULL)
+	if ((eBase->eFT->Render)(elem, rSize, rlMod, cpRend, cpSurf))
 	{
 		eNum = 4;
 		goto out;
 	}
 
-	destRect.w = rSize->w;
-	destRect.h = rSize->h;
-	SDL_RenderCopy(cpRend, cpTex, NULL, &destRect);
 	SDL_RenderPresent(cpRend);
 
 	/*------------------------------------------------------------------------*/
@@ -1016,17 +1037,25 @@ SDL_Texture * neuik_Element_RenderRotate(
 		eNum = 5;
 		goto out;
 	}
+
+	destRect.x = rl.x;
+	destRect.y = rl.y;
+	destRect.w = imSurf->w;
+	destRect.h = imSurf->h;
+	SDL_RenderCopy(xRend, imTex, NULL, &destRect);
 out:
+	if (imTex  != NULL) SDL_DestroyTexture(imTex);
 	if (cpTex  != NULL) SDL_DestroyTexture(cpTex);
 	if (cpRend != NULL) SDL_DestroyRenderer(cpRend);
 	if (cpSurf != NULL) SDL_FreeSurface(cpSurf);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
 
-	return imTex;
+	return eNum;
 }
 
 
@@ -2175,6 +2204,7 @@ int neuik_Element_NeedsRedraw(
 	return 	eBase->eSt.doRedraw;
 }
 
+
 /*******************************************************************************
  *
  *  Name:          neuik_Element_RedrawBackgroundGradient
@@ -2189,7 +2219,9 @@ int neuik_Element_NeedsRedraw(
  ******************************************************************************/
 int neuik_Element_RedrawBackgroundGradient(
 	NEUIK_Element      elem,
-	NEUIK_ColorStop ** cs)
+	NEUIK_ColorStop ** cs,
+	RenderLoc        * rlMod,   /* A relative location modifier (for rendering) */
+	neuik_MaskMap    * maskMap) /* Identifies regions of background to not draw */
 {
 	int                 ctr;
 	int                 gCtr;             /* gradient counter */
@@ -2200,20 +2232,26 @@ int neuik_Element_RedrawBackgroundGradient(
 	int                 clrB;
 	int                 clrA;
 	int                 clrFound;
-	char                dirn;            /* Direction of the gradient 'v' or 'h' */
+	int                 maskCtr;          /* maskMap counter */
+	int                 maskRegions;      /* number of regions in maskMap */
+	const int         * regionX0;         /* Array of region X0 values */
+	const int         * regionXf;         /* Array of region Xf values */
+	char                dirn;             /* Direction of the gradient 'v' or 'h' */
 	float               lastFrac  = -1.0;
 	float               frac;
 	float               fracDelta;        /* fraction between ColorStop 1 & 2 */
 	float               fracStart = 0.0;  /* fraction at ColorStop 1 */
 	float               fracEnd   = 1.0;  /* fraction at ColorStop 2 */
 	RenderSize          rSize;            /* Size of the element background to fill */
+	RenderLoc           rl;               /* Location of element background */
+	SDL_Rect            srcRect;
 	NEUIK_ElementBase * eBase     = NULL;
 	SDL_Renderer      * rend      = NULL;
 	colorDeltas       * deltaPP   = NULL;
 	colorDeltas       * clrDelta;
 	NEUIK_Color       * clr;
 	static char         funcName[] = "neuik_Element_RedawBackgroundGradient";
-	static char       * errMsgs[] = {"",                                 // [0] no error
+	static char       * errMsgs[] = {"", // [0] no error
 		"Pointer to ColorStops is NULL.",                                // [1]
 		"Unsupported gradient direction.",                               // [2]
 		"Invalid RenderSize supplied.",                                  // [3]
@@ -2225,6 +2263,7 @@ int neuik_Element_RedrawBackgroundGradient(
 		"Failure to allocate memory.",                                   // [9]
 		"Failed to create software renderer.",                           // [10]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [11]
+		"Failure in `neuik_MaskMap_GetUnmaskedRegionsOnHLine`.",         // [12]
 	};
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -2233,11 +2272,10 @@ int neuik_Element_RedrawBackgroundGradient(
 		goto out;
 	}
 
-	rSize.w = eBase->eSt.rSize.w;
-	rSize.h = eBase->eSt.rSize.h;
-
-	rend = eBase->eSt.rend;
-	dirn = eBase->eBg.gradient_dirn;
+	rl    = eBase->eSt.rLoc;
+	rSize = eBase->eSt.rSize;
+	rend  = eBase->eSt.rend;
+	dirn  = eBase->eBg.gradient_dirn;
 
 	/*------------------------------------------------------------------------*/
 	/* Check for easily issues before attempting to render the gradient       */
@@ -2272,7 +2310,6 @@ int neuik_Element_RedrawBackgroundGradient(
 		if (cs[nClrs] == NULL) break; /* this is the number of ColorStops */
 		if (cs[nClrs]->frac < 0.0 || cs[nClrs]->frac > 1.0)
 		{
-			printf("cs[%d]->frac = %f\n", nClrs, cs[nClrs]->frac);
 			eNum = 7;
 			goto out;
 		}
@@ -2316,9 +2353,14 @@ int neuik_Element_RedrawBackgroundGradient(
 		/*--------------------------------------------------------------------*/
 		/* A single color; this will just be a filled rectangle               */
 		/*--------------------------------------------------------------------*/
+		srcRect.x = rl.x;
+		srcRect.y = rl.y;
+		srcRect.w = rSize.w;
+		srcRect.h = rSize.h;
+
 		clr = &(cs[0]->color);
 		SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, clr->a);
-		SDL_RenderClear(rend);
+		SDL_RenderFillRect(rend, &srcRect);
 	}
 	else if (dirn == 'v')
 	{
@@ -2375,7 +2417,34 @@ int neuik_Element_RedrawBackgroundGradient(
 				SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, clr->a);
 			}
 
-			SDL_RenderDrawLine(rend, 0, gCtr, rSize.w - 1, gCtr);
+			if (maskMap != NULL)
+			{
+				/*------------------------------------------------------------*/
+				/* A transparency mask is included, draw unmasked regions.    */
+				/*------------------------------------------------------------*/
+				if (neuik_MaskMap_GetUnmaskedRegionsOnHLine(
+						maskMap, gCtr, &maskRegions, &regionX0, &regionXf))
+				{
+					eNum = 12;
+					goto out;
+				}
+
+				for (maskCtr = 0; maskCtr < maskRegions; maskCtr++)
+				{
+					SDL_RenderDrawLine(rend, 
+						rl.x + regionX0[maskCtr], rl.y + gCtr, 
+						rl.x + regionXf[maskCtr], rl.y + gCtr);
+				}
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* There are no masked off (transparent areas) draw full line */
+				/*------------------------------------------------------------*/
+				SDL_RenderDrawLine(rend, 
+					rl.x,                 rl.y + gCtr, 
+					rl.x + (rSize.w - 1), rl.y + gCtr);
+			}
 		}
 	}
 	else if (dirn == 'h')
@@ -2383,6 +2452,7 @@ int neuik_Element_RedrawBackgroundGradient(
 		/*--------------------------------------------------------------------*/
 		/* Draw a horizontal gradient                                         */
 		/*--------------------------------------------------------------------*/
+		#pragma message("TODO/FIXME: Implement horizontal gradient")
 	}
 out:
 	if (eNum > 0)
@@ -2395,6 +2465,7 @@ out:
 	return eNum;
 }
 
+
 /*******************************************************************************
  *
  *  Name:          neuik_Element_RedrawBackground
@@ -2406,8 +2477,18 @@ out:
  ******************************************************************************/
 int neuik_Element_RedrawBackground(
 	NEUIK_Element   elem,
-	SDL_Surface   * xSurf) /* background surface from external object */
+	SDL_Surface   * xSurf,   /* background surface from external object */
+	RenderLoc     * rlMod,   /* A relative location modifier (for rendering) */
+	neuik_MaskMap * maskMap) /* Identifies regions of background to not draw */
 {
+	int                    y              = 0;    /* current y-position */
+	int                    y0             = 0;    /* first y-position to draw */
+	int                    yf             = 0;    /* final y-position to draw */
+	int                    eNum           = 0;    /* which error to report (if any) */
+	int                    maskCtr;               /* maskMap counter */
+	int                    maskRegions;           /* number of regions in maskMap */
+	const int            * regionX0;              /* Array of region X0 values */
+	const int            * regionXf;              /* Array of region Xf values */
 	NEUIK_ElementBase    * eBase          = NULL;
 	SDL_Renderer         * rend           = NULL;
 	SDL_Texture          * tex            = NULL;
@@ -2415,23 +2496,22 @@ int neuik_Element_RedrawBackground(
 	enum neuik_bgstyle     bgstyle;               /* active background style */
 	NEUIK_Color          * color_solid    = NULL; /* pointer to active solid color */
 	NEUIK_ColorStop    *** color_gradient = NULL; /* color gradient to use under normal condtions */
-	RenderLoc              rRelLoc;               /* Location of element background (in parent) */
+	RenderLoc              rl;                    /* Location of element background */
 	RenderSize             rSize;                 /* Size of the element background to fill */
 	static char            funcName[] = "neuik_Element_RedrawBackground";
-	static char            errMsg[]   =
-		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.";
+	static char          * errMsgs[]  = {"", // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Failure in `neuik_MaskMap_GetUnmaskedRegionsOnHLine`.",         // [2]
+	};
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
 	{
-		NEUIK_RaiseError(funcName, errMsg);
-		return 1;
+		eNum = 1;
+		goto out;
 	}
 
-	rRelLoc.x  = eBase->eSt.rRelLoc.x;
-	rRelLoc.y  = eBase->eSt.rRelLoc.y;
-	rSize.w = eBase->eSt.rSize.w;
-	rSize.h = eBase->eSt.rSize.h;
-
+	rl    = eBase->eSt.rLoc;
+	rSize = eBase->eSt.rSize;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
@@ -2495,28 +2575,66 @@ int neuik_Element_RedrawBackground(
 			/*----------------------------------------------------------------*/
 			SDL_SetRenderDrawColor(rend,
 				color_solid->r, color_solid->g, color_solid->b, color_solid->a);
-			SDL_RenderClear(rend);
+
+			if (maskMap != NULL)
+			{
+				/*------------------------------------------------------------*/
+				/* A transparency mask is included, draw unmasked regions.    */
+				/*------------------------------------------------------------*/
+				y0 = 0;
+				yf = rSize.h - 1;
+				for (y = y0; y < yf; y++)
+				{
+					if (neuik_MaskMap_GetUnmaskedRegionsOnHLine(
+							maskMap, y, &maskRegions, &regionX0, &regionXf))
+					{
+						eNum = 2;
+						goto out;
+					}
+
+					for (maskCtr = 0; maskCtr < maskRegions; maskCtr++)
+					{
+						SDL_RenderDrawLine(rend, 
+							rl.x + regionX0[maskCtr], rl.y + y, 
+							rl.x + regionXf[maskCtr], rl.y + y);
+					}
+				}
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* There are no masked off (transparent areas) fill in rect.  */
+				/*------------------------------------------------------------*/
+				srcRect.x = rl.x;
+				srcRect.y = rl.y;
+				srcRect.w = rSize.w;
+				srcRect.h = rSize.h;
+
+				SDL_RenderFillRect(rend, &srcRect);
+			}
+
 			break;
 		case NEUIK_BGSTYLE_GRADIENT:
-			neuik_Element_RedrawBackgroundGradient(elem, *color_gradient);
+			neuik_Element_RedrawBackgroundGradient(
+				elem, *color_gradient, rlMod, maskMap);
 			break;
 		case NEUIK_BGSTYLE_TRANSPARENT:
 			/*----------------------------------------------------------------*/
-			/* Fill the entire surface background with a transparent color.   */
+			/* The entire surface background is transparent; do nothing.      */
 			/*----------------------------------------------------------------*/
-			srcRect.x = rRelLoc.x;
-			srcRect.y = rRelLoc.y;
-			srcRect.w = rSize.w;
-			srcRect.h = rSize.h;
-			tex = SDL_CreateTextureFromSurface(rend, xSurf);
-			SDL_RenderCopy(rend, tex, &srcRect, NULL);
-			SDL_RenderPresent(rend);
 			break;
 	}
 
 	/* No errors*/
 	ConditionallyDestroyTexture((SDL_Texture **)&(tex));
-	return 0;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
 }
 
 

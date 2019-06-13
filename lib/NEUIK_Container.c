@@ -1078,7 +1078,6 @@ int NEUIK_Container_DeleteElements(
 	NEUIK_Element cont)
 {
 	int               ctr;
-	int               wasLocated = 0;
 	int               eNum       = 0;    /* which error to report (if any) */
 	NEUIK_Container * cBase      = NULL;
 	static char       funcName[] = "NEUIK_Container_RemoveElements";
@@ -1173,7 +1172,6 @@ int NEUIK_Container_Configure(
 	int               ctr;
 	// int               nCtr;
 	int               isBool;
-	int               boolVal    = 0;
 	int               doRedraw   = 0;
 	int               typeMixup;
 	va_list           args;
@@ -1265,12 +1263,10 @@ int NEUIK_Container_Configure(
 				}
 
 				isBool  = 1;
-				boolVal = 1;
 				name    = buf;
 				if (buf[0] == '!')
 				{
-					boolVal = 0;
-					name    = buf + 1;
+					name = buf + 1;
 				}
 			}
 			else

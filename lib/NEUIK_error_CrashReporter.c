@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -91,7 +91,7 @@ int NEUIK_BacktraceErrors_GUI()
 	int             btFail  = 1;    /* backtrace failed to display */
 	int             isFalse = 0;
 	int             isTrue  = 1;
-	char            buf[2048];
+	char            buf[2096];
 	NEUIK_Window  * btWin   = NULL;
 	NEUIK_Label   * btTitle = NULL;
 	NEUIK_Label   * btMsg0  = NULL;

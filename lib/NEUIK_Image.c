@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -39,8 +39,9 @@ extern int neuik__isInitialized;
 int neuik_Object_New__Image(void ** imgPtr);
 int neuik_Object_Free__Image(void * imgPtr);
 
-int           neuik_Element_GetMinSize__Image(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Image(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_GetMinSize__Image(NEUIK_Element, RenderSize*);
+int neuik_Element_Render__Image(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -644,13 +645,13 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Image(
+int neuik_Element_Render__Image(
 	NEUIK_Element   elem, 
 	RenderSize    * rSize, /* [in] the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
-	SDL_Surface       * surf       = NULL;
 	SDL_Surface       * imgSurf    = NULL;
 	SDL_Renderer      * rend       = NULL;
 	SDL_Texture       * imgTex     = NULL; /* image texture */
@@ -658,12 +659,13 @@ SDL_Texture * neuik_Element_Render__Image(
 	int                 imW        = 0;
 	int                 imH        = 0;
 	int                 eNum       = 0; /* which error to report (if any) */
+	RenderLoc           rl         = {0, 0};
 	NEUIK_Image       * img        = NULL;
 	NEUIK_ElementBase * eBase      = NULL;
 	static char         funcName[] = "neuik_Element_Render__Image";
 	static char       * errMsgs[]  = {"",                                // [0] no error
 		"Argument `elem` is not of Image class.",                        // [1]
-		"Failure in Element_Resize().",                                  // [2]
+		"", // [2]
 		"SDL_CreateTextureFromSurface returned NULL.",                   // [3]
 		"Invalid specified `rSize` (negative values).",                  // [4]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [5]
@@ -684,53 +686,25 @@ SDL_Texture * neuik_Element_Render__Image(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw(img) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(img, *rSize) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
-	}
-	surf    = eBase->eSt.surf;
-	rend    = eBase->eSt.rend;
+	eBase->eSt.rend = xRend;
+	rend = eBase->eSt.rend;
 	imgSurf = (SDL_Surface *)(img->image);
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem, xSurf))
+	if (neuik_Element_RedrawBackground(elem, xSurf, rlMod, NULL))
 	{
 		eNum = 6;
 		goto out;
 	}
+	rl = eBase->eSt.rLoc;
 
 	/*------------------------------------------------------------------------*/
 	/* Render the Image                                                       */
@@ -740,23 +714,27 @@ SDL_Texture * neuik_Element_Render__Image(
 		imW = imgSurf->w;
 		imH = imgSurf->h;
 		imgTex = SDL_CreateTextureFromSurface(rend, imgSurf);
+		if (imgTex == NULL)
+		{
+			eNum = 3;
+			goto out;
+		}
+
+		rect.x = rl.x;
+		rect.y = rl.y + (int) ((float)(rSize->h - imH)/2.0);
 
 		switch (eBase->eCfg.HJustify)
 		{
 			case NEUIK_HJUSTIFY_LEFT:
-				rect.x = 0;
-				rect.y = (int) ((float)(rSize->h - imH)/2.0);
 				break;
 
 			case NEUIK_HJUSTIFY_CENTER:
 			case NEUIK_HJUSTIFY_DEFAULT:
-				rect.x = (int) ((float)(rSize->w - imW)/2.0);
-				rect.y = (int) ((float)(rSize->h - imH)/2.0);
+				rect.x += (int) ((float)(rSize->w - imW)/2.0);
 				break;
 
 			case NEUIK_HJUSTIFY_RIGHT:
-				rect.x = (int) (rSize->w - imW);
-				rect.y = (int) ((float)(rSize->h - imH)/2.0);
+				rect.x += (int) (rSize->w - imW);
 				break;
 		}
 		rect.w = imW;
@@ -764,26 +742,16 @@ SDL_Texture * neuik_Element_Render__Image(
 
 		SDL_RenderCopy(rend, imgTex, NULL, &rect);
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Copy the text onto the renderer and update it                          */
-	/*------------------------------------------------------------------------*/
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 3;
-		goto out;
-	}
-	eBase->eSt.doRedraw = 0;
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-	}
+	eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&imgTex);
 
-	if (eBase == NULL) return NULL;
-	return eBase->eSt.texture;
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
 }

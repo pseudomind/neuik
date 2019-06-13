@@ -4,7 +4,6 @@
 
 int main()
 {
-	NEUIK_Frame      * outerFrame  = NULL;
 	NEUIK_GridLayout * gridExample = NULL;
 	NEUIK_Button     * btnExample1 = NULL;
 	NEUIK_Button     * btnExample2 = NULL;

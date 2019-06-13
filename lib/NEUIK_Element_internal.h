@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,6 +18,7 @@
 
 
 #include "NEUIK_Element.h"
+#include "neuik_MaskMap.h"
 
 /*----------------------------------------------------------------------------*/
 /* Typedef(s)                                                                 */
@@ -89,16 +90,16 @@ typedef struct {
 
 typedef struct {
 	/* GetMinSize(): Get the minimum required size for the element  */
-	int          (*GetMinSize)    (NEUIK_Element, RenderSize *);
+	int (*GetMinSize) (NEUIK_Element, RenderSize *);
 
 	/* Render(): Redraw the element  element  */
-	SDL_Texture* (*Render)        (NEUIK_Element, RenderSize *, SDL_Renderer *, SDL_Surface *);
+	int (*Render) (NEUIK_Element, RenderSize *, RenderLoc *, SDL_Renderer *, SDL_Surface *);
 
 	/* CaptureEvent(): Determine if this element caputures a given event */
-	neuik_EventState (*CaptureEvent)  (NEUIK_Element, SDL_Event *);
+	neuik_EventState (*CaptureEvent) (NEUIK_Element, SDL_Event *);
 	
 	/* Defocus(): This function will be called when an element looses focus */
-	void         (*Defocus)       (NEUIK_Element);
+	void (*Defocus) (NEUIK_Element);
 
 } NEUIK_Element_FuncTable;
 
@@ -155,17 +156,19 @@ int
 	neuik_Element_NeedsRedraw(
 			NEUIK_Element elem);
 
-SDL_Texture *
+int
 	neuik_Element_Render(
 	 		NEUIK_Element    elem, 
 	 		RenderSize     * rSize, 
+	 		RenderLoc      * rlMod, 
 	 		SDL_Renderer   * xRend,
 	 		SDL_Surface    * xSurf);
 
-SDL_Texture * 
+int 
 	neuik_Element_RenderRotate(
 			NEUIK_Element   elem, 
 			RenderSize    * rSize, 
+			RenderLoc     * rlMod,
 			SDL_Renderer  * xRend,
 	 		SDL_Surface   * xSurf,
 			double          rotation);
@@ -173,7 +176,9 @@ SDL_Texture *
 int
 	neuik_Element_RedrawBackground(
 			NEUIK_Element   elem,
-			SDL_Surface   * xSurf);
+			SDL_Surface   * xSurf,
+			RenderLoc     * rlMod,
+			neuik_MaskMap * maskMap);
 
 int 
 	neuik_Element_RequestRedraw(
@@ -188,6 +193,15 @@ int
 	neuik_Element_ResizeTransparent(
 			NEUIK_Element elem, 
 			RenderSize    nSize);
+
+int 
+	NEUIK_Element_SetBackgroundColorSolid_noRedraw(
+			NEUIK_Element   elem,
+			const char    * styleName,
+			unsigned char   r,
+			unsigned char   g,
+			unsigned char   b,
+			unsigned char   a);
 
 void 
 	neuik_Element_SetParentPointer(

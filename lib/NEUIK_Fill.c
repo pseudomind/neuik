@@ -33,7 +33,8 @@ int neuik_Object_New__Fill(void **);
 int neuik_Object_Free__Fill(void *);
 
 int neuik_Element_GetMinSize__Fill(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Fill(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__Fill(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -430,26 +431,23 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Fill(
+int neuik_Element_Render__Fill(
 	NEUIK_Element   elem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                 eNum       = 0; /* which error to report (if any) */
-	SDL_Surface       * surf       = NULL;
-	SDL_Renderer      * rend       = NULL;
 	NEUIK_Fill        * fill       = NULL;
 	NEUIK_ElementBase * eBase      = NULL;
 	static char         funcName[] = "neuik_Element_Render__Fill";
-	static char       * errMsgs[]  = {"",                                // [0] no error
+	static char       * errMsgs[]  = {"", // [0] no error
 		"Argument `elem` is not of NEUIK_Fill class.",                   // [1]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
-		"Failure in `neuik_Element_GetMinSize__Fill`.",                  // [3]
+		"", // [3]
 		"Invalid specified `rSize` (negative values).",                  // [4]
-		"Failure in `neuik_Element_Resize`.",                            // [5]
 		"Failure in `neuik_Element_RedrawBackground`.",                  // [6]
-		"SDL_CreateTextureFromSurface returned NULL.",                   // [7]
 	};
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_Fill))
@@ -465,81 +463,28 @@ SDL_Texture * neuik_Element_Render__Fill(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw(fill) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
-	/*------------------------------------------------------*/
-	/* Calculate the required size of the resultant texture */
-	/*------------------------------------------------------*/
-	if (rSize->w == 0 && rSize->h == 0)
-	{
-		if (neuik_Element_GetMinSize__Fill(fill, rSize))
-		{
-			eNum = 3;
-			goto out;
-		}
-	}
-	else if (rSize->w < 0 || rSize->h < 0)
+	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
 		goto out;
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(fill, *rSize) != 0)
-		{
-			eNum = 5;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
-	rend = eBase->eSt.rend;
-
-	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem, xSurf))
+	if (neuik_Element_RedrawBackground(elem, xSurf, rlMod, NULL))
 	{
-		eNum = 6;
+		eNum = 5;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Copy onto the renderer and update it                                   */
-	/*------------------------------------------------------------------------*/
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 7;
-		goto out;
-	}
 	eBase->eSt.doRedraw = 0;
 out:
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	if (eBase == NULL) return NULL;
-	return eBase->eSt.texture;
+	return eNum;
 }

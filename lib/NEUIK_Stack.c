@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,7 +37,8 @@ int neuik_Object_Free__Stack(void * stkPtr);
 
 int neuik_Element_CaptureEvent__Stack(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_GetMinSize__Stack(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Stack(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__Stack(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -421,9 +422,10 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Stack(
+int neuik_Element_Render__Stack(
 	NEUIK_Element   stkElem, 
 	RenderSize    * rSize, 
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
@@ -434,9 +436,7 @@ SDL_Texture * neuik_Element_Render__Stack(
 	RenderLoc                rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect                 rect;
 	RenderSize               rs;
-	SDL_Surface            * surf       = NULL;
 	SDL_Renderer           * rend       = NULL;
-	SDL_Texture            * tex        = NULL; /* texture */
 	NEUIK_Stack            * stk        = NULL;
 	NEUIK_Container        * cont       = NULL;
 	NEUIK_Element            elem       = NULL;
@@ -448,11 +448,10 @@ SDL_Texture * neuik_Element_Render__Stack(
 		"Argument `stkElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"Call to Element_GetMinSize failed.",                               // [3]
 		"Invalid specified `rSize` (negative values).",                     // [4]
-		"Failure in Element_Resize().",                                     // [5]
+		"Failure in `neuik_Element_Render().",                              // [5]
 		"Active element not contained by this stack.",                      // [6]
 		"Element_GetConfig returned NULL.",                                 // [7]
-		"SDL_CreateTextureFromSurface returned NULL.",                      // [8]
-		"Failure in neuik_Element_RedrawBackground().",                     // [9]
+		"Failure in neuik_Element_RedrawBackground().",                     // [8]
 	};
 
 	if (!neuik_Object_IsClass(stkElem, neuik__Class_Stack))
@@ -474,66 +473,30 @@ SDL_Texture * neuik_Element_Render__Stack(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw(stk) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
-	if (rSize->w == 0 && rSize->h == 0)
-	{
-		if (neuik_Element_GetMinSize__Stack(stk, rSize))
-		{
-			eNum = 3;
-			goto out;
-		}
-	}
-	else if (rSize->w < 0 || rSize->h < 0)
+	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(stk, *rSize))
-		{
-			eNum = 5;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(stkElem, xSurf))
+	if (neuik_Element_RedrawBackground(stkElem, xSurf, rlMod, NULL))
 	{
-		eNum = 9;
+		eNum = 8;
 		goto out;
 	}
+	rl = eBase->eSt.rLoc;
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the currently shown UI element onto the Stack                     */
 	/*------------------------------------------------------------------------*/
-	if (cont->elems == NULL) goto out2; /* stack contains no elements */
-	if (stk->elemActive == NULL) goto out2; /* no active stack element */
+	if (cont->elems == NULL) goto out; /* stack contains no elements */
+	if (stk->elemActive == NULL) goto out; /* no active stack element */
 
 	/*------------------------------------------------------------------------*/
 	/* Verify that the current active stack element is within the stack.      */
@@ -559,7 +522,7 @@ SDL_Texture * neuik_Element_Render__Stack(
 	}
 
 	elem = stk->elemActive;
-	if (!NEUIK_Element_IsShown(elem)) goto out2; /* active elem not shown */
+	if (!NEUIK_Element_IsShown(elem)) goto out; /* active elem not shown */
 
 
 	/*------------------------------------------------------------------------*/
@@ -595,36 +558,43 @@ SDL_Texture * neuik_Element_Render__Stack(
 		rs.h = rSize->h - (eCfg->PadTop + eCfg->PadBottom);
 	}
 
+
+
 	/*------------------------------------------------------------------------*/
 	/* Update the stored location before rendering the element. This is       */
 	/* necessary as the location of this object will propagate to its         */
 	/* child objects.                                                         */
 	/*------------------------------------------------------------------------*/
+	rect.x = rl.x;
+	rect.y = rl.y;
+	rect.w = rs.w;
+	rect.h = rs.h;
+
 	switch (eCfg->HJustify)
 	{
 		case NEUIK_HJUSTIFY_DEFAULT:
 			switch (cont->HJustify)
 			{
 				case NEUIK_HJUSTIFY_LEFT:
-					rect.x = eCfg->PadLeft;
+					rect.x += eCfg->PadLeft;
 					break;
 				case NEUIK_HJUSTIFY_CENTER:
 				case NEUIK_HJUSTIFY_DEFAULT:
-					rect.x = rSize->w/2 - (rs.w/2);
+					rect.x += rSize->w/2 - (rs.w/2);
 					break;
 				case NEUIK_HJUSTIFY_RIGHT:
-					rect.x = rSize->w - (rs.w + eCfg->PadRight);
+					rect.x += rSize->w - (rs.w + eCfg->PadRight);
 					break;
 			}
 			break;
 		case NEUIK_HJUSTIFY_LEFT:
-			rect.x = eCfg->PadLeft;
+			rect.x += eCfg->PadLeft;
 			break;
 		case NEUIK_HJUSTIFY_CENTER:
-			rect.x = rSize->w/2 - (rs.w/2);
+			rect.x += rSize->w/2 - (rs.w/2);
 			break;
 		case NEUIK_HJUSTIFY_RIGHT:
-			rect.x = rSize->w - (rs.w + eCfg->PadRight);
+			rect.x += rSize->w - (rs.w + eCfg->PadRight);
 			break;
 	}
 
@@ -634,68 +604,50 @@ SDL_Texture * neuik_Element_Render__Stack(
 			switch (cont->VJustify)
 			{
 				case NEUIK_VJUSTIFY_TOP:
-					rect.y = eCfg->PadTop;
+					rect.y += eCfg->PadTop;
 					break;
 				case NEUIK_VJUSTIFY_CENTER:
 				case NEUIK_VJUSTIFY_DEFAULT:
-					rect.y = (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 -
+					rect.y += (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 -
 						(rs.h/2);
 					break;
 				case NEUIK_VJUSTIFY_BOTTOM:
-					rect.y = rSize->h - (rs.h + eCfg->PadBottom);
+					rect.y += rSize->h - (rs.h + eCfg->PadBottom);
 					break;
 			}
 			break;
 		case NEUIK_VJUSTIFY_TOP:
-			rect.y = eCfg->PadTop;
+			rect.y += eCfg->PadTop;
 			break;
 		case NEUIK_VJUSTIFY_CENTER:
-			rect.y = (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 - (rs.h/2);
+			rect.y += (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 - (rs.h/2);
 			break;
 		case NEUIK_VJUSTIFY_BOTTOM:
-			rect.y = rSize->h - (rs.h + eCfg->PadBottom);
+			rect.y += rSize->h - (rs.h + eCfg->PadBottom);
 			break;
 	}
 
-	rect.w = rs.w;
-	rect.h = rs.h;
-	rl.x = (eBase->eSt.rLoc).x + rect.x;
-	rl.y = (eBase->eSt.rLoc).y + rect.y;
+	rl.x = rect.x;
+	rl.y = rect.y;
 	rlRel.x = rect.x;
 	rlRel.y = rect.y;
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	tex = neuik_Element_Render(elem, &rs, rend, surf);
-	if (tex == NULL)
+	if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
 	{
 		eNum = 5;
 		goto out;
 	}
-
-	SDL_RenderCopy(rend, tex, NULL, &rect);
-
-	/*------------------------------------------------------------------------*/
-	/* Present all changes and create a texture from this surface             */
-	/*------------------------------------------------------------------------*/
-out2:
-	ConditionallyDestroyTexture((SDL_Texture **)&(eBase->eSt.texture));
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 8;
-		goto out;
-	}
-
-	eBase->eSt.doRedraw = 0;
 out:
+	eBase->eSt.doRedraw = 0;
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	if (eBase == NULL) return NULL;
-	return eBase->eSt.texture;
+	return eNum;
 }
 
 

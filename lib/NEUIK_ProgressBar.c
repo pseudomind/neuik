@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -38,7 +38,8 @@ int neuik_Object_New__ProgressBar(void ** wPtr);
 int neuik_Object_Free__ProgressBar(void * wPtr);
 int neuik_Element_GetMinSize__ProgressBar(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ProgressBar(NEUIK_Element, SDL_Event*);
-SDL_Texture * neuik_Element_Render__ProgressBar(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__ProgressBar(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -137,17 +138,16 @@ int neuik_Object_New__ProgressBar(
 	int                 eNum       = 0; /* which error to report (if any) */
 	NEUIK_ProgressBar * pb         = NULL;
 	NEUIK_Element     * sClassPtr  = NULL;
-	NEUIK_Color  		bgClr      = COLOR_LGRAY;
 
 	static char         funcName[] = "neuik_Object_New__ProgressBar";
-	static char       * errMsgs[]  = {"",                      // [0] no error
-		"Failure to allocate memory.",                         // [1]
-		"Failure in NEUIK_NewProgressBarConfig.",              // [2]
-		"Output Argument `pbPtr` is NULL.",                    // [3]
-		"Failure in function `neuik_Object_New`.",             // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.",   // [5]
-		"Failure in `neuik_GetObjectBaseOfClass`.",            // [6]
-		"Failure in `NEUIK_Element_SetBackgroundColorSolid`.", // [7]
+	static char       * errMsgs[]  = {"",                         // [0] no error
+		"Failure to allocate memory.",                            // [1]
+		"Failure in NEUIK_NewProgressBarConfig.",                 // [2]
+		"Output Argument `pbPtr` is NULL.",                       // [3]
+		"Failure in function `neuik_Object_New`.",                // [4]
+		"Failure in function `neuik_Element_SetFuncTable`.",      // [5]
+		"Failure in `neuik_GetObjectBaseOfClass`.",               // [6]
+		"Failure in `NEUIK_Element_SetBackgroundColorGradient`.", // [7]
 	};
 
 	if (pbPtr == NULL)
@@ -224,20 +224,26 @@ int neuik_Object_New__ProgressBar(
 	/*------------------------------------------------------------------------*/
 	/* Set the default element background redraw styles.                      */
 	/*------------------------------------------------------------------------*/
-	if (NEUIK_Element_SetBackgroundColorSolid(pb, "normal",
-		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	if (NEUIK_Element_SetBackgroundColorGradient(pb, "normal", 'v',
+		"103,150,166,255,0.0",
+		"70,120,166,255,1.0",
+		NULL))
 	{
 		eNum = 7;
 		goto out;
 	}
-	if (NEUIK_Element_SetBackgroundColorSolid(pb, "selected",
-		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	if (NEUIK_Element_SetBackgroundColorGradient(pb, "selected", 'v',
+		"103,150,166,255,0.0",
+		"70,120,166,255,1.0",
+		NULL))
 	{
 		eNum = 7;
 		goto out;
 	}
-	if (NEUIK_Element_SetBackgroundColorSolid(pb, "hovered",
-		bgClr.r, bgClr.g, bgClr.b, bgClr.a))
+	if (NEUIK_Element_SetBackgroundColorGradient(pb, "hovered", 'v',
+		"103,150,166,255,0.0",
+		"70,120,166,255,1.0",
+		NULL))
 	{
 		eNum = 7;
 		goto out;
@@ -534,61 +540,41 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__ProgressBar(
+int neuik_Element_Render__ProgressBar(
 	NEUIK_Element   elem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
-	const NEUIK_Color        * fgClr  = NULL;
-	const NEUIK_Color        * bgClr  = NULL;
-	const NEUIK_Color        * bClr   = NULL; /* border color */
-	static SDL_Color           tClr   = COLOR_TRANSP;
-	SDL_Surface              * surf   = NULL;
-	SDL_Renderer             * rend   = NULL;
-	int                        progW  = 0; /* pixel width of entire shadable region */
-	int                        shadeW = 0; /* width of shaded progress bar region */
-	int                        textW  = 0;
-	int                        textH  = 0;
-	int                        eNum   = 0; /* which error to report (if any) */
-	SDL_Texture              * gTex   = NULL; /* gradient progress texture */
-	SDL_Texture              * tTex   = NULL; /* text texture */
-	TTF_Font                 * font   = NULL;
-	SDL_Rect                   rect;
-	RenderSize                 shadeSize;
-	NEUIK_ProgressBar        * pb     = NULL;
-	NEUIK_ElementBase        * eBase  = NULL;
-	int                        ctr;
-	int                        gCtr;             /* gradient counter */
-	int                        nClrs;
-	int                        clrR;
-	int                        clrG;
-	int                        clrB;
-	int                        clrFound;
-	float                      lastFrac  = -1.0;
-	float                      frac;
-	float                      fracDelta;        /* fraction between ColorStop 1 & 2 */
-	float                      fracStart = 0.0;  /* fraction at ColorStop 1 */
-	float                      fracEnd   = 1.0;  /* fraction at ColorStop 2 */
-	colorDeltas              * deltaPP   = NULL;
-	colorDeltas              * clrDelta;
-	NEUIK_Color              * clr;
-	NEUIK_ColorStop         ** cs;
-	NEUIK_ProgressBarConfig  * aCfg = NULL; /* the active ProgressBar config */
-	static char                funcName[] = "neuik_Element_Render__ProgressBar";
-	static char              * errMsgs[] = {"",                           // [0] no error
+	const NEUIK_Color       * fgClr  = NULL;
+	const NEUIK_Color       * bgClr  = NULL;
+	const NEUIK_Color       * bClr   = NULL; /* border color */
+	SDL_Renderer            * rend   = NULL;
+	int                       progW  = 0; /* pixel width of entire shadable region */
+	int                       shadeW = 0; /* width of shaded progress bar region */
+	int                       textW  = 0;
+	int                       textH  = 0;
+	int                       eNum   = 0; /* which error to report (if any) */
+	SDL_Texture             * gTex   = NULL; /* gradient progress texture */
+	SDL_Texture             * tTex   = NULL; /* text texture */
+	TTF_Font                * font   = NULL;
+	SDL_Rect                  rect;
+	NEUIK_ProgressBar       * pb     = NULL;
+	NEUIK_ElementBase       * eBase  = NULL;
+	colorDeltas             * deltaPP = NULL;
+	RenderLoc                 rl;
+	neuik_MaskMap           * maskMap = NULL;
+	NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
+	static char               funcName[] = "neuik_Element_Render__ProgressBar";
+	static char             * errMsgs[] = {"",                           // [0] no error
 		"Argument `elem` is not of ProgressBar class.",                  // [1]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"Invalid specified `rSize` (negative values).",                  // [3]
-		"Failure in Element_Resize().",                                  // [4]
-		"Invalid ColorStop fraction (<0 or >1).",                        // [5]
-		"ColorStops array fractions not in ascending order.",            // [6]
-		"ColorStops array is empty.",                                    // [7]
-		"Failure to allocate memory.",                                   // [8]
-		"FontSet_GetFont returned NULL.",                                // [9]
-		"RenderText returned NULL.",                                     // [10]
-		"SDL_CreateTextureFromSurface returned NULL.",                   // [11]
-		"Failure in `neuik_Element_RedrawBackground()`.",                // [12]
+		"Failure in `neuik_Element_RedrawBackground()`.",                // [4]
+		"FontSet_GetFont returned NULL.",                                // [5]
+		"RenderText returned NULL.",                                     // [6]
+		"Failure in `neuik_MakeMaskMap()`",                              // [7]
 	};
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_ProgressBar))
@@ -604,238 +590,102 @@ SDL_Texture * neuik_Element_Render__ProgressBar(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw(pb) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 3;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(pb, *rSize) != 0)
-		{
-			eNum = 4;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* select the correct ProgressBar config to use (pointer or internal)     */
 	/*------------------------------------------------------------------------*/
+	aCfg = pb->cfg;
 	if (pb->cfgPtr != NULL)
 	{
 		aCfg = pb->cfgPtr;
-	}
-	else 
-	{
-		aCfg = pb->cfg;
 	}
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem, xSurf))
-	{
-		eNum = 12;
-		goto out;
-	}
+	rl = eBase->eSt.rLoc;
 	bgClr = &(aCfg->bgColor);
 	fgClr = &(aCfg->fgColor);
 
-	/*------------------------------------------------------------------------*/
-	/* Draw the color representation of the progress bar progress             */
-	/*------------------------------------------------------------------------*/
-	if (pb->frac > 0.0)
+	if (pb->frac == 0.0)
 	{
-		progW  = (rSize->w - 2) - 1;
-		shadeW = 2 + (int)(pb->frac * (double)(progW));
-		rect.x = 1;
-		rect.y = 0;
-		rect.w = shadeW;
-		rect.h = (rSize->h - 1);
-
-		shadeSize.w = shadeW;
-		shadeSize.h = rect.h;
-
 		/*--------------------------------------------------------------------*/
-		/* TODO: when the opportunity presents itself, the rest of the code   */
-		/* in this block should be replaced by a fixed call to RenderGradient */
-		/* however for now, I will leave duplicate code here since it works.  */
+		/* Currently the progress bare is completely "unfinished".            */
 		/*--------------------------------------------------------------------*/
+		rect.x = rl.x + 1;
+		rect.y = rl.y + 1;
+		rect.w = rSize->w - 2;
+		rect.h = rSize->h - 2;
 
-		// gTex = NEUIK_RenderGradient(aCfg->gradCS, 'v', rend, shadeSize);
-		// if (gTex == NULL)
-		// {
-		// 	eNum = 3;
-		// 	goto out;
-		// }
-
-		// SDL_QueryTexture(gTex, &testUint32, &access, &testW, &testH);
-
-		// srcRect.x = 0;
-		// srcRect.y = 0;
-		// srcRect.w = rect.w;
-		// srcRect.h = rect.h;
-		// SDL_RenderCopy(rend, gTex, NULL, &rect);
-		// // SDL_RenderCopy(rend, gTex, &srcRect, &rect);
-		// //SDL_RenderCopy(rend, gTex, NULL, NULL);
-
-		cs = aCfg->gradCS;
-
-		/*------------------------------------------------------------------------*/
-		/* Count the number of color stops and check that the color stop          */
-		/* fractions are in increasing order                                      */
-		/*------------------------------------------------------------------------*/
-		for (nClrs = 0;; nClrs++)
-		{
-			if (cs[nClrs] == NULL) break; /* this is the number of ColorStops */
-			if (cs[nClrs]->frac < 0.0 || cs[nClrs]->frac > 1.0)
-			{
-				eNum = 5;
-				goto out;
-			}
-			else if (cs[nClrs]->frac < lastFrac)
-			{
-				eNum = 6;
-				goto out;
-			}
-			else
-			{
-				lastFrac = cs[nClrs]->frac;
-			}
-		}
-		if (nClrs == 0)
+		SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
+		SDL_RenderFillRect(rend, &rect);
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* Create a MaskMap an mark off the trasnparent pixels.               */
+		/*--------------------------------------------------------------------*/
+		if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
 		{
 			eNum = 7;
 			goto out;
 		}
 
-		/*------------------------------------------------------------------------*/
-		/* Allocate memory for delta-per-px array and calculate the ColorStop     */
-		/* delta-per-px values.                                                   */
-		/*------------------------------------------------------------------------*/
-		if (nClrs > 1)
+		/*--------------------------------------------------------------------*/
+		/* Mark off the rounded sections of the ProgressBar within the        */
+		/* MaskMap.                                                           */
+		/*--------------------------------------------------------------------*/
+		/* Apply transparent pixels to (round off) the upper-left corner */
+		neuik_MaskMap_MaskPoint(maskMap, 0, 0);
+		neuik_MaskMap_MaskPoint(maskMap, 0, 1);
+		neuik_MaskMap_MaskPoint(maskMap, 1, 0);
+
+		/* Apply transparent pixels to (round off) the lower-left corner */
+		neuik_MaskMap_MaskPoint(maskMap, 0, rSize->h - 1);
+		neuik_MaskMap_MaskPoint(maskMap, 0, rSize->h - 2);
+		neuik_MaskMap_MaskPoint(maskMap, 1, rSize->h - 1);
+
+		/* Apply transparent pixels to (round off) the upper-right corner */
+		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, 0);
+		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, 1);
+		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 2, 0);
+
+		/* Apply transparent pixels to (round off) the lower-right corner */
+		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, rSize->h - 1);
+		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, rSize->h - 2);
+		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 2, rSize->h - 1);
+
+		/*--------------------------------------------------------------------*/
+		/* The progress bar is "in-progress"; draw in the background gradient */
+		/*--------------------------------------------------------------------*/
+		if (neuik_Element_RedrawBackground(elem, xSurf, rlMod, maskMap))
 		{
-			deltaPP = (colorDeltas *)malloc((nClrs - 1)*sizeof(colorDeltas));
-			if (deltaPP == NULL)
-			{
-				eNum = 8;
-				goto out;
-			}
-			for (ctr = 0; ctr < nClrs-1; ctr++)
-			{
-				deltaPP[ctr].r = (float)((cs[ctr+1]->color).r - (cs[ctr]->color).r);
-				deltaPP[ctr].g = (float)((cs[ctr+1]->color).g - (cs[ctr]->color).g);
-				deltaPP[ctr].b = (float)((cs[ctr+1]->color).b - (cs[ctr]->color).b);
-			}
+			eNum = 4;
+			goto out;
 		}
 
 		/*--------------------------------------------------------------------*/
-		/* Draw a vertical gradient                                           */
+		/* Cover up the "unfinished" progress section of the progress bar.    */
 		/*--------------------------------------------------------------------*/
-		for (gCtr = 0; gCtr < shadeSize.h; gCtr++)
-		{
-			/* calculate the fractional position within the gradient */
-			frac = (float)(gCtr+1)/(float)(shadeSize.h);
+		progW  = (rSize->w - 2);
+		shadeW = (int)((1.0 - pb->frac) * (double)(progW));
 
+		rect.x = (rl.x + 1 + progW) - shadeW;
+		rect.y = rl.y + 1;
+		rect.w = shadeW;
+		rect.h = (rSize->h - 2);
 
-			/* determine which ColorStops/colorDeltas should be used */
-			fracStart = cs[0]->frac;
-			clr       = &(cs[0]->color);
-			clrDelta  = NULL;
-			clrFound  = 0;
-			for (ctr = 0;;ctr++)
-			{
-				if (cs[ctr] == NULL) break;
-
-				if (frac < cs[ctr]->frac)
-				{
-					/* apply delta from this clr */
-					fracEnd  = cs[ctr]->frac;
-					clrFound = 1;
-					break;
-				}
-
-				clr      = &(cs[ctr]->color);
-				clrDelta = &(deltaPP[ctr]);
-			}
-
-			if (!clrFound)
-			{
-				/* line is beyond the final ColorStop; use that color */
-				clrDelta = NULL;
-			}
-
-			/* calculate and set the color for this gradient line */
-			if (clrDelta != NULL)
-			{
-				/* between two ColorStops, blend the color */
-				fracDelta = (frac - fracStart)/(fracEnd - fracStart);
-				clrR = clr->r + (int)((clrDelta->r)*fracDelta);
-				clrG = clr->g + (int)((clrDelta->g)*fracDelta);
-				clrB = clr->b + (int)((clrDelta->b)*fracDelta);
-				SDL_SetRenderDrawColor(rend, clrR, clrG, clrB, 255);
-			}
-			else
-			{
-				/* not between two ColorStops, use a single color */
-				SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, 255);
-			}
-
-			SDL_RenderDrawLine(rend, 0, gCtr, shadeSize.w - 1, gCtr);
-		}
+		SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
+		SDL_RenderFillRect(rend, &rect);
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Trim off the rounded sections of the ProgressBar using a transparent   */
-	/* color                                                                  */
-	/*------------------------------------------------------------------------*/
-	SDL_SetColorKey(surf, SDL_TRUE, 
-		SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-	SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
-
-	/* Apply transparent pixels to (round off) the upper-left corner */
-	SDL_RenderDrawPoint(rend, 0, 0);
-	SDL_RenderDrawPoint(rend, 0, 1);
-	SDL_RenderDrawPoint(rend, 1, 0);
-
-	/* Apply transparent pixels to (round off) the lower-left corner */
-	SDL_RenderDrawPoint(rend, 0, rSize->h - 1);
-	SDL_RenderDrawPoint(rend, 0, rSize->h - 2);
-	SDL_RenderDrawPoint(rend, 1, rSize->h - 1);
-
-	/* Apply transparent pixels to (round off) the upper-right corner */
-	SDL_RenderDrawPoint(rend, rSize->w - 1, 0);
-	SDL_RenderDrawPoint(rend, rSize->w - 1, 1);
-	SDL_RenderDrawPoint(rend, rSize->w - 2, 0);
-
-	/* Apply transparent pixels to (round off) the lower-right corner */
-	SDL_RenderDrawPoint(rend, rSize->w - 1, rSize->h - 1);
-	SDL_RenderDrawPoint(rend, rSize->w - 1, rSize->h - 2);
-	SDL_RenderDrawPoint(rend, rSize->w - 2, rSize->h - 1);
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the border around the ProgressBar.                                */
@@ -844,37 +694,45 @@ SDL_Texture * neuik_Element_Render__ProgressBar(
 	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
 	/* Draw upper-left corner border pixels */
-	SDL_RenderDrawPoint(rend, 1, 1);
-	SDL_RenderDrawPoint(rend, 1, 2);
-	SDL_RenderDrawPoint(rend, 2, 1);
+	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 1);
+	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 2);
+	SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + 1);
 
 	/* Draw lower-left corner border pixels */
-	SDL_RenderDrawPoint(rend, 1, rSize->h - 2);
-	SDL_RenderDrawPoint(rend, 1, rSize->h - 3);
-	SDL_RenderDrawPoint(rend, 2, rSize->h - 2);
+	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 2));
+	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 3));
+	SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + (rSize->h - 2));
 
 	/* Draw upper-right corner border pixels */
-	SDL_RenderDrawPoint(rend, rSize->w - 2, 1);
-	SDL_RenderDrawPoint(rend, rSize->w - 2, 2);
-	SDL_RenderDrawPoint(rend, rSize->w - 3, 1);
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 1);
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 2);
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + 1);
 
 	/* Draw upper-right corner border pixels */
-	SDL_RenderDrawPoint(rend, rSize->w - 2, rSize->h - 2);
-	SDL_RenderDrawPoint(rend, rSize->w - 2, rSize->h - 3);
-	SDL_RenderDrawPoint(rend, rSize->w - 3, rSize->h - 2);
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 2));
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 3));
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 
 
 	/* upper border line */
-	SDL_RenderDrawLine(rend, 2, 0, rSize->w - 3, 0); 
+	SDL_RenderDrawLine(rend, 
+		rl.x + 2,              rl.y, 
+		rl.x + (rSize->w - 3), rl.y); 
 	/* left border line */
-	SDL_RenderDrawLine(rend, 0, 2, 0, rSize->h - 3); 
+	SDL_RenderDrawLine(rend, 
+		rl.x, rl.y + 2, 
+		rl.x, rl.y + (rSize->h - 3));
 	/* right border line */
-	SDL_RenderDrawLine(rend, rSize->w - 1, 2, rSize->w - 1, rSize->h - 3); 
+	SDL_RenderDrawLine(rend, 
+		rl.x + (rSize->w - 1), rl.y + 2, 
+		rl.x + (rSize->w - 1), rl.y + (rSize->h - 3));
 
 	/* lower border line */
 	bClr = &(aCfg->borderColorDark);
 	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-	SDL_RenderDrawLine(rend, 2, rSize->h - 1, rSize->w - 3, rSize->h - 1);
+	SDL_RenderDrawLine(rend, 
+		rl.x + 2,              rl.y + (rSize->h - 1), 
+		rl.x + (rSize->w - 3), rl.y + (rSize->h - 1));
 
 	/*------------------------------------------------------------------------*/
 	/* Render the ProgressBar text                                            */
@@ -885,68 +743,58 @@ SDL_Texture * neuik_Element_Render__ProgressBar(
 			aCfg->fontBold, aCfg->fontItalic);
 		if (font == NULL) 
 		{
-			eNum = 9;
+			eNum = 5;
 			goto out;
 		}
 
 		tTex = NEUIK_RenderText(pb->fracText, font, *fgClr, rend, &textW, &textH);
 		if (tTex == NULL)
 		{
-			eNum = 10;
+			eNum = 6;
 			goto out;
 		}
+
+		rect.x = rl.x;
+		rect.y = rl.y;
+		rect.w = textW;
+		rect.h = textH;
 
 		switch (eBase->eCfg.HJustify)
 		{
 			case NEUIK_HJUSTIFY_LEFT:
-				rect.x = 6;
-				rect.y = (int) ((float)(rSize->h - textH)/2.0);
-				rect.w = textW;
-				rect.h = (int)(1.1*textH);
+				rect.x += 6;
+				rect.y += (int) ((float)(rSize->h - textH)/2.0);
 				break;
 
 			case NEUIK_HJUSTIFY_CENTER:
 			case NEUIK_HJUSTIFY_DEFAULT:
-				rect.x = (int) ((float)(rSize->w - textW)/2.0);
-				rect.y = (int) ((float)(rSize->h - textH)/2.0);
-				rect.w = textW;
-				rect.h = (int)(1.1*textH);
+				rect.x += (int) ((float)(rSize->w - textW)/2.0);
+				rect.y += (int) ((float)(rSize->h - textH)/2.0);
 				break;
 
 			case NEUIK_HJUSTIFY_RIGHT:
-				rect.x = (int) (rSize->w - textW - 6);
-				rect.y = (int) ((float)(rSize->h - textH)/2.0);
-				rect.w = textW;
-				rect.h = (int)(1.1*textH);
+				rect.x += (int) (rSize->w - textW - 6);
+				rect.y += (int) ((float)(rSize->h - textH)/2.0);
 				break;
 		}
 
 		SDL_RenderCopy(rend, tTex, NULL, &rect);
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Copy the text onto the renderer and update it                          */
-	/*------------------------------------------------------------------------*/
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 11;
-		goto out;
-	}
-	eBase->eSt.doRedraw = 0;
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-	}
+	eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 	ConditionallyDestroyTexture(&gTex);
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 	if (deltaPP != NULL) free(deltaPP);
-	
-	if (eBase == NULL) return NULL;
-	return eBase->eSt.texture;
+
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
 }
 
 

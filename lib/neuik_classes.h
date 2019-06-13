@@ -59,6 +59,11 @@ extern neuik_Class * neuik__Class_Frame;
 extern neuik_Class * neuik__Class_Stack;
 
 /*----------------------------------------------------------------------------*/
+/* Registered class implementations : Internal Objects                        */
+/*----------------------------------------------------------------------------*/
+extern neuik_Class * neuik__Class_MaskMap;
+
+/*----------------------------------------------------------------------------*/
 /* Registerd Virtual Functions                                                */
 /*----------------------------------------------------------------------------*/
 extern neuik_VirtualFunc neuik_Element_vfunc_CaptureEvent;
@@ -104,5 +109,7 @@ int neuik_RegisterClass_ToggleButtonConfig();
 int neuik_RegisterClass_Transformer();
 int neuik_RegisterClass_Stack();
 
+
+int neuik_RegisterClass_MaskMap();
 
 #endif /* NEUIK_CLASSES_H */

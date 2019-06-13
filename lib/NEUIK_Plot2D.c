@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,8 +24,6 @@
 #include "NEUIK_Plot2D.h"
 #include "NEUIK_Element_internal.h"
 #include "NEUIK_Container.h"
-// #include "NEUIK_Label.h"
-// #include "NEUIK_Frame.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
@@ -38,7 +36,8 @@ int neuik_Object_New__Plot2D(void ** vgPtr);
 int neuik_Object_Free__Plot2D(void * vgPtr);
 
 int neuik_Element_GetMinSize__Plot2D(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Plot2D(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__Plot2D(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -379,14 +378,14 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Plot2D(
+int neuik_Element_Render__Plot2D(
 	NEUIK_Element   pltElem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
-	float                 yFree      = 0.0; /* px of space free for vFill elems */
 	RenderLoc             rl         = {0, 0};
 	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect              rect       = {0, 0, 0, 0};
@@ -394,7 +393,6 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 	RenderSize            dwg_rs;
 	SDL_Surface         * surf       = NULL;
 	SDL_Renderer        * rend       = NULL;
-	SDL_Texture         * tex        = NULL; /* texture */
 	NEUIK_Plot          * plot       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_ElementBase   * dwg_eBase  = NULL;
@@ -405,12 +403,12 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 	static char           funcName[] = "neuik_Element_Render__Plot2D";
 	static char         * errMsgs[]  = {"",                                 // [0] no error
 		"Argument `pltElem` is not of Plot2D class.",                       // [1]
-		"Failure in Element_Resize().",                                     // [2]
+		"", // [2]
 		"Element_GetConfig returned NULL.",                                 // [3]
 		"Element_GetMinSize Failed.",                                       // [4]
-		"Element_Render returned NULL.",                                    // [5]
+		"Failure in `neuik_Element_Render()`",                              // [5]
 		"Invalid specified `rSize` (negative values).",                     // [6]
-		"SDL_CreateTextureFromSurface returned NULL.",                      // [7]
+		"", // [7]
 		"Argument `pltElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in neuik_Element_RedrawBackground().",                     // [9]
 	};
@@ -433,53 +431,24 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw((NEUIK_Element)plt) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
 		goto out;
 	}
-	yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize((NEUIK_Element)plt, *rSize) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(pltElem, xSurf))
+	if (neuik_Element_RedrawBackground(pltElem, xSurf, rlMod, NULL))
 	{
 		eNum = 9;
 		goto out;
 	}
+	rl = eBase->eSt.rLoc;
 
 	elem = plot->visual;
 
@@ -557,13 +526,11 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 	rlRel.y = rect.y;
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	tex = neuik_Element_Render(elem, &rs, rend, surf);
-	if (tex == NULL)
+	if (neuik_Element_Render(elem, &rs, rlMod, rend, surf))
 	{
 		eNum = 5;
 		goto out;
 	}
-	SDL_RenderCopy(rend, tex, NULL, &rect);
 
 	/*------------------------------------------------------------------------*/
 	/* At this point, the size of the plot drawing area should be known. Now  */
@@ -584,8 +551,6 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 	/* Draw in the labels for the y-axis/x-axis tic marks                     */
 	/*------------------------------------------------------------------------*/
 	dwg = plt->drawing_ticmarks;
-	NEUIK_Canvas_SetDrawColor(dwg, 0, 0, 0, 0); /* dwg bg color */
-	NEUIK_Canvas_Fill(dwg);
 	NEUIK_Canvas_SetDrawColor(dwg, 0, 0, 0, 255); /* dwg ticmark label color */
 	NEUIK_Canvas_SetTextSize(dwg, 10);        /* set size of drawn text */
 
@@ -615,27 +580,15 @@ SDL_Texture * neuik_Element_Render__Plot2D(
 	NEUIK_Canvas_DrawLine(dwg, (dwg_rs.w-1), (dwg_rs.h-1));
 	NEUIK_Canvas_DrawLine(dwg, 0, (dwg_rs.h-1));
 	NEUIK_Canvas_DrawLine(dwg, 0, 0);
-
-	/*------------------------------------------------------------------------*/
-	/* Present all changes and create a texture from this surface             */
-	/*------------------------------------------------------------------------*/
-// out2:
-	ConditionallyDestroyTexture((SDL_Texture **)&(eBase->eSt.texture));
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 7;
-		goto out;
-	}
-
-	eBase->eSt.doRedraw = 0;
 out:
+	eBase->eSt.doRedraw = 0;
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	return eBase->eSt.texture;
+	return eNum;
 }
 

@@ -118,6 +118,9 @@ int NEUIK_Init()
 		neuik_RegisterClass_ProgressBarConfig();
 		neuik_RegisterClass_ProgressBar();
 		neuik_RegisterClass_Stack();
+
+
+		neuik_RegisterClass_MaskMap();
 	}
 out:
 	if (eNum != 0)

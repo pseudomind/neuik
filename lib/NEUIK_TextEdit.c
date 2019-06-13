@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -46,10 +46,12 @@ extern int neuik__isInitialized;
 int neuik_Object_New__TextEdit(void ** tePtr);
 int neuik_Object_Free__TextEdit(void * tePtr);
 
-int           neuik_Element_GetMinSize__TextEdit(NEUIK_Element, RenderSize*);
-int           neuik_Element_CaptureEvent__TextEdit(NEUIK_Element, SDL_Event*);
-SDL_Texture * neuik_Element_Render__TextEdit(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
-void          neuik_Element_Defocus__TextEdit(NEUIK_Element);
+int neuik_Element_GetMinSize__TextEdit(NEUIK_Element, RenderSize*);
+neuik_EventState neuik_Element_CaptureEvent__TextEdit(
+	NEUIK_Element, SDL_Event*);
+int neuik_Element_Render__TextEdit(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+void neuik_Element_Defocus__TextEdit(NEUIK_Element);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -913,9 +915,10 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__TextEdit(
+int neuik_Element_Render__TextEdit(
 	NEUIK_Element   elem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
@@ -932,27 +935,27 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	size_t                 lineCtr;
 	size_t                 nLines;
 	char                 * lineBytes  = NULL;
+	RenderLoc              rl;
 	SDL_Rect               rect;
 	const NEUIK_Color    * fgClr      = NULL;
 	const NEUIK_Color    * bgClr      = NULL;
 	const NEUIK_Color    * bClr       = NULL; /* border color */
-	static SDL_Color       tClr       = COLOR_TRANSP;
-	SDL_Surface          * surf       = NULL;
 	SDL_Renderer         * rend       = NULL;
 	SDL_Texture          * tTex       = NULL; /* text texture */
 	TTF_Font             * font       = NULL;
 	NEUIK_ElementBase    * eBase      = NULL;
+	neuik_MaskMap        * maskMap    = NULL;
 	NEUIK_TextEdit       * te         = NULL;
 	NEUIK_TextEditConfig * aCfg       = NULL; /* the active textEntry config */
 	static char            funcName[] = "neuik_Element_Render__TextEdit";
 	static char          * errMsgs[]  = {"",                             // [0] no error
 		"Argument `elem` is not of TextEdit class.",                     // [1]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
-		"TextEdit_GetMinSize failed.",                                   // [3]
+		"", // [3]
 		"Invalid specified `rSize` (negative values).",                  // [4]
-		"Failure in Element_Resize().",                                  // [5]
+		"Failure in `neuik_MakeMaskMap()`",                              // [5]
 		"FontSet_GetFont returned NULL.",                                // [6]
-		"SDL_CreateTextureFromSurface returned NULL.",                   // [7]
+		"", // [7]
 		"Failure in function `neuik_TextBlock_GetLineCount`.",           // [8]
 		"Failure in function `neuik_TextBlock_GetLine`.",                // [9]
 		"Failure in function `neuik_TextBlock_GetLineLength`.",          // [10]
@@ -972,60 +975,23 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw((NEUIK_Element)te) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
-	/*------------------------------------------------------*/
-	/* Calculate the required size of the resultant texture */
-	/*------------------------------------------------------*/
-	if (rSize->w == 0 && rSize->h == 0)
-	{
-		if (neuik_Element_GetMinSize__TextEdit(te, rSize))
-		{
-			eNum = 3;
-			goto out;
-		}
-	}
-	else if (rSize->w < 0 || rSize->h < 0)
+	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize((NEUIK_Element)te, *rSize) != 0)
-		{
-			eNum = 5;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Select the correct entry config to use (pointer or internal)           */
 	/*------------------------------------------------------------------------*/
-	aCfg = te->cfgPtr;
-	if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
+	aCfg = te->cfg;
+	if (te->cfgPtr != NULL)
+	{
+		aCfg = te->cfgPtr;
+	}
 
 	/* extract the current fg/bg colors */
 	bgClr = &(aCfg->bgColor);
@@ -1060,14 +1026,45 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	}
 
 	/*------------------------------------------------------------------------*/
+	/* Create a MaskMap an mark off the transparent pixels.                   */
+	/*------------------------------------------------------------------------*/
+	if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Mark off the rounded sections of the button within the MaskMap.        */
+	/*------------------------------------------------------------------------*/
+	/* upper border line */
+	neuik_MaskMap_MaskLine(maskMap, 
+		0,            0, 
+		rSize->w - 1, 0); 
+	/* left border line */
+	neuik_MaskMap_MaskLine(maskMap, 
+		0, 0, 
+		0, rSize->h - 1); 
+	/* right border line */
+	neuik_MaskMap_MaskLine(maskMap, 
+		rSize->w - 1, 0, 
+		rSize->w - 1, rSize->h - 1); 
+	/* lower border line */
+	neuik_MaskMap_MaskLine(maskMap, 
+		0,            rSize->h - 1, 
+		rSize->w - 1, rSize->h - 1);
+
+	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(te, xSurf))
+	if (neuik_Element_RedrawBackground(te, xSurf, rlMod, maskMap))
 	{
 		eNum = 11;
 		goto out;
 	}
 	bgClr = &(aCfg->bgColor);
+
+	rl = eBase->eSt.rLoc;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the contained text and highlighting (if present)                */
@@ -1098,274 +1095,264 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	/*------------------------------------------------------------------------*/
 	/* Only redraw the text section if there is valid text in this TextBlock. */
 	/*------------------------------------------------------------------------*/
-	if (hasText)
+	if (!hasText) goto draw_border;
+
+	/*------------------------------------------------------------------------*/
+	/* There appears to be one or more lines of valid text in the Block.      */
+	/* Place the lines one-at-a-time where they should go.                    */
+	/*------------------------------------------------------------------------*/
+	yPos = 6;
+	for (lineCtr = 0; lineCtr < nLines; lineCtr++)
 	{
-		/*--------------------------------------------------------------------*/
-		/* There appears to be one or more lines of valid text in the Block.  */
-		/* Place the lines one-at-a-time where they should go.                */
-		/*--------------------------------------------------------------------*/
-		yPos = 6;
-		for (lineCtr = 0; lineCtr < nLines; lineCtr++)
+		if (neuik_TextBlock_GetLine(te->textBlk, lineCtr, &lineBytes))
 		{
-			if (neuik_TextBlock_GetLine(te->textBlk, lineCtr, &lineBytes))
+			eNum = 9;
+			goto out;
+		}
+		// printf("[TB.GL] `%s`\n", lineBytes);
+
+		if (lineBytes[0] != '\0')
+		{
+			/* Determine the full size of the rendered text content */
+			TTF_SizeText(font, lineBytes, &textW, &textH);
+			textWFull = textW;
+
+			/*----------------------------------------------------------------*/
+			/* Create an SDL_Surface for the text within the element          */
+			/*----------------------------------------------------------------*/
+			textHFull = (int)(1.1*textH);
+			te->textSurf = SDL_CreateRGBSurface(
+				0, textW+1, textHFull, 32, 0, 0, 0, 0);
+			if (te->textSurf == NULL)
+			{
+				eNum = 8;
+				goto out;
+			}
+
+			te->textRend = SDL_CreateSoftwareRenderer(te->textSurf);
+			if (te->textRend == NULL)
 			{
 				eNum = 9;
 				goto out;
 			}
-			// printf("[TB.GL] `%s`\n", lineBytes);
 
-			if (lineBytes[0] != '\0')
+			/*----------------------------------------------------------------*/
+			/* Fill the background with it's color                            */
+			/*----------------------------------------------------------------*/
+			SDL_SetRenderDrawColor(
+				te->textRend, bgClr->r, bgClr->g, bgClr->b, 255);
+			SDL_RenderClear(te->textRend);
+
+			/*----------------------------------------------------------------*/
+			/* Render the Text now, it will be copied on after highlighting.  */
+			/*----------------------------------------------------------------*/
+			tTex = NEUIK_RenderText(
+				lineBytes, font, *fgClr, te->textRend, &textW, &textH);
+			if (tTex == NULL)
 			{
-				/* Determine the full size of the rendered text content */
-				TTF_SizeText(font, lineBytes, &textW, &textH);
-				textWFull = textW;
-
-				/*----------------------------------------------------------------*/
-				/* Create an SDL_Surface for the text within the element          */
-				/*----------------------------------------------------------------*/
-				textHFull = (int)(1.1*textH);
-				te->textSurf = SDL_CreateRGBSurface(0, textW+1, textHFull, 32, 0, 0, 0, 0);
-				if (te->textSurf == NULL)
-				{
-					eNum = 8;
-					goto out;
-				}
-
-				te->textRend = SDL_CreateSoftwareRenderer(te->textSurf);
-				if (te->textRend == NULL)
-				{
-					eNum = 9;
-					goto out;
-				}
-
-				/*----------------------------------------------------------------*/
-				/* Fill the background with it's color                            */
-				/*----------------------------------------------------------------*/
-				SDL_SetRenderDrawColor(te->textRend, bgClr->r, bgClr->g, bgClr->b, 255);
-				SDL_RenderClear(te->textRend);
-
-				/*----------------------------------------------------------------*/
-				/* Render the Text now, it will be copied on after highlighting   */
-				/*----------------------------------------------------------------*/
-				tTex = NEUIK_RenderText(lineBytes, font, *fgClr, te->textRend, &textW, &textH);
-				if (tTex == NULL)
-				{
-					eNum = 6;
-					goto out;
-				}
-
-				/*----------------------------------------------------------------*/
-				/* Check for and fill in highlight text selection background      */
-				/*----------------------------------------------------------------*/
-				if (eBase->eSt.hasFocus && te->highlightIsSet)
-				{
-					if (lineCtr >= te->highlightStartLine &&
-						lineCtr <= te->highlightEndLine)
-					{
-						rect.x = 0;
-						rect.y = 0;
-						rect.w = textW;
-						rect.h = textHFull;
-
-						textW = 0;
-						textH = 0;
-						/* determine the point of the start of the bgkd highlight */
-						if (lineCtr > te->highlightStartLine)
-						{
-							/*------------------------------------------------*/
-							/* The start of the line will be highlighted      */
-							/*------------------------------------------------*/
-							if (lineCtr < te->highlightEndLine)
-							{
-								/*--------------------------------------------*/
-								/* highlight the entire line                  */
-								/*--------------------------------------------*/
-								TTF_SizeText(font, lineBytes, &textW, &textH);
-							}
-							else if (te->highlightEndPos != 0)
-							{
-								tempChar = lineBytes[te->highlightEndPos];
-								lineBytes[te->highlightEndPos] = '\0';
-								TTF_SizeText(font, lineBytes, &textW, &textH);
-								lineBytes[te->highlightEndPos] = tempChar;
-							}
-							else
-							{
-								/*--------------------------------------------*/
-								/* The highlight ends at the start of line    */
-								/*--------------------------------------------*/
-								TTF_SizeText(font, " ", &textW, &textH);
-							}
-						}
-						else if (lineCtr == te->highlightStartLine)
-						{
-							/*------------------------------------------------*/
-							/* The highlighted block starts on this line      */
-							/*------------------------------------------------*/
-							if (te->highlightStartPos != 0)
-							{
-								tempChar = lineBytes[te->highlightStartPos];
-								lineBytes[te->highlightStartPos] = '\0';
-								TTF_SizeText(font, lineBytes, &textW, &textH);
-								lineBytes[te->highlightStartPos] = tempChar;
-							}
-							rect.x += textW;
-
-							/*------------------------------------------------*/
-							/* determine the point of the start of the bgkd   */
-							/* highlight                                      */
-							/*------------------------------------------------*/
-							lineLen = strlen(lineBytes);
-
-							if (te->highlightEndLine > lineCtr)
-							{
-								TTF_SizeText(font, 
-									lineBytes + te->highlightStartPos, 
-									&textW, &textH);
-							}
-							else
-							{
-								tempChar = lineBytes[te->highlightEndPos];
-								lineBytes[te->highlightEndPos] = '\0';
-								TTF_SizeText(font, 
-									lineBytes + te->highlightStartPos, 
-									&textW, &textH);
-								lineBytes[te->highlightEndPos] = tempChar;
-							}
-						}
-						hlWidth = textW;
-						rect.w = hlWidth;
-
-						bgClr = &(aCfg->bgColorHl);
-						SDL_SetRenderDrawColor(te->textRend, bgClr->r, bgClr->g, bgClr->b, 255);
-						SDL_RenderFillRect(te->textRend, &rect);
-						bgClr = &(aCfg->bgColor);
-					}
-				}
-
-				/*------------------------------------------------------------*/
-				/* Copy over the previously rendered text.                    */
-				/*------------------------------------------------------------*/
-				rect.x = 0;
-				rect.y = 0;
-				rect.w = textWFull;
-				rect.h = textHFull;
-
-				SDL_RenderCopy(te->textRend, tTex, NULL, &rect);
-
-				/*------------------------------------------------------------*/
-				/* Draw the cursor (if textedit is focused)                   */
-				/*------------------------------------------------------------*/
-				if (eBase->eSt.hasFocus && te->cursorLine == lineCtr)
-				{
-					/*--------------------------------------------------------*/
-					/* Draw the cursor line into the textedit element         */
-					/*--------------------------------------------------------*/
-					SDL_SetRenderDrawColor(te->textRend, fgClr->r, fgClr->g, fgClr->b, 255);
-
-					tempChar = lineBytes[te->cursorPos];
-					if (tempChar == '\0')
-					{
-						rect.x = textWFull - 1;
-					}
-					else
-					{
-						lineBytes[te->cursorPos] = '\0';
-						TTF_SizeText(font, lineBytes, &textW, &textH);
-						lineBytes[te->cursorPos] = tempChar;
-
-						/* this will be the positin of the cursor */
-						rect.x = textW;
-					}
-					te->cursorX = rect.x;
-					SDL_RenderDrawLine(te->textRend, rect.x, rect.y, rect.x, rect.y + rect.h); 
-				}
-
-				SDL_RenderPresent(te->textRend);
-				te->textTex = SDL_CreateTextureFromSurface(rend, te->textSurf);
-				if (te->textTex == NULL)
-				{
-					eNum = 7;
-					goto out;
-				}
-
-				rect.x = 6;
-				rect.y = yPos;
-				rect.w = textWFull;
-				rect.h = textHFull;
-
-				// SDL_RenderCopy(rend, te->textTex, &srcRect, &rect);
-				SDL_RenderCopy(rend, te->textTex, NULL, &rect);
-				ConditionallyDestroyTexture(&tTex);
+				eNum = 6;
+				goto out;
 			}
-			else
-			{
-				/*------------------------------------------------------------*/
-				/* This is a blank line but the cursor may be present.        */
-				/*------------------------------------------------------------*/
-				TTF_SizeText(font, " ", &textW, &textH);
-				textHFull = (int)(1.1*textH);
 
-				/*------------------------------------------------------------*/
-				/* Condtionally draw the cursor line into the textedit.       */
-				/*------------------------------------------------------------*/
-				if (eBase->eSt.hasFocus && te->cursorLine == lineCtr)
+			/*----------------------------------------------------------------*/
+			/* Check for and fill in highlight text selection background.     */
+			/*----------------------------------------------------------------*/
+			if (eBase->eSt.hasFocus && te->highlightIsSet)
+			{
+				if (lineCtr >= te->highlightStartLine &&
+					lineCtr <= te->highlightEndLine)
 				{
-					/*--------------------------------------------------------*/
-					/* Position the cursor at the start of the line.          */
-					/*--------------------------------------------------------*/
-					rect.x = 6;
-					rect.y = yPos;
+					rect.x = 0;
+					rect.y = 0;
+					rect.w = textW + 1;
 					rect.h = textHFull;
 
-					SDL_SetRenderDrawColor(rend, fgClr->r, fgClr->g, fgClr->b, 255);
-					SDL_RenderDrawLine(rend, rect.x, rect.y, rect.x, rect.y + rect.h); 
+					textW = 0;
+					textH = 0;
+					/* determine the point of the start of the bgkd highlight */
+					if (lineCtr > te->highlightStartLine)
+					{
+						/*----------------------------------------------------*/
+						/* The start of the line will be highlighted.         */
+						/*----------------------------------------------------*/
+						if (lineCtr < te->highlightEndLine)
+						{
+							/*------------------------------------------------*/
+							/* highlight the entire line.                     */
+							/*------------------------------------------------*/
+							TTF_SizeText(font, lineBytes, &textW, &textH);
+						}
+						else if (te->highlightEndPos != 0)
+						{
+							tempChar = lineBytes[te->highlightEndPos];
+							lineBytes[te->highlightEndPos] = '\0';
+							TTF_SizeText(font, lineBytes, &textW, &textH);
+							lineBytes[te->highlightEndPos] = tempChar;
+						}
+						else
+						{
+							/*------------------------------------------------*/
+							/* The highlight ends at the start of line.       */
+							/*------------------------------------------------*/
+							TTF_SizeText(font, " ", &textW, &textH);
+						}
+					}
+					else if (lineCtr == te->highlightStartLine)
+					{
+						/*----------------------------------------------------*/
+						/* The highlighted block starts on this line.         */
+						/*----------------------------------------------------*/
+						if (te->highlightStartPos != 0)
+						{
+							tempChar = lineBytes[te->highlightStartPos];
+							lineBytes[te->highlightStartPos] = '\0';
+							TTF_SizeText(font, lineBytes, &textW, &textH);
+							lineBytes[te->highlightStartPos] = tempChar;
+						}
+						rect.x += textW;
+
+						/*----------------------------------------------------*/
+						/* determine the point of the start of the bgkd       */
+						/* highlight                                          */
+						/*----------------------------------------------------*/
+						lineLen = strlen(lineBytes);
+
+						if (te->highlightEndLine > lineCtr)
+						{
+							TTF_SizeText(font, 
+								lineBytes + te->highlightStartPos, 
+								&textW, &textH);
+						}
+						else
+						{
+							tempChar = lineBytes[te->highlightEndPos];
+							lineBytes[te->highlightEndPos] = '\0';
+							TTF_SizeText(font, 
+								lineBytes + te->highlightStartPos, 
+								&textW, &textH);
+							lineBytes[te->highlightEndPos] = tempChar;
+						}
+					}
+					hlWidth = textW;
+					rect.w = hlWidth;
+
+					bgClr = &(aCfg->bgColorHl);
+					SDL_SetRenderDrawColor(
+						te->textRend, bgClr->r, bgClr->g, bgClr->b, 255);
+					SDL_RenderFillRect(te->textRend, &rect);
+					bgClr = &(aCfg->bgColor);
 				}
 			}
 
-			yPos += textHFull;
+			/*----------------------------------------------------------------*/
+			/* Copy over the previously rendered text.                        */
+			/*----------------------------------------------------------------*/
+			rect.x = 0;
+			rect.y = 0;
+			rect.w = textWFull + 1;
+			rect.h = textHFull;
 
-			if (lineBytes != NULL)
+			SDL_RenderCopy(te->textRend, tTex, NULL, &rect);
+
+			/*----------------------------------------------------------------*/
+			/* Draw the cursor (if TextEdit is focused)                       */
+			/*----------------------------------------------------------------*/
+			if (eBase->eSt.hasFocus && te->cursorLine == lineCtr)
 			{
-				free(lineBytes);
-				lineBytes = NULL;
+				/*------------------------------------------------------------*/
+				/* Draw the cursor line into the TextEdit element             */
+				/*------------------------------------------------------------*/
+				SDL_SetRenderDrawColor(
+					te->textRend, fgClr->r, fgClr->g, fgClr->b, 255);
+
+				tempChar = lineBytes[te->cursorPos];
+				if (tempChar == '\0')
+				{
+					rect.x = textWFull - 1;
+				}
+				else
+				{
+					lineBytes[te->cursorPos] = '\0';
+					TTF_SizeText(font, lineBytes, &textW, &textH);
+					lineBytes[te->cursorPos] = tempChar;
+
+					/* this will be the position of the cursor */
+					rect.x = textW;
+				}
+				te->cursorX = rect.x;
+				SDL_RenderDrawLine(te->textRend, 
+					rect.x, rect.y, 
+					rect.x, rect.y + rect.h); 
 			}
-			if (te->textTex != NULL)
+
+			SDL_RenderPresent(te->textRend);
+			te->textTex = SDL_CreateTextureFromSurface(rend, te->textSurf);
+			if (te->textTex == NULL)
 			{
-				SDL_DestroyTexture(te->textTex);
-				te->textTex = NULL;
+				eNum = 7;
+				goto out;
 			}
-			if (te->textSurf != NULL)
+
+			rect.x = rl.x + 6;
+			rect.y = rl.y + yPos;
+			rect.w = textWFull + 1;
+			rect.h = textHFull;
+
+			SDL_RenderCopy(rend, te->textTex, NULL, &rect);
+			ConditionallyDestroyTexture(&tTex);
+		}
+		else
+		{
+			/*----------------------------------------------------------------*/
+			/* This is a blank line but the cursor may be present.            */
+			/*----------------------------------------------------------------*/
+			TTF_SizeText(font, " ", &textW, &textH);
+			textHFull = (int)(1.1*textH);
+
+			/*----------------------------------------------------------------*/
+			/* Conditionally draw the cursor line into the TextEdit.          */
+			/*----------------------------------------------------------------*/
+			if (eBase->eSt.hasFocus && te->cursorLine == lineCtr)
 			{
-				SDL_FreeSurface(te->textSurf);
-				te->textSurf = NULL;
+				/*------------------------------------------------------------*/
+				/* Position the cursor at the start of the line.              */
+				/*------------------------------------------------------------*/
+				rect.x = rl.x + 6;
+				rect.y = rl.y + yPos;
+				rect.h = textHFull;
+
+				SDL_SetRenderDrawColor(rend, fgClr->r, fgClr->g, fgClr->b, 255);
+				SDL_RenderDrawLine(rend, 
+					rect.x, rect.y, 
+					rect.x, rect.y + rect.h); 
 			}
-			if (te->textRend != NULL)
-			{
-				SDL_DestroyRenderer(te->textRend);
-				te->textRend = NULL;
-			}
+		}
+
+		yPos += textHFull;
+
+		if (lineBytes != NULL)
+		{
+			free(lineBytes);
+			lineBytes = NULL;
+		}
+		if (te->textTex != NULL)
+		{
+			SDL_DestroyTexture(te->textTex);
+			te->textTex = NULL;
+		}
+		if (te->textSurf != NULL)
+		{
+			SDL_FreeSurface(te->textSurf);
+			te->textSurf = NULL;
+		}
+		if (te->textRend != NULL)
+		{
+			SDL_DestroyRenderer(te->textRend);
+			te->textRend = NULL;
 		}
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Draw the border in its unselected way                                  */
-	/*------------------------------------------------------------------------*/
-	/* Fill in the outermost pixels using a transparent color                 */
-	/*------------------------------------------------------------------------*/
-	SDL_SetColorKey(surf, SDL_TRUE, 
-		SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-	SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
-
-	/* upper border line */
-	SDL_RenderDrawLine(rend, 0, 0, rSize->w - 1, 0); 
-	/* left border line */
-	SDL_RenderDrawLine(rend, 0, 0, 0, rSize->h - 1); 
-	/* right border line */
-	SDL_RenderDrawLine(rend, rSize->w - 1, 0, rSize->w - 1, rSize->h - 1); 
-	/* lower border line */
-	SDL_RenderDrawLine(rend, 0, rSize->h - 1, rSize->w - 1, rSize->h - 1);
-
+draw_border:
 	/*------------------------------------------------------------------------*/
 	/* Draw the border around the TextEdit.                                   */
 	/*------------------------------------------------------------------------*/
@@ -1373,37 +1360,37 @@ SDL_Texture * neuik_Element_Render__TextEdit(
 	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
 	/* upper border line */
-	SDL_RenderDrawLine(rend, 1, 1, rSize->w - 2, 1); 
+	SDL_RenderDrawLine(rend, 
+		rl.x + 1,              rl.y + 1, 
+		rl.x + (rSize->w - 2), rl.y + 1);
 	/* left border line */
-	SDL_RenderDrawLine(rend, 1, 1, 1, rSize->h - 2); 
+	SDL_RenderDrawLine(rend, 
+		rl.x + 1, rl.y + 1, 
+		rl.x + 1, rl.y + (rSize->h - 2));
 	/* right border line */
-	SDL_RenderDrawLine(rend, rSize->w - 2, 1, rSize->w - 2, rSize->h - 2); 
+	SDL_RenderDrawLine(rend, 
+		rl.x + (rSize->w - 2), rl.y + (1), 
+		rl.x + (rSize->w - 2), rl.y + (rSize->h - 2)); 
 
 	/* lower border line */
 	bClr = &(aCfg->borderColorDark);
 	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-	SDL_RenderDrawLine(rend, 2, rSize->h - 2, rSize->w - 3, rSize->h - 2);
-
-	/*------------------------------------------------------------------------*/
-	/* Copy the text onto the renderer and update it                          */
-	/*------------------------------------------------------------------------*/
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 7;
-		goto out;
-	}
-	eBase->eSt.doRedraw = 0;
+	SDL_RenderDrawLine(rend, 
+		rl.x + 2,              rl.y + (rSize->h - 2),
+		rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 out:
+	eBase->eSt.doRedraw = 0;
+
+	ConditionallyDestroyTexture(&tTex);
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	ConditionallyDestroyTexture(&tTex);
-
-	return eBase->eSt.texture;
+	return eNum;
 }
 
 

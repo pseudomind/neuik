@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,9 +37,9 @@ extern int neuik__isInitialized;
 /*----------------------------------------------------------------------------*/
 int neuik_Object_New__Label(void ** lblPtr);
 int neuik_Object_Free__Label(void * lblPtr);
-
-int           neuik_Element_GetMinSize__Label(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Label(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_GetMinSize__Label(NEUIK_Element, RenderSize*);
+int neuik_Element_Render__Label(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -479,8 +479,8 @@ out:
  *
  ******************************************************************************/
 int NEUIK_Label_SetText(
-		NEUIK_Label * label,
-		const char  * text)
+	NEUIK_Label * label,
+	const char  * text)
 {
 	size_t         sLen = 1;
 	int            eNum = 0; /* which error to report (if any) */
@@ -548,7 +548,7 @@ out:
  *
  ******************************************************************************/
 const char * NEUIK_Label_GetText(
-		NEUIK_Label * label)
+	NEUIK_Label * label)
 {
 	int            eNum       = 0; /* which error to report (if any) */
 	const char   * rvPtr      = NULL;
@@ -595,18 +595,16 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Label(
-	NEUIK_Element    elem, 
-	RenderSize     * rSize, /* [in] the size the tex occupies when complete */
-	SDL_Renderer   * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface    * xSurf) /* the external surface (used for transp. bg) */
+int neuik_Element_Render__Label(
+	NEUIK_Element   elem, 
+	RenderSize    * rSize, /* [in] the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	const NEUIK_Color       * fgClr      = NULL;
-	SDL_Surface             * surf       = NULL;
 	SDL_Renderer            * rend       = NULL;
 	SDL_Texture             * tTex       = NULL; /* text texture */
-	SDL_Surface             * tSurfRaw   = NULL; /* text surface */
-	SDL_Surface             * tSurf      = NULL; /* text surface */
 	SDL_Rect                  rect;
 	int                       textW      = 0;
 	int                       textH      = 0;
@@ -614,15 +612,17 @@ SDL_Texture * neuik_Element_Render__Label(
 	NEUIK_Label             * label      = NULL;
 	TTF_Font                * font       = NULL;
 	NEUIK_ElementBase       * eBase      = NULL;
+	RenderLoc                 rl;
+	RenderLoc                 rlAdj;             /* loc. including adjustments */
 	const NEUIK_LabelConfig * aCfg       = NULL; /* the active Label config */
 	static char               funcName[] = "neuik_Element_Render__Label";
 	static char             * errMsgs[]  = {"",                          // [0] no error
 		"Argument `elem` is not of Label class.",                        // [1]
-		"Failure in Element_Resize().",                                  // [2]
+		"", // [2]
 		"Failed to Render Text.",                                        // [3]
 		"FontSet_GetFont returned NULL.",                                // [4]
-		"SDL_CreateTextureFromSurface returned NULL.",                   // [5]
-		"RenderText returned NULL.",                                     // [6]
+		"RenderText returned NULL.",                                     // [5]
+		"", // [6]
 		"Invalid specified `rSize` (negative values).",                  // [7]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in neuik_Element_RedrawBackground().",                  // [9]
@@ -641,54 +641,22 @@ SDL_Texture * neuik_Element_Render__Label(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw(label) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 7;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(label, *rSize) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* select the correct Label config to use (pointer or internal)           */
 	/*------------------------------------------------------------------------*/
+	aCfg = label->cfg;
 	if (label->cfgPtr != NULL)
 	{
 		aCfg = label->cfgPtr;
-	}
-	else 
-	{
-		aCfg = label->cfg;
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -699,10 +667,18 @@ SDL_Texture * neuik_Element_Render__Label(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem, xSurf))
+	if (neuik_Element_RedrawBackground(elem, xSurf, rlMod, NULL))
 	{
 		eNum = 9;
 		goto out;
+	}
+
+	rl = eBase->eSt.rLoc;
+	rlAdj = rl;
+	if (rlMod != NULL)
+	{
+		rlAdj.x += rlMod->x;
+		rlAdj.y += rlMod->y;
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -721,61 +697,54 @@ SDL_Texture * neuik_Element_Render__Label(
 
 			}
 
-			tSurfRaw = NEUIK_RenderTextAsSurface(label->text, font, *fgClr, rend, &textW, &textH);
-			tSurf    = SDL_ConvertSurface(tSurfRaw, surf->format, 0);
+			tTex = NEUIK_RenderText(
+				label->text, font, *fgClr, rend, &textW, &textH);
+			if (tTex == NULL)
+			{
+				eNum = 5;
+				goto out;
+			}
+
+			rect.x = rlAdj.x;
+			rect.y = rlAdj.y;
+			rect.w = textW;
+			rect.h = textH;
 
 			switch (eBase->eCfg.HJustify)
 			{
 				case NEUIK_HJUSTIFY_LEFT:
-					rect.x = 6;
-					rect.y = (int) ((float)(rSize->h - textH)/2.0);
-					rect.w = textW;
-					rect.h = (int)(1.1*textH);
+					rect.x += 6;
+					rect.y += (int) ((float)(rSize->h - textH)/2.0);
 					break;
 
 				case NEUIK_HJUSTIFY_CENTER:
 				case NEUIK_HJUSTIFY_DEFAULT:
-					rect.x = (int) ((float)(rSize->w - textW)/2.0);
-					rect.y = (int) ((float)(rSize->h - textH)/2.0);
-					rect.w = textW;
-					rect.h = (int)(1.1*textH);
+					rect.x += (int) ((float)(rSize->w - textW)/2.0);
+					rect.y += (int) ((float)(rSize->h - textH)/2.0);
 					break;
 
 				case NEUIK_HJUSTIFY_RIGHT:
-					rect.x = (int) (rSize->w - textW - 6);
-					rect.y = (int) ((float)(rSize->h - textH)/2.0);
-					rect.w = textW;
-					rect.h = (int)(1.1*textH);
+					rect.x += (int) (rSize->w - textW - 6);
+					rect.y += (int) ((float)(rSize->h - textH)/2.0);
 					break;
 			}
 
-			SDL_BlitSurface(tSurf, NULL, surf, &rect);
+			SDL_RenderCopy(rend, tTex, NULL, &rect);
 		}
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Copy the text onto the renderer and update it                          */
-	/*------------------------------------------------------------------------*/
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 5;
-		goto out;
-	}
-	eBase->eSt.doRedraw = 0;
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-	}
+	eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 
-	if (tSurf != NULL) SDL_FreeSurface(tSurf);
-	if (tSurfRaw != NULL) SDL_FreeSurface(tSurfRaw);
-	if (eBase == NULL) return NULL;
-	return eBase->eSt.texture;
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
 }
 
 void neuik_Label_Configure_capture_segv(

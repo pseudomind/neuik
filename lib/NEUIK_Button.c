@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -39,7 +39,8 @@ int neuik_Object_New__Button(void ** btnPtr);
 int neuik_Object_Free__Button(void * btnPtr);
 int neuik_Element_GetMinSize__Button(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__Button(NEUIK_Element, SDL_Event*);
-SDL_Texture * neuik_Element_Render__Button(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__Button(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -486,8 +487,8 @@ out:
  *
  ******************************************************************************/
 int NEUIK_Button_SetText(
-		NEUIK_Button * btn,
-		const char   * text)
+	NEUIK_Button * btn,
+	const char   * text)
 {
 	size_t         sLen = 1;
 	int            eNum = 0; /* which error to report (if any) */
@@ -555,7 +556,7 @@ out:
  *
  ******************************************************************************/
 const char * NEUIK_Button_GetText(
-		NEUIK_Button * btn)
+	NEUIK_Button * btn)
 {
 	int           eNum       = 0; /* which error to report (if any) */
 	const char  * rvPtr      = NULL;
@@ -591,6 +592,7 @@ out:
 
 	return rvPtr;
 }
+
 
 void neuik_Button_Configure_capture_segv(
 	int sig_num)
@@ -982,33 +984,34 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Button(
-	NEUIK_Element    elem,
-	RenderSize     * rSize, /* in/out the size the tex occupies when complete */
-	SDL_Renderer   * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface    * xSurf) /* the external surface (used for transp. bg) */
+int neuik_Element_Render__Button(
+	NEUIK_Element   elem,
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                   eNum       = 0;    /* which error to report (if any) */
 	int                   textW      = 0;
 	int                   textH      = 0;
 	SDL_Rect              rect;
-	SDL_Surface         * surf       = NULL;
 	SDL_Renderer        * rend       = NULL;
 	SDL_Texture         * tTex       = NULL; /* text texture */
 	TTF_Font            * font       = NULL;
 	const NEUIK_Color   * fgClr      = NULL;
 	const NEUIK_Color   * bClr       = NULL; /* border color */
-	static SDL_Color      tClr       = COLOR_TRANSP;
 	NEUIK_ButtonConfig  * aCfg       = NULL; /* the active button config */
 	NEUIK_Button        * btn        = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
-	colorDeltas         * deltaPP    = NULL;
+	neuik_MaskMap       * maskMap    = NULL;
+	RenderLoc             rl;
+	RenderLoc             rlAdj;             /* loc. including adjustments */
 	static char           funcName[] = "neuik_Element_Render__Button";
-	static char         * errMsgs[] = {"",                         // [ 0] no error
+	static char         * errMsgs[] = {"", // [ 0] no error
 		"Argument `elem` is not of Button class.",                       // [1]
-		"Failure in Element_Resize().",                                  // [2]
+		"Failure in `neuik_MakeMaskMap()`",                              // [2]
 		"FontSet_GetFont returned NULL.",                                // [3]
-		"SDL_CreateTextureFromSurface returned NULL.",                   // [4]
+		"", // [4]
 		"RenderText returned NULL.",                                     // [5]
 		"Invalid specified `rSize` (negative values).",                  // [6]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [7]
@@ -1028,43 +1031,13 @@ SDL_Texture * neuik_Element_Render__Button(
 		goto out;
 	}
 
-
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw((NEUIK_Element)btn) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize((NEUIK_Element)btn, *rSize) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
@@ -1076,7 +1049,6 @@ SDL_Texture * neuik_Element_Render__Button(
 		aCfg = btn->cfgPtr;
 	}
 
-
 	/*------------------------------------------------------------------------*/
 	/* Select the correct foreground color                                    */
 	/*------------------------------------------------------------------------*/
@@ -1087,41 +1059,55 @@ SDL_Texture * neuik_Element_Render__Button(
 		fgClr = &(aCfg->fgColorSelect);
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Redraw the background surface before continuing.                       */
-	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem, xSurf))
+	rl = eBase->eSt.rLoc;
+	rlAdj = rl;
+	if (rlMod != NULL)
 	{
-		eNum = 8;
+		rlAdj.x += rlMod->x;
+		rlAdj.y += rlMod->y;
+	}
+	rl = rlAdj;
+
+	/*------------------------------------------------------------------------*/
+	/* Create a MaskMap an mark off the trasnparent pixels.                   */
+	/*------------------------------------------------------------------------*/
+	if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+	{
+		eNum = 2;
 		goto out;
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Trim off the rounded sections of the button using a transparent color  */
+	/* Mark off the rounded sections of the button within the MaskMap.        */
 	/*------------------------------------------------------------------------*/
-	SDL_SetColorKey(surf, SDL_TRUE, 
-		SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-	SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 0);
-
 	/* Apply transparent pixels to (round off) the upper-left corner */
-	SDL_RenderDrawPoint(rend, 0, 0);
-	SDL_RenderDrawPoint(rend, 0, 1);
-	SDL_RenderDrawPoint(rend, 1, 0);
+	neuik_MaskMap_MaskPoint(maskMap, 0, 0);
+	neuik_MaskMap_MaskPoint(maskMap, 0, 1);
+	neuik_MaskMap_MaskPoint(maskMap, 1, 0);
 
 	/* Apply transparent pixels to (round off) the lower-left corner */
-	SDL_RenderDrawPoint(rend, 0, rSize->h - 1);
-	SDL_RenderDrawPoint(rend, 0, rSize->h - 2);
-	SDL_RenderDrawPoint(rend, 1, rSize->h - 1);
+	neuik_MaskMap_MaskPoint(maskMap, 0, rSize->h - 1);
+	neuik_MaskMap_MaskPoint(maskMap, 0, rSize->h - 2);
+	neuik_MaskMap_MaskPoint(maskMap, 1, rSize->h - 1);
 
 	/* Apply transparent pixels to (round off) the upper-right corner */
-	SDL_RenderDrawPoint(rend, rSize->w - 1, 0);
-	SDL_RenderDrawPoint(rend, rSize->w - 1, 1);
-	SDL_RenderDrawPoint(rend, rSize->w - 2, 0);
+	neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, 0);
+	neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, 1);
+	neuik_MaskMap_MaskPoint(maskMap, rSize->w - 2, 0);
 
 	/* Apply transparent pixels to (round off) the lower-right corner */
-	SDL_RenderDrawPoint(rend, rSize->w - 1, rSize->h - 1);
-	SDL_RenderDrawPoint(rend, rSize->w - 1, rSize->h - 2);
-	SDL_RenderDrawPoint(rend, rSize->w - 2, rSize->h - 1);
+	neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, rSize->h - 1);
+	neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, rSize->h - 2);
+	neuik_MaskMap_MaskPoint(maskMap, rSize->w - 2, rSize->h - 1);
+
+	/*------------------------------------------------------------------------*/
+	/* Redraw the background surface before continuing.                       */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_RedrawBackground(elem, xSurf, rlMod, maskMap))
+	{
+		eNum = 8;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the border around the button.                                     */
@@ -1130,37 +1116,45 @@ SDL_Texture * neuik_Element_Render__Button(
 	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
 	/* Draw upper-left corner border pixels */
-	SDL_RenderDrawPoint(rend, 1, 1);
-	SDL_RenderDrawPoint(rend, 1, 2);
-	SDL_RenderDrawPoint(rend, 2, 1);
+	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 1);
+	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 2);
+	SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + 1);
 
 	/* Draw lower-left corner border pixels */
-	SDL_RenderDrawPoint(rend, 1, rSize->h - 2);
-	SDL_RenderDrawPoint(rend, 1, rSize->h - 3);
-	SDL_RenderDrawPoint(rend, 2, rSize->h - 2);
+	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 2));
+	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 3));
+	SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + (rSize->h - 2));
 
 	/* Draw upper-right corner border pixels */
-	SDL_RenderDrawPoint(rend, rSize->w - 2, 1);
-	SDL_RenderDrawPoint(rend, rSize->w - 2, 2);
-	SDL_RenderDrawPoint(rend, rSize->w - 3, 1);
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 1);
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 2);
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + 1);
 
 	/* Draw upper-right corner border pixels */
-	SDL_RenderDrawPoint(rend, rSize->w - 2, rSize->h - 2);
-	SDL_RenderDrawPoint(rend, rSize->w - 2, rSize->h - 3);
-	SDL_RenderDrawPoint(rend, rSize->w - 3, rSize->h - 2);
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 2));
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 3));
+	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 
 
 	/* upper border line */
-	SDL_RenderDrawLine(rend, 2, 0, rSize->w - 3, 0); 
+	SDL_RenderDrawLine(rend, 
+		rl.x + 2,              rl.y, 
+		rl.x + (rSize->w - 3), rl.y); 
 	/* left border line */
-	SDL_RenderDrawLine(rend, 0, 2, 0, rSize->h - 3); 
+	SDL_RenderDrawLine(rend, 
+		rl.x, rl.y + 2, 
+		rl.x, rl.y + (rSize->h - 3));
 	/* right border line */
-	SDL_RenderDrawLine(rend, rSize->w - 1, 2, rSize->w - 1, rSize->h - 3); 
+	SDL_RenderDrawLine(rend, 
+		rl.x + (rSize->w - 1), rl.y + 2, 
+		rl.x + (rSize->w - 1), rl.y + (rSize->h - 3));
 
 	/* lower border line */
 	bClr = &(aCfg->borderColorDark);
 	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-	SDL_RenderDrawLine(rend, 2, rSize->h - 1, rSize->w - 3, rSize->h - 1);
+	SDL_RenderDrawLine(rend, 
+		rl.x + 2,              rl.y + (rSize->h - 1), 
+		rl.x + (rSize->w - 3), rl.y + (rSize->h - 1));
 
 	/*------------------------------------------------------------------------*/
 	/* Render the button text                                                 */
@@ -1183,55 +1177,45 @@ SDL_Texture * neuik_Element_Render__Button(
 			goto out;
 		}
 
+		rect.x = rl.x;
+		rect.y = rl.y;
+		rect.w = textW;
+		rect.h = textH;
+
 		switch (eBase->eCfg.HJustify)
 		{
 			case NEUIK_HJUSTIFY_LEFT:
-				rect.x = 6;
-				rect.y = (int) ((float)(rSize->h - textH)/2.0);
-				rect.w = textW;
-				rect.h = (int)(1.1*textH);
+				rect.x += 6;
+				rect.y += (int) ((float)(rSize->h - textH)/2.0);
 				break;
 
 			case NEUIK_HJUSTIFY_CENTER:
 			case NEUIK_HJUSTIFY_DEFAULT:
-				rect.x = (int) ((float)(rSize->w - textW)/2.0);
-				rect.y = (int) ((float)(rSize->h - textH)/2.0);
-				rect.w = textW;
-				rect.h = (int)(1.1*textH);
+				rect.x += (int) ((float)(rSize->w - textW)/2.0);
+				rect.y += (int) ((float)(rSize->h - textH)/2.0);
 				break;
 
 			case NEUIK_HJUSTIFY_RIGHT:
-				rect.x = (int) (rSize->w - textW - 6);
-				rect.y = (int) ((float)(rSize->h - textH)/2.0);
-				rect.w = textW;
-				rect.h = (int)(1.1*textH);
+				rect.x += (int) (rSize->w - textW - 6);
+				rect.y += (int) ((float)(rSize->h - textH)/2.0);
 				break;
 		}
 
 		SDL_RenderCopy(rend, tTex, NULL, &rect);
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Copy the text onto the renderer and update it                          */
-	/*------------------------------------------------------------------------*/
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 4;
-		goto out;
-	}
-	eBase->eSt.doRedraw = 0;
 out:
+	eBase->eSt.doRedraw = 0;
+
+	ConditionallyDestroyTexture(&tTex);
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	ConditionallyDestroyTexture(&tTex);
-	if (deltaPP != NULL) free(deltaPP);
-
-	return eBase->eSt.texture;
+	return eNum;
 }
 
 

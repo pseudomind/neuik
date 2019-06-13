@@ -1384,7 +1384,6 @@ out:
 int NEUIK_Window_Redraw(
 	NEUIK_Window  * w)
 {
-	int                   ctr;
 	int                   doResize   = 0;
 	int                   rv         = 0;
 	int                   eNum       = 0; /* which error to report (if any) */
@@ -1396,22 +1395,20 @@ int NEUIK_Window_Redraw(
 	int                   minH;           /* minimum element height */
 	int                   oldMinW;        /* old minimum element width */
 	int                   oldMinH;        /* old minimum element height */
+	unsigned int          timeBeforeRedraw; /* for calculating frame time */
+	unsigned int          frameTime;        /* time required to redraw elem */
 	NEUIK_Color         * clr;
 	NEUIK_WindowConfig  * aCfg       = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
-	NEUIK_Element       * popup      = NULL;
 	// NEUIK_PopUp         * popup      = NULL;
 	SDL_Rect              dispBnds;
-	SDL_Texture         * menuTex    = NULL;
-	SDL_Texture         * elemTex    = NULL;
-	SDL_Rect              destRect   = {0, 0, 0, 0};  /* destination rectangle */
 	RenderSize            rSize      = {0, 0};
 	RenderLoc             rLoc       = {0, 0};
 	static char           funcName[] = "NEUIK_Window_Redraw";
 	static char         * errMsgs[]  = {"",              // [ 0] no error
 		"Element_GetConfig returned NULL.",              // [ 1]
 		"Element_GetMinSize Failed.",                    // [ 2]
-		"Element_Render returned NULL.",                 // [ 3]
+		"Failure in `neuik_Element_Render()`",           // [ 3]
 		"MainMenu_GetMinSize Failed.",                   // [ 4]
 		"MainMenu_Render returned NULL.",                // [ 5]
 		"Argument `w` does not implement Window class.", // [ 6]
@@ -1610,116 +1607,111 @@ int NEUIK_Window_Redraw(
 		neuik_Element_StoreSizeAndLocation(w->elem, rSize, rLoc, rLoc);
 		if (doResize) neuik_Element_ForceRedraw(w->elem);
 
-		elemTex = neuik_Element_Render(w->elem, &rSize, w->rend, NULL);
-		if (elemTex != NULL)
-		{
-			destRect.x = rLoc.x;
-			destRect.y = rLoc.y;
-			destRect.w = rSize.w;
-			destRect.h = rSize.h;
-			SDL_RenderCopy(w->rend, elemTex, NULL, &destRect);
-		}
-		else
+		timeBeforeRedraw = SDL_GetTicks();
+		if (neuik_Element_Render(w->elem, &rSize, NULL, w->rend, NULL))
 		{
 			eNum = 3;
 			goto out;
 		}
+
+		frameTime = SDL_GetTicks() - timeBeforeRedraw;
+		printf("NEUIK_Window_Redraw() : frameTime = %d ms\n", frameTime);
 	}
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the MainMenu                                                    */
 	/*------------------------------------------------------------------------*/
-	rLoc.x = 0;
-	rLoc.y = 0;
-	if (w->mmenu != NULL)
-	{
-		if (NEUIK_MainMenu_GetSize(w->mmenu, &rSize))
-		{
-			eNum = 4;
-			goto out;
-		}
+	// rLoc.x = 0;
+	// rLoc.y = 0;
+	// if (w->mmenu != NULL)
+	// {
+	// 	if (NEUIK_MainMenu_GetSize(w->mmenu, &rSize))
+	// 	{
+	// 		eNum = 4;
+	// 		goto out;
+	// 	}
 
-		// ConditionallyDestroyTexture(&menuTex);
-		menuTex = NEUIK_RenderMainMenu(w->mmenu, &rSize, w->rend);
-		if (menuTex != NULL)
-		{
-			destRect.x = 0;
-			destRect.y = 0;
-			destRect.w = rSize.w;
-			destRect.h = rSize.h;
-			SDL_RenderCopy(w->rend, menuTex, NULL, &destRect);
-			NEUIK_MainMenu_StoreSizeAndLocation(w->mmenu, rSize, rLoc);
-		}
-		else
-		{
-			eNum = 5;
-			goto out;
-		}
-	}
+	// 	// ConditionallyDestroyTexture(&menuTex);
+	// 	menuTex = NEUIK_RenderMainMenu(w->mmenu, &rSize, w->rend);
+	// 	if (menuTex != NULL)
+	// 	{
+	// 		destRect.x = 0;
+	// 		destRect.y = 0;
+	// 		destRect.w = rSize.w;
+	// 		destRect.h = rSize.h;
+	// 		SDL_RenderCopy(w->rend, menuTex, NULL, &destRect);
+	// 		NEUIK_MainMenu_StoreSizeAndLocation(w->mmenu, rSize, rLoc);
+	// 	}
+	// 	else
+	// 	{
+	// 		eNum = 5;
+	// 		goto out;
+	// 	}
+	// }
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw all contained popups                                            */
 	/*------------------------------------------------------------------------*/
-	if (w->popups != NULL)
-	{
-		for (ctr = 0;; ctr++)
-		{
-			popup = w->popups[ctr];
-			if (popup == NULL) break; /* End of array */
-			if (!NEUIK_Element_IsShown(popup)) continue;
+	// if (w->popups != NULL)
+	// {
+	// 	for (ctr = 0;; ctr++)
+	// 	{
+	// 		popup = w->popups[ctr];
+	// 		if (popup == NULL) break; /* End of array */
+	// 		if (!NEUIK_Element_IsShown(popup)) continue;
 
-			if (!neuik_Object_ImplementsClass(popup, neuik__Class_Element))
-			{
-				eNum = 8;
-				goto out;
-			}
+	// 		if (!neuik_Object_ImplementsClass(popup, neuik__Class_Element))
+	// 		{
+	// 			eNum = 8;
+	// 			goto out;
+	// 		}
 
-			if (neuik_Element_GetMinSize(popup, &rSize))
-			{
-				eNum = 9;
-				goto out;
-			}
+	// 		if (neuik_Element_GetMinSize(popup, &rSize))
+	// 		{
+	// 			eNum = 9;
+	// 			goto out;
+	// 		}
 
-			eCfg = neuik_Element_GetConfig(popup);
-			if (eCfg == NULL)
-			{
-				eNum = 10;
-				goto out;
-			}
+	// 		eCfg = neuik_Element_GetConfig(popup);
+	// 		if (eCfg == NULL)
+	// 		{
+	// 			eNum = 10;
+	// 			goto out;
+	// 		}
 
-			/*----------------------------------------------------------------*/
-			/* Check if the popup has enough space to live within the window  */
-			/*----------------------------------------------------------------*/
-			if (neuik_Element_GetLocation(popup, &rLoc))
-			{
-				eNum = 12;
-				goto out;
-			}
+	// 		/*----------------------------------------------------------------*/
+	// 		/* Check if the popup has enough space to live within the window  */
+	// 		/*----------------------------------------------------------------*/
+	// 		if (neuik_Element_GetLocation(popup, &rLoc))
+	// 		{
+	// 			eNum = 12;
+	// 			goto out;
+	// 		}
 
-			/*----------------------------------------------------------------*/
-			/* Update the stored location before rendering the element. This  */
-			/* is necessary as the location of this object will propagate to  */
-			/* its child objects.                                             */
-			/*----------------------------------------------------------------*/
-			// neuik_Element_StoreSizeAndLocation(popup, rSize, rLoc);
-			if (doResize) neuik_Element_ForceRedraw(popup);
+	// 		/*----------------------------------------------------------------*/
+	// 		/* Update the stored location before rendering the element. This  */
+	// 		/* is necessary as the location of this object will propagate to  */
+	// 		/* its child objects.                                             */
+	// 		/*----------------------------------------------------------------*/
+	// 		// neuik_Element_StoreSizeAndLocation(popup, rSize, rLoc);
+	// 		if (doResize) neuik_Element_ForceRedraw(popup);
 
-			elemTex = neuik_Element_Render(popup, &rSize, w->rend, NULL);
-			if (elemTex != NULL)
-			{
-				destRect.x = rLoc.x;
-				destRect.y = rLoc.y;
-				destRect.w = rSize.w;
-				destRect.h = rSize.h;
-				SDL_RenderCopy(w->rend, elemTex, NULL, &destRect);
-			}
-			else
-			{
-				eNum = 11;
-				goto out;
-			}
-		}
-	}
+	// 		elemTex = neuik_Element_Render(popup, &rSize, w->rend, NULL);
+	// 		if (elemTex != NULL)
+	// 		{
+	// 			destRect.x = rLoc.x;
+	// 			destRect.y = rLoc.y;
+	// 			destRect.w = rSize.w;
+	// 			destRect.h = rSize.h;
+	// 			SDL_RenderCopy(w->rend, elemTex, NULL, &destRect);
+	// 		}
+	// 		else
+	// 		{
+	// 			eNum = 11;
+	// 			goto out;
+	// 		}
+	// 	}
+	// }
 
 	SDL_RenderPresent(w->rend);
 out:

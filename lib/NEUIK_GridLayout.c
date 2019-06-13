@@ -36,9 +36,11 @@ extern int neuik__isInitialized;
 int neuik_Object_New__GridLayout(void **);
 int neuik_Object_Free__GridLayout(void *);
 
-neuik_EventState neuik_Element_CaptureEvent__GridLayout(NEUIK_Element, SDL_Event*);
+neuik_EventState neuik_Element_CaptureEvent__GridLayout(
+	NEUIK_Element, SDL_Event*);
 int neuik_Element_GetMinSize__GridLayout(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__GridLayout(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__GridLayout(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 int neuik_Element_SetWindowPointer__GridLayout(NEUIK_Element, void*);
 int neuik_Element_IsShown__GridLayout(NEUIK_Element);
 
@@ -1383,13 +1385,13 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__GridLayout(
+int neuik_Element_Render__GridLayout(
 	NEUIK_Element   gridElem,
 	RenderSize    * rSize,    /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,    /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf)    /* the external surface (used for transp. bg) */
 {
-	static int             nCalled       = 0;
 	int                    nAlloc        = 0;
 	int                    tempH         = 0;
 	int                    tempW         = 0;
@@ -1435,23 +1437,21 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 	static RenderSize      rsZero        = {0, 0};
 	RenderSize             rsMin         = {0, 0};
 	RenderSize           * rs            = NULL;
-	SDL_Surface          * surf          = NULL;
 	SDL_Renderer         * rend          = NULL;
-	SDL_Texture          * tex           = NULL; /* texture */
 	NEUIK_Container      * cont          = NULL;
 	NEUIK_ElementBase    * eBase         = NULL;
 	NEUIK_Element          elem          = NULL;
 	NEUIK_ElementConfig  * eCfg          = NULL;
 	NEUIK_GridLayout     * grid          = NULL;
 	static char            funcName[]    = "neuik_Element_Render__GridLayout";
-	static char          * errMsgs[]     = {"",                               // [0] no error
+	static char          * errMsgs[]     = {"", // [0] no error
 		"Argument `gridElem` is not of GridLayout class.",                   // [1]
-		"Failure in Element_Resize().",                                      // [2]
+		"Failure in `neuik_Element_Render()`",                               // [2]
 		"Element_GetConfig returned NULL.",                                  // [3]
 		"Element_GetMinSize Failed.",                                        // [4]
-		"Element_Render returned NULL.",                                     // [5]
+		"Failure to allocate memory.",                                       // [5]
 		"Invalid specified `rSize` (negative values).",                      // [6]
-		"SDL_CreateTextureFromSurface returned NULL.",                       // [7]
+		"", // [7]
 		"Argument `gridElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in neuik_Element_RedrawBackground().",                      // [9]
 	};
@@ -1474,56 +1474,28 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw((NEUIK_Element)grid) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(grid, *rSize) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(gridElem, xSurf))
+	if (neuik_Element_RedrawBackground(gridElem, xSurf, rlMod, NULL))
 	{
 		eNum = 9;
 		goto out;
 	}
+	rl = eBase->eSt.rLoc;
 
 	if (cont->elems == NULL) {
 		/* there are no UI elements contained by this GridLayout */
-		goto out2;
+		goto out;
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -2074,32 +2046,15 @@ SDL_Texture * neuik_Element_Render__GridLayout(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, *rs, rl, rlRel);
 
-			tex = neuik_Element_Render(elem, rs, rend, surf);
-			if (tex == NULL)
+			if (neuik_Element_Render(elem, rs, rlMod, rend, xSurf))
 			{
-				eNum = 5;
+				eNum = 2;
 				goto out;
 			}
-
-			SDL_RenderCopy(rend, tex, NULL, &rect);
 		}
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Present all changes and create a texture from this surface             */
-	/*------------------------------------------------------------------------*/
-out2:
-	ConditionallyDestroyTexture((SDL_Texture **)&(eBase->eSt.texture));
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 7;
-		goto out;
-	}
-
-	eBase->eSt.doRedraw = 0;
 out:
+	eBase->eSt.doRedraw = 0;
 	if (elemsCfg   != NULL) free(elemsCfg);
 	if (elemsShown != NULL) free(elemsShown);
 	if (elemsValid != NULL) free(elemsValid);
@@ -2114,12 +2069,10 @@ out:
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	printf("[%3d] GridLayout_Render()\n", nCalled);
-	nCalled++;
-
-	return eBase->eSt.texture;
+	return eNum;
 }
 
 /*******************************************************************************

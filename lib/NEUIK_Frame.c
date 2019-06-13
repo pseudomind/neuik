@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,7 +35,8 @@ int neuik_Object_New__Frame(void ** fPtr);
 int neuik_Object_Free__Frame(void * fPtr);
 
 int neuik_Element_GetMinSize__Frame(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Frame(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__Frame(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -408,9 +409,10 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Frame(
+int neuik_Element_Render__Frame(
 	NEUIK_Element   fElem, 
 	RenderSize    * rSize, 
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
@@ -422,10 +424,8 @@ SDL_Texture * neuik_Element_Render__Frame(
 	RenderLoc             rl         = {0, 0};
 	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	const NEUIK_Color   * bClr       = NULL; /* border color */
-	SDL_Surface         * surf       = NULL;
 	SDL_Renderer        * rend       = NULL;
 	RenderSize            rs         = {0, 0};
-	SDL_Texture         * tex        = NULL; /* texture */
 	SDL_Rect              destRect   = {0, 0, 0, 0};  /* destination rectangle */
 	NEUIK_Container     * cont       = NULL;
 	NEUIK_Element         elem       = NULL;
@@ -438,11 +438,11 @@ SDL_Texture * neuik_Element_Render__Frame(
 		"Argument `fElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"Call to Element_GetMinSize failed.",                             // [3]
 		"Invalid specified `rSize` (negative values).",                   // [4]
-		"Failure in Element_Resize().",                                   // [5]
+		"", // [5]
 		"Element_GetConfig returned NULL.",                               // [6]
-		"neuik_Element_Render returned NULL.",                            // [7]
-		"SDL_CreateTextureFromSurface returned NULL.",                    // [8]
-		"Failure in neuik_Element_RedrawBackground().",                   // [9]
+		"Failure in `neuik_Element_Render()`",                            // [7]
+		"", // [8]
+		"Failure in `neuik_Element_RedrawBackground()`.",                 // [9]
 	};
 
 	if (!neuik_Object_IsClass(fElem, neuik__Class_Frame))
@@ -464,63 +464,24 @@ SDL_Texture * neuik_Element_Render__Frame(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw(frame) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
-	/*------------------------------------------------------*/
-	/* Calculate the required size of the resultant texture */
-	/*------------------------------------------------------*/
-	if (rSize->w == 0 && rSize->h == 0)
-	{
-		if (neuik_Element_GetMinSize__Frame(frame, rSize))
-		{
-			eNum = 3;
-			goto out;
-		}
-	}
-	else if (rSize->w < 0 || rSize->h < 0)
+	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(frame, *rSize) != 0)
-		{
-			eNum = 5;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(fElem, xSurf))
+	if (neuik_Element_RedrawBackground(fElem, xSurf, rlMod, NULL))
 	{
 		eNum = 9;
 		goto out;
 	}
+	rl = eBase->eSt.rLoc;
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the border of the frame.                                          */
@@ -528,10 +489,10 @@ SDL_Texture * neuik_Element_Render__Frame(
 	bClr = &(frame->color);
 	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
-	offLeft   = 0;
-	offRight  = rSize->w - 1;
-	offTop    = 0;
-	offBottom = rSize->h - 1;
+	offLeft   = rl.x;
+	offRight  = rl.x + (rSize->w - 1);
+	offTop    = rl.y;
+	offBottom = rl.y + (rSize->h - 1);
 
 	/* upper border line */
 	SDL_RenderDrawLine(rend, offLeft, offTop, offRight, offTop); 
@@ -546,13 +507,13 @@ SDL_Texture * neuik_Element_Render__Frame(
 	/*------------------------------------------------------------------------*/
 	/* Render the contained Element                                           */
 	/*------------------------------------------------------------------------*/
-	if (cont->elems == NULL) goto out2;
+	if (cont->elems == NULL) goto out;
 	elem = cont->elems[0];
 
-	if (elem == NULL) goto out2;
+	if (elem == NULL) goto out;
 
 	/* If this frame has a hidden element, just make it a small box */
-	if (!NEUIK_Element_IsShown(elem)) goto out2;
+	if (!NEUIK_Element_IsShown(elem)) goto out;
 
 	/*------------------------------------------------------------------------*/
 	/* Determine whether the contained element fills the window               */
@@ -672,35 +633,20 @@ SDL_Texture * neuik_Element_Render__Frame(
 	rlRel.y = destRect.y;
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	tex = neuik_Element_Render(elem, &rs, rend, surf);
-	if (tex != NULL)
-	{
-		SDL_RenderCopy(rend, tex, NULL, &destRect);
-	}
-	else
+	if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
 	{
 		eNum = 7;
 		goto out;
 	}
-
-
-out2:
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 8;
-		goto out;
-	}
+out:
 	eBase->eSt.doRedraw = 0;
 
-out:
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	if (eBase == NULL) return NULL;
-	return eBase->eSt.texture;
+	return eNum;
 }
 

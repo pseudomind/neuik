@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,7 +37,8 @@ int neuik_Object_Free__ListRow(void * rowPtr);
 
 int neuik_Element_GetMinSize__ListRow(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ListRow(NEUIK_Element rowElem, SDL_Event * ev);
-SDL_Texture * neuik_Element_Render__ListRow(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__ListRow(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 void neuik_Element_Defocus__ListRow(NEUIK_Element rowElem);
 
 /*----------------------------------------------------------------------------*/
@@ -630,9 +631,10 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__ListRow(
+int neuik_Element_Render__ListRow(
 	NEUIK_Element   rowElem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
@@ -651,25 +653,23 @@ SDL_Texture * neuik_Element_Render__ListRow(
 	float                 xSize      = 0.0;
 	float                 xFree      = 0.0;  /* px of space for hFill elems */
 	float                 tScale     = 0.0;  /* total vFill scaling factors */
-	SDL_Texture         * tex        = NULL; /* texture */
 	NEUIK_ElementConfig * eCfg       = NULL;
 	NEUIK_Element         elem       = NULL;
 	NEUIK_Container     * cont       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_ListRow       * row        = NULL;
 	const NEUIK_Color   * bgClr      = NULL; /* background color */
-	SDL_Surface         * surf       = NULL;
 	SDL_Renderer        * rend       = NULL;
 	static RenderSize     rsZero     = {0, 0};
 	static char           funcName[] = "neuik_Element_Render__ListRow";
 	static char         * errMsgs[]  = {"",                           // [0] no error
 		"Argument `rowElem` is not of ListRow class.",                      // [1]
-		"Failure in Element_Resize().",                                     // [2]
+		"", // [2]
 		"Element_GetConfig returned NULL.",                                 // [3]
 		"Element_GetMinSize Failed.",                                       // [4]
 		"Element_Render returned NULL.",                                    // [5]
 		"Invalid specified `rSize` (negative values).",                     // [6]
-		"SDL_CreateTextureFromSurface returned NULL.",                      // [7]
+		"", // [7]
 		"Argument `rowElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in `NEUIK_Element_SetBackgroundColorSolid`.",              // [9]
 		"Failure in `neuik_Element_RedrawBackground()`.",                   // [10]
@@ -693,19 +693,6 @@ SDL_Texture * neuik_Element_Render__ListRow(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw((NEUIK_Element)row) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-	
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
@@ -713,23 +700,7 @@ SDL_Texture * neuik_Element_Render__ListRow(
 	}
 	xFree = (float)(rSize->w); /* free X-px: start with the full width and deduct as used */
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize((NEUIK_Element)row, *rSize) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
@@ -766,7 +737,7 @@ SDL_Texture * neuik_Element_Render__ListRow(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(row, xSurf))
+	if (neuik_Element_RedrawBackground(row, xSurf, rlMod, NULL))
 	{
 		eNum = 10;
 		goto out;
@@ -819,7 +790,7 @@ SDL_Texture * neuik_Element_Render__ListRow(
 
 		if (vctr == 0)
 		{
-			goto out2;
+			goto out;
 		}
 
 		/*-------------------------------------------------------------*/
@@ -921,40 +892,25 @@ SDL_Texture * neuik_Element_Render__ListRow(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			tex = neuik_Element_Render(elem, &rs, rend, surf);
-			if (tex == NULL)
+			if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
 			{
 				eNum = 5;
 				goto out;
 			}
 
-			SDL_RenderCopy(rend, tex, NULL, &rect);
-
 			xPos += xSize + (eCfg->PadLeft + eCfg->PadRight) ;
 		}
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Present all changes and create a texture from this surface             */
-	/*------------------------------------------------------------------------*/
-out2:
-	ConditionallyDestroyTexture((SDL_Texture **)&(eBase->eSt.texture));
-	SDL_RenderPresent(eBase->eSt.rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 7;
-		goto out;
-	}
-
-	eBase->eSt.doRedraw = 0;
 out:
+	eBase->eSt.doRedraw = 0;
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	return eBase->eSt.texture;
+	return eNum;
 }
 
 /*******************************************************************************

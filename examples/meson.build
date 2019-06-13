@@ -30,6 +30,7 @@ examples = [
 	'24-canvas',
 	'25-plot2d',
 	'26-gridLayout',
+	'27-fill',
 	# '99-debug',
 ]
 

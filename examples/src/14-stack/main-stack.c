@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <NEUIK.h>
 
+#pragma message("TODO/FIXME: The VGroup isn't getting the TopPadding that it deserves.")
+
 void cbFunc_SetActiveElem(
 	void * window,
 	void * stkPtr,

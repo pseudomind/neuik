@@ -56,6 +56,11 @@ neuik_Class * neuik__Class_ListRow            = NULL;
 neuik_Class * neuik__Class_Frame              = NULL;
 neuik_Class * neuik__Class_Stack              = NULL;
 
+/*----------------------------------------------------------------------------*/
+/* Registered class implementations : Internal Objects                        */
+/*----------------------------------------------------------------------------*/
+neuik_Class * neuik__Class_MaskMap            = NULL;
+
 
 /*----------------------------------------------------------------------------*/
 /* Registerd Virtual Functions                                                */

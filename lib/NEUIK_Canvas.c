@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,7 +34,8 @@ int neuik_Object_New__Canvas(void **);
 int neuik_Object_Free__Canvas(void *);
 
 int neuik_Element_GetMinSize__Canvas(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__Canvas(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__Canvas(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -405,9 +406,10 @@ int neuik_Element_GetMinSize__Canvas(
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Canvas(
+int neuik_Element_Render__Canvas(
 	NEUIK_Element   elem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
@@ -415,13 +417,12 @@ SDL_Texture * neuik_Element_Render__Canvas(
 	int                 ctr;            /* loop iteration counter */
 	int                 textW;
 	int                 textH;
-	const NEUIK_Color * lClr       = NULL;
-	SDL_Surface       * surf       = NULL;
-	SDL_Surface       * text_surf  = NULL;
+	SDL_Texture       * tTex       = NULL; /* text texture */
 	SDL_Renderer      * rend       = NULL;
 	TTF_Font          * font       = NULL;
 	SDL_Rect            rect;
-	SDL_Color           color;
+	RenderLoc           rl;
+	NEUIK_Color         color;
 	neuik_canvas_op   * op;
 	NEUIK_Canvas      * cnvs       = NULL;
 	NEUIK_ElementBase * eBase      = NULL;
@@ -429,15 +430,15 @@ SDL_Texture * neuik_Element_Render__Canvas(
 	static char       * errMsgs[]  = {"",                                // [0] no error
 		"Argument `elem` is not of Canvas class.",                       // [1]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
-		"neuik_Element_GetMinSize__Canvas failed.",                      // [3]
+		"", // [3]
 		"Invalid cnvs orientation.",                                     // [4]
-		"SDL_CreateTextureFromSurface returned NULL.",                   // [5]
+		"", // [5]
 		"Failure in neuik_Element_RedrawBackground().",                  // [6]
 		"Failure in SDL_SetRenderDrawColor().",                          // [7]
 		"Failure in SDL_RenderDrawPoint().",                             // [8]
 		"Failure in SDL_RenderDrawLine().",                              // [9]
-		"Failure in SDL_RenderClear().",                                 // [10]
-		"Failure in `TTF_RenderText_Blended()`.",                        // [11]
+		"Failure in SDL_RenderFillRect().",                              // [10]
+		"RenderText returned NULL.",                                     // [11]
 		"FontSet_GetFont returned NULL.",                                // [12]
 	};
 
@@ -452,19 +453,6 @@ SDL_Texture * neuik_Element_Render__Canvas(
 	{
 		eNum = 2;
 		goto out;
-	}
-
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw(cnvs) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
 	}
 
 	/*------------------------------------------------------*/
@@ -484,33 +472,18 @@ SDL_Texture * neuik_Element_Render__Canvas(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(cnvs, *rSize) != 0)
-		{
-			eNum = 3;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(elem, xSurf))
+	if (neuik_Element_RedrawBackground(elem, xSurf, rlMod, NULL))
 	{
 		eNum = 6;
 		goto out;
 	}
+	rl = eBase->eSt.rLoc;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the canvas as specified by the associated draw functions.       */
@@ -525,6 +498,7 @@ SDL_Texture * neuik_Element_Render__Canvas(
 					cnvs->draw_x = op->op_moveto.x;
 					cnvs->draw_y = op->op_moveto.y;
 					break;
+					//
 				case NEUIK_CANVAS_OP_SETDRAWCOLOR:
 					cnvs->draw_clr_r = op->op_setdrawcolor.r;
 					cnvs->draw_clr_g = op->op_setdrawcolor.g;
@@ -541,8 +515,10 @@ SDL_Texture * neuik_Element_Render__Canvas(
 						goto out;
 					}
 					break;
+					//
 				case NEUIK_CANVAS_OP_DRAWPOINT:
-					if (SDL_RenderDrawPoint(rend, cnvs->draw_x, cnvs->draw_y))
+					if (SDL_RenderDrawPoint(
+						rend, rl.x + cnvs->draw_x, rl.y + cnvs->draw_y))
 					{
 						eNum = 8;
 						goto out;
@@ -550,10 +526,8 @@ SDL_Texture * neuik_Element_Render__Canvas(
 					break;
 				case NEUIK_CANVAS_OP_DRAWLINE:
 					if (SDL_RenderDrawLine(rend,
-						cnvs->draw_x, 
-						cnvs->draw_y,
-						op->op_drawline.x, 
-						op->op_drawline.y))
+						rl.x + cnvs->draw_x, rl.y + cnvs->draw_y,
+						rl.x + op->op_drawline.x, rl.y + op->op_drawline.y))
 					{
 						eNum = 9;
 						goto out;
@@ -562,9 +536,8 @@ SDL_Texture * neuik_Element_Render__Canvas(
 					cnvs->draw_x = op->op_drawline.x;
 					cnvs->draw_y = op->op_drawline.y;
 					break;
-
+					//
 				case NEUIK_CANVAS_OP_DRAWTEXT:
-					#pragma message("Implement NEUIK_CANVAS_OP_DRAWTEXT")
 					color.r = cnvs->draw_clr_r;
 					color.g = cnvs->draw_clr_g;
 					color.b = cnvs->draw_clr_b;
@@ -583,25 +556,22 @@ SDL_Texture * neuik_Element_Render__Canvas(
 					}
 					TTF_SizeText(font, op->op_drawtext.text, &textW, &textH);
 
-					text_surf = TTF_RenderText_Blended(font, 
-						op->op_drawtext.text, color);
-					if (text_surf == NULL)
+					tTex = NEUIK_RenderText(
+						op->op_drawtext.text, font, color, rend, &textW, &textH);
+					if (tTex == NULL)
 					{
 						eNum = 11;
 						goto out;
 					}
 
-					rect.x = cnvs->draw_x;
-					rect.y = cnvs->draw_y;
+					rect.x = rl.x + cnvs->draw_x;
+					rect.y = rl.y + cnvs->draw_y;
 					rect.w = textW;
 					rect.h = textH;
-					SDL_BlitSurface(text_surf, NULL, surf, &rect);
-
-					/* free the text surface before continuing */
-					if (text_surf != NULL) SDL_FreeSurface(text_surf);
-					text_surf = NULL;
+					SDL_RenderCopy(rend, tTex, NULL, &rect);
+					ConditionallyDestroyTexture(&tTex);
 					break;
-
+					//
 				case NEUIK_CANVAS_OP_DRAWTEXTLARGE:
 					#pragma message("Implement NEUIK_CANVAS_OP_DRAWTEXTLARGE")
 					color.r = cnvs->draw_clr_r;
@@ -609,6 +579,7 @@ SDL_Texture * neuik_Element_Render__Canvas(
 					color.b = cnvs->draw_clr_b;
 					color.a = cnvs->draw_clr_a;
 					break;
+					//
 				case NEUIK_CANVAS_OP_SETTEXTSIZE:
 					cnvs->text_size = op->op_settextsize.size;
 					font = NEUIK_FontSet_GetFont(cnvs->fontSet, cnvs->fontSize,
@@ -620,8 +591,14 @@ SDL_Texture * neuik_Element_Render__Canvas(
 
 					}
 					break;
+					//
 				case NEUIK_CANVAS_OP_FILL:
-					if (SDL_RenderClear(rend))
+					rect.x = rl.x;
+					rect.y = rl.y;
+					rect.w = eBase->eSt.rSize.w;
+					rect.h = eBase->eSt.rSize.h;
+
+					if (SDL_RenderFillRect(rend, &rect) < 0) 
 					{
 						eNum = 10;
 						goto out;
@@ -630,28 +607,16 @@ SDL_Texture * neuik_Element_Render__Canvas(
 			}
 		}
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Copy the text onto the renderer and update it                          */
-	/*------------------------------------------------------------------------*/
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 5;
-		goto out;
-	}
-	eBase->eSt.doRedraw = 0;
 out:
-	if (text_surf != NULL) SDL_FreeSurface(text_surf);
+	eBase->eSt.doRedraw = 0;
 
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	if (eBase == NULL) return NULL;
-	return eBase->eSt.texture;
+	return eNum;
 }
 
 

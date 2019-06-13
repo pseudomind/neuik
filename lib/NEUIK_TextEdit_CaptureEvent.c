@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -213,7 +213,7 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
+neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
@@ -313,7 +313,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					neuik_Element_RequestRedraw((NEUIK_Element)te);
 				}
 				doContinue = 1;
-				evCaptured = 1;
+				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			}
 		}
 
@@ -369,7 +369,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 			if (lineBytes != NULL)
 			{
-				if (lineBytes != '\0')
+				if (*lineBytes != '\0')
 				{
 					doContinue = 1;
 
@@ -553,7 +553,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		}
 
 		neuik_Element_RequestRedraw((NEUIK_Element)te);
-		evCaptured = 1;
+		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 
 		te->clickHeld = 1;
 	}
@@ -565,7 +565,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/* This text entry has the window focus (unset `clickHeld`)       */
 			/*----------------------------------------------------------------*/
 			te->clickHeld =  0;
-			evCaptured    =  1;
+			evCaptured    =  NEUIK_EVENTSTATE_CAPTURED;
 		}
 	}
 	else if (ev->type == SDL_MOUSEMOTION)
@@ -585,7 +585,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				{
 					/* This mouse click originated within this button */
 					doContinue = 1;
-					evCaptured = 1;
+					evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 				}
 			}
 
@@ -640,7 +640,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 				if (lineBytes != NULL)
 				{
-					if (lineBytes != '\0')
+					if (*lineBytes != '\0')
 					{
 						doContinue = 1;
 
@@ -710,7 +710,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 				neuik_Element_RequestRedraw((NEUIK_Element)te);
-				evCaptured = 1;
+				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			}
 
 			if (!doContinue) goto out;
@@ -830,7 +830,7 @@ int neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 
 			neuik_Element_RequestRedraw((NEUIK_Element)te);
-			evCaptured = 1;
+			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 		}
 	}
 out:
@@ -853,7 +853,7 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
+neuik_EventState neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
@@ -925,7 +925,7 @@ int neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 
 	neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_INSERTED);
 	neuik_Element_RequestRedraw((NEUIK_Element)te);
-	evCaptured = 1;
+	evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 out:
 	if (eNum > 0)
 	{
@@ -946,7 +946,7 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
+neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
@@ -1520,7 +1520,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
 			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_INSERTED);
 			neuik_Element_RequestRedraw((NEUIK_Element)te);
-			evCaptured = 1;
+			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 
 		case SDLK_HOME:
@@ -1727,7 +1727,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 		clipText = SDL_GetClipboardText();
 		if (clipText == NULL)
 		{
-			evCaptured = 1;
+			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			eNum = 2;
 			goto out;
 		}
@@ -1742,7 +1742,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
 		neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_ADD_REMOVE);
 		neuik_Element_RequestRedraw((NEUIK_Element)te);
-		evCaptured = 1;
+		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 	}
 	else if (neuik_KeyShortcut_SelectAll(keyEv, keyMod))
 	{
@@ -1781,7 +1781,7 @@ int neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	}
 
 	if (doRedraw) neuik_Element_RequestRedraw((NEUIK_Element)te);
-	evCaptured = 1;
+	evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 out:
 	if (eNum > 0)
 	{
@@ -1802,11 +1802,11 @@ out:
  *  Returns:       1 if event is captured; 0 otherwise
  *
  ******************************************************************************/
-int neuik_Element_CaptureEvent__TextEdit(
+neuik_EventState neuik_Element_CaptureEvent__TextEdit(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                 evCaptured = 0;
+	neuik_EventState    evCaptured = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	int                 eNum       = 0; /* which error to report (if any) */
 	char              * clipText   = NULL;
 	NEUIK_TextEdit    * te         = NULL;

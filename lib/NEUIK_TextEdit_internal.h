@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,9 +35,24 @@ extern int neuik__isInitialized;
 int neuik_Object_New__TextEdit(void ** wPtr);
 int neuik_Object_Free__TextEdit(void ** wPtr);
 
-int           neuik_Element_GetMinSize__TextEdit(NEUIK_Element, RenderSize*);
-int           neuik_Element_CaptureEvent__TextEdit(NEUIK_Element, SDL_Event*);
-SDL_Texture * neuik_Element_Render__TextEdit(NEUIK_Element, RenderSize*, SDL_Renderer*);
-void          neuik_Element_Defocus__TextEdit(NEUIK_Element);
+int 
+	neuik_Element_GetMinSize__TextEdit(
+			NEUIK_Element, RenderSize*);
+
+neuik_EventState 
+	neuik_Element_CaptureEvent__TextEdit(
+			NEUIK_Element, SDL_Event*);
+
+int 
+	neuik_Element_Render__TextEdit(
+			NEUIK_Element, 
+			RenderSize*, 
+			RenderLoc*,
+			SDL_Renderer*,
+			SDL_Surface*);
+
+void
+	neuik_Element_Defocus__TextEdit(
+			NEUIK_Element);
 
 #endif /* NEUIK_TEXTEDIT_INTERNAL_H */

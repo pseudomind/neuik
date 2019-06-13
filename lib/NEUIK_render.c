@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -149,10 +149,10 @@ SDL_Texture * NEUIK_RenderText(
 	SDL_Texture  * rvTex = NULL;
 	int            eNum  = 0;    /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_RenderText";
-	static char  * errMsgs[] = {"",              // [0] no error
-		"Pointer to Font is NULL.",              // [1]
-		"Failed to Render Text.",                // [2]
-		"SDL_CreateTextureFromSurface failed.",  // [3]
+	static char  * errMsgs[] = {"",                     // [0] no error
+		"Pointer to Font is NULL.",                     // [1]
+		"Failed to Render Text.",                       // [2]
+		"Failure in `SDL_CreateTextureFromSurface()`.", // [3]
 	};
 
 	if (font == NULL)

@@ -36,8 +36,10 @@ int neuik_Object_Free__Transformer(void * tPtr);
 
 int neuik__getTransformedMinSize__Transformer(NEUIK_Element, RenderSize*);
 int neuik_Element_GetMinSize__Transformer(NEUIK_Element, RenderSize*);
-neuik_EventState neuik_Element_CaptureEvent__Transformer(NEUIK_Element, SDL_Event*);
-SDL_Texture * neuik_Element_Render__Transformer(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+neuik_EventState neuik_Element_CaptureEvent__Transformer(
+	NEUIK_Element, SDL_Event*);
+int neuik_Element_Render__Transformer(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 
 /*----------------------------------------------------------------------------*/
@@ -320,8 +322,6 @@ int NEUIK_Transformer_Configure(
 {
 	int                   ctr;
 	int                   nCtr;
-	int                   isBool;
-	int                   boolVal    = 0;
 	int                   doRedraw   = 0;
 	int                   typeMixup;
 	va_list               args;
@@ -331,7 +331,6 @@ int NEUIK_Transformer_Configure(
 	const char          * set        = NULL;
 	char                  buf[4096];
 	NEUIK_ElementBase   * eBase      = NULL;
-	NEUIK_ElementConfig * eCfg       = NULL;
 	/*------------------------------------------------------------------------*/
 	/* If a `name=value` string with an unsupported name is found, check to   */
 	/* see if a boolName was mistakenly used instead.                         */
@@ -372,13 +371,10 @@ int NEUIK_Transformer_Configure(
 
 	set = set0;
 
-	eCfg = neuik_Element_GetConfig(eBase);
-
 	va_start(args, set0);
 
 	for (ctr = 0;; ctr++)
 	{
-		isBool = 0;
 		name   = NULL;
 		value  = NULL;
 
@@ -415,12 +411,9 @@ int NEUIK_Transformer_Configure(
 					NEUIK_RaiseError(funcName, errMsgs[6]);
 				}
 
-				isBool  = 1;
-				boolVal = 1;
 				name    = buf;
 				if (buf[0] == '!')
 				{
-					boolVal = 0;
 					name    = buf + 1;
 				}
 			}
@@ -751,24 +744,23 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__Transformer(
+int neuik_Element_Render__Transformer(
 	NEUIK_Element   tElem, 
 	RenderSize    * rSize, 
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
-	int                   ePadLeft   = 0;
-	int                   ePadRight  = 0;
-	int                   ePadTop    = 0;
-	int                   ePadBot    = 0;
 	RenderLoc             rl         = {0, 0};
 	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Surface         * surf       = NULL;
 	SDL_Renderer        * rend       = NULL;
 	RenderSize            rs         = {0, 0};
-	SDL_Texture         * tex        = NULL; /* texture */
+	RenderSize            rsOrig     = {0, 0}; /* the unrotated render size */
+	RenderLoc             rlModNext  = {0, 0}; /* to pass to containd elem */
 	SDL_Rect              destRect   = {0, 0, 0, 0};  /* destination rectangle */
+	SDL_Texture         * tex        = NULL;
 	NEUIK_Container     * cont       = NULL;
 	NEUIK_Element         elem       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
@@ -782,9 +774,9 @@ SDL_Texture * neuik_Element_Render__Transformer(
 		"Invalid specified `rSize` (negative values).",                   // [4]
 		"Failure in Element_Resize().",                                   // [5]
 		"Element_GetConfig returned NULL.",                               // [6]
-		"neuik_Element_Render returned NULL.",                            // [7]
-		"SDL_CreateTextureFromSurface returned NULL.",                    // [8]
-		"Failure in neuik_Element_RedrawBackground().",                   // [9]
+		"Failure in `neuik_Element_RenderRotate()`",                      // [7]
+		"Failure in `SDL_CreateTextureFromSurface()`.",                   // [8]
+		"Failure in `neuik_Element_RedrawBackground()`.",                 // [9]
 	};
 
 	if (!neuik_Object_IsClass(tElem, neuik__Class_Transformer))
@@ -806,31 +798,7 @@ SDL_Texture * neuik_Element_Render__Transformer(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw(trans) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
-	/*------------------------------------------------------*/
-	/* Calculate the required size of the resultant texture */
-	/*------------------------------------------------------*/
-	if (rSize->w == 0 && rSize->h == 0)
-	{
-		if (neuik_Element_GetMinSize__Transformer(trans, rSize))
-		{
-			eNum = 3;
-			goto out;
-		}
-	}
-	else if (rSize->w < 0 || rSize->h < 0)
+	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
 		goto out;
@@ -858,7 +826,7 @@ SDL_Texture * neuik_Element_Render__Transformer(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(tElem, xSurf))
+	if (neuik_Element_RedrawBackground(tElem, surf, rlMod, NULL))
 	{
 		eNum = 9;
 		goto out;
@@ -867,13 +835,13 @@ SDL_Texture * neuik_Element_Render__Transformer(
 	/*------------------------------------------------------------------------*/
 	/* Render the contained Element                                           */
 	/*------------------------------------------------------------------------*/
-	if (cont->elems == NULL) goto out2;
+	if (cont->elems == NULL) goto out;
 	elem = cont->elems[0];
 
-	if (elem == NULL) goto out2;
+	if (elem == NULL) goto out;
 
 	/* If this trans has a hidden element, just make it a small box */
-	if (!NEUIK_Element_IsShown(elem)) goto out2;
+	if (!NEUIK_Element_IsShown(elem)) goto out;
 
 	/*------------------------------------------------------------------------*/
 	/* Determine whether the contained element fills the window               */
@@ -1019,6 +987,7 @@ SDL_Texture * neuik_Element_Render__Transformer(
 		/*--------------------------------------------------------------------*/
 		/* No effective rotation                                              */
 		/*--------------------------------------------------------------------*/
+		rsOrig = rs;
 		destRect.x = eCfg->PadLeft;
 		destRect.y = eCfg->PadTop;
 		destRect.w = rs.w;
@@ -1030,6 +999,7 @@ SDL_Texture * neuik_Element_Render__Transformer(
 		/*--------------------------------------------------------------------*/
 		/* Rotated by 180 degrees (turned upside-down)                        */
 		/*--------------------------------------------------------------------*/
+		rsOrig = rs;
 		destRect.x = eCfg->PadRight;
 		destRect.y = eCfg->PadBottom;
 		destRect.w = rs.w;
@@ -1041,6 +1011,8 @@ SDL_Texture * neuik_Element_Render__Transformer(
 		/*--------------------------------------------------------------------*/
 		/* Rotated by 90 degrees (resting on its right side).                 */
 		/*--------------------------------------------------------------------*/
+		rsOrig.w = rs.h;
+		rsOrig.h = rs.w;
 		destRect.x = eCfg->PadBottom;
 		destRect.y = eCfg->PadLeft;
 		destRect.w = rs.h;
@@ -1052,6 +1024,8 @@ SDL_Texture * neuik_Element_Render__Transformer(
 		/*--------------------------------------------------------------------*/
 		/* Rotated by 270 degrees (resting on its left side).                 */
 		/*--------------------------------------------------------------------*/
+		rsOrig.w = rs.h;
+		rsOrig.h = rs.w;
 		destRect.x = eCfg->PadTop;
 		destRect.y = eCfg->PadRight;
 		destRect.w = rs.h;
@@ -1065,34 +1039,53 @@ SDL_Texture * neuik_Element_Render__Transformer(
 
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	tex = neuik_Element_RenderRotate(elem, &rs, rend, surf, trans->rotation);
-	if (tex != NULL)
+	/*------------------------------------------------------------------------*/
+	/* Calculate an updated RenderLoc modifier.                               */
+	/*------------------------------------------------------------------------*/
+	rlModNext.x = -eBase->eSt.rLoc.x;
+	rlModNext.y = -eBase->eSt.rLoc.y;
+
+	if (rlMod != NULL)
 	{
-		SDL_RenderCopy(rend, tex, NULL, &destRect);
+		rlModNext.x += rlMod->x;
+		rlModNext.y += rlMod->y;
 	}
-	else
+
+	if (neuik_Element_RenderRotate(
+			elem, &rsOrig, &rlModNext, rend, surf, trans->rotation))
 	{
 		eNum = 7;
 		goto out;
 	}
-out2:
 	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
+
+	tex = SDL_CreateTextureFromSurface(xRend, surf);
+	if (tex == NULL)
 	{
 		eNum = 8;
 		goto out;
 	}
-	eBase->eSt.doRedraw = 0;
+
+	rl = eBase->eSt.rLoc;
+
+	destRect.x = rl.x;
+	destRect.y = rl.y;
+	destRect.w = eBase->eSt.rSize.w;
+	destRect.h = eBase->eSt.rSize.h;
+	SDL_RenderCopy(xRend, tex, NULL, &destRect);
 
 out:
+	eBase->eSt.doRedraw = 0;
+
+	ConditionallyDestroyTexture(&tex);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	if (eBase == NULL) return NULL;
-	return eBase->eSt.texture;
+	return eNum;
 }
 
 /*******************************************************************************

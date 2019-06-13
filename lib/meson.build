@@ -11,6 +11,7 @@ libneuik_srcs = [
 	'NEUIK_neuik.c',
 	'neuik_classes.c',
 	'neuik_internal.c',
+	'neuik_MaskMap.c',
 	'neuik_TextBlock.c',
 	'NEUIK_error.c',
 	'NEUIK_error_CrashReporter.c',

@@ -35,7 +35,8 @@ int neuik_Object_New__VGroup(void ** vgPtr);
 int neuik_Object_Free__VGroup(void * vgPtr);
 
 int neuik_Element_GetMinSize__VGroup(NEUIK_Element, RenderSize*);
-SDL_Texture * neuik_Element_Render__VGroup(NEUIK_Element, RenderSize*, SDL_Renderer*, SDL_Surface*);
+int neuik_Element_Render__VGroup(
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -576,9 +577,10 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__VGroup(
+int neuik_Element_Render__VGroup(
 	NEUIK_Element   vgElem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
@@ -598,9 +600,7 @@ SDL_Texture * neuik_Element_Render__VGroup(
 	SDL_Rect              rect    = {0, 0, 0, 0};
 	RenderSize            rs      = {0, 0};
 	static RenderSize     rsZero  = {0, 0};
-	SDL_Surface         * surf    = NULL;
 	SDL_Renderer        * rend    = NULL;
-	SDL_Texture         * tex     = NULL; /* texture */
 	NEUIK_Container     * cont    = NULL;
 	NEUIK_ElementBase   * eBase   = NULL;
 	NEUIK_Element         elem    = NULL;
@@ -609,14 +609,14 @@ SDL_Texture * neuik_Element_Render__VGroup(
 	static char           funcName[] = "neuik_Element_Render__VGroup";
 	static char         * errMsgs[]  = {"",                                // [0] no error
 		"Argument `vgElem` is not of VGroup class.",                       // [1]
-		"Failure in Element_Resize().",                                    // [2]
+		"", // [2]
 		"Element_GetConfig returned NULL.",                                // [3]
 		"Element_GetMinSize Failed.",                                      // [4]
-		"Element_Render returned NULL.",                                   // [5]
+		"Failure in `neuik_Element_Render()`",                             // [5]
 		"Invalid specified `rSize` (negative values).",                    // [6]
-		"SDL_CreateTextureFromSurface returned NULL.",                     // [7]
+		"", // [7]
 		"Argument `vgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
-		"Failure in neuik_Element_RedrawBackground().",                    // [9]
+		"Failure in `neuik_Element_RedrawBackground()`.",                  // [9]
 	};
 
 	if (!neuik_Object_IsClass(vgElem, neuik__Class_VGroup))
@@ -637,19 +637,6 @@ SDL_Texture * neuik_Element_Render__VGroup(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw((NEUIK_Element)vg) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
@@ -657,29 +644,13 @@ SDL_Texture * neuik_Element_Render__VGroup(
 	}
 	yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize((NEUIK_Element)vg, *rSize) != 0)
-		{
-			eNum = 2;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(vgElem, xSurf))
+	if (neuik_Element_RedrawBackground(vgElem, xSurf, rlMod, NULL))
 	{
 		eNum = 9;
 		goto out;
@@ -732,7 +703,7 @@ SDL_Texture * neuik_Element_Render__VGroup(
 
 		if (vctr == 0)
 		{
-			goto out2;
+			goto out;
 		}
 
 		/*-----------------------------------------------------------*/
@@ -860,39 +831,24 @@ SDL_Texture * neuik_Element_Render__VGroup(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			tex = neuik_Element_Render(elem, &rs, rend, surf);
-			if (tex == NULL)
+			if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
 			{
 				eNum = 5;
 				goto out;
 			}
 
-			SDL_RenderCopy(rend, tex, NULL, &rect);
-
-			yPos += rs.h + (eCfg->PadTop + eCfg->PadBottom) ;
+			yPos += rs.h + (eCfg->PadTop + eCfg->PadBottom);
 		}
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Present all changes and create a texture from this surface             */
-	/*------------------------------------------------------------------------*/
-out2:
-	ConditionallyDestroyTexture((SDL_Texture **)&(eBase->eSt.texture));
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 7;
-		goto out;
-	}
-
-	eBase->eSt.doRedraw = 0;
 out:
+	eBase->eSt.doRedraw = 0;
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	return eBase->eSt.texture;
+	return eNum;
 }
 

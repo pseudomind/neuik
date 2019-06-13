@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -534,8 +534,8 @@ out:
  *
  ******************************************************************************/
 int NEUIK_TextEntry_SetText(
-		NEUIK_TextEntry * te,
-		const char      * text)
+	NEUIK_TextEntry * te,
+	const char      * text)
 {
 	size_t          sLen    = 1;
 	size_t          textLen = 0;
@@ -627,7 +627,7 @@ out:
  *
  ******************************************************************************/
 const char * NEUIK_TextEntry_GetText(
-		NEUIK_TextEntry * te)
+	NEUIK_TextEntry * te)
 {
 	int            eNum = 0; /* which error to report (if any) */
 	const char   * rvPtr      = NULL;
@@ -881,9 +881,10 @@ out:
  *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
  *
  ******************************************************************************/
-SDL_Texture * neuik_Element_Render__TextEntry(
+int neuik_Element_Render__TextEntry(
 	NEUIK_Element   elem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
 {
@@ -900,23 +901,23 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 	const NEUIK_Color     * fgClr      = NULL;
 	const NEUIK_Color     * bgClr      = NULL;
 	const NEUIK_Color     * bClr       = NULL; /* border color */
-	static SDL_Color        tClr       = COLOR_TRANSP;
-	SDL_Surface           * surf       = NULL;
 	SDL_Renderer          * rend       = NULL;
 	SDL_Texture           * tTex       = NULL; /* text texture */
 	TTF_Font              * font       = NULL;
 	NEUIK_ElementBase     * eBase      = NULL;
+	RenderLoc               rl;
+	neuik_MaskMap         * maskMap    = NULL;
 	NEUIK_TextEntry       * te         = NULL;
 	NEUIK_TextEntryConfig * aCfg       = NULL; /* the active textEntry config */
 	static char             funcName[] = "neuik_Element_Render__TextEntry";
-	static char           * errMsgs[]  = {"",                            // [0] no error
+	static char           * errMsgs[]  = {"", // [0] no error
 		"Argument `elem` is not of TextEntry class.",                    // [1]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
-		"TextEntry_GetMinSize failed.",                                  // [3]
+		"", // [3]
 		"Invalid specified `rSize` (negative values).",                  // [4]
-		"Failure in Element_Resize().",                                  // [5]
+		"Failure in `neuik_MakeMaskMap()`",                              // [5]
 		"FontSet_GetFont returned NULL.",                                // [6]
-		"SDL_CreateTextureFromSurface returned NULL.",                   // [7]
+		"", // [7]
 		"Failure in neuik_Element_RedrawBackground().",                  // [8]
 	};
 
@@ -933,60 +934,24 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w == eBase->eSt.rSizeOld.w  &&
-		eBase->eSt.rSize.h == eBase->eSt.rSizeOld.h)
-	{
-		if (!neuik_Element_NeedsRedraw((NEUIK_Element)te) && eBase->eSt.texture != NULL) 
-		{
-			(*rSize) = eBase->eSt.rSize;
-			return eBase->eSt.texture;
-		}
-	}
-
-	/*------------------------------------------------------*/
-	/* Calculate the required size of the resultant texture */
-	/*------------------------------------------------------*/
-	if (rSize->w == 0 && rSize->h == 0)
-	{
-		if (neuik_Element_GetMinSize__TextEntry(te, rSize))
-		{
-			eNum = 3;
-			goto out;
-		}
-	}
-	else if (rSize->w < 0 || rSize->h < 0)
+	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize((NEUIK_Element)te, *rSize) != 0)
-		{
-			eNum = 5;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
+	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Select the correct entry config to use (pointer or internal)           */
 	/*------------------------------------------------------------------------*/
-	aCfg = te->cfgPtr;
-	if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
+	aCfg = te->cfg;  /* Fallback to internal config */
+	if (te->cfgPtr != NULL)
+	{
+		/* Switch to pointer config */
+		aCfg = te->cfgPtr;
+	}
 
 	/* extract the current fg/bg colors */
 	bgClr = &(aCfg->bgColor);
@@ -1149,7 +1114,9 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 					rect.x = textW;
 				}
 				te->cursorX = rect.x;
-				SDL_RenderDrawLine(te->textRend, rect.x, rect.y, rect.x, rect.y + rect.h); 
+				SDL_RenderDrawLine(te->textRend, 
+					rect.x, rect.y, 
+					rect.x, rect.y + rect.h); 
 			}
 
 			SDL_RenderPresent(te->textRend);
@@ -1163,13 +1130,44 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 	}
 
 	/*------------------------------------------------------------------------*/
+	/* Create a MaskMap an mark off the trasnparent pixels.                   */
+	/*------------------------------------------------------------------------*/
+	if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Mark off the rounded sections of the button within the MaskMap.        */
+	/*------------------------------------------------------------------------*/
+	/* upper border line */
+	neuik_MaskMap_MaskLine(maskMap, 
+		0,            0, 
+		rSize->w - 1, 0); 
+	/* left border line */
+	neuik_MaskMap_MaskLine(maskMap, 
+		0, 0, 
+		0, rSize->h - 1); 
+	/* right border line */
+	neuik_MaskMap_MaskLine(maskMap, 
+		rSize->w - 1, 0, 
+		rSize->w - 1, rSize->h - 1); 
+	/* lower border line */
+	neuik_MaskMap_MaskLine(maskMap, 
+		0,            rSize->h - 1, 
+		rSize->w - 1, rSize->h - 1);
+
+	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(te, xSurf))
+	if (neuik_Element_RedrawBackground(te, xSurf, rlMod, maskMap))
 	{
 		eNum = 8;
 		goto out;
 	}
+	rl = eBase->eSt.rLoc;
+
 	bgClr = &(aCfg->bgColor);
 
 	if (te->textTex != NULL)
@@ -1179,23 +1177,26 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 		if (textWFull < normWidth) 
 		{
 			TTF_SizeText(font, te->text, &textW, &textH);
+
+			rect.x = rl.x;
+			rect.y = rl.y + 1;
+			rect.w = textW + 1;
+			rect.h = rSize->h - 2;
+
 			switch (aCfg->textHJustify)
 			{
 				case NEUIK_HJUSTIFY_LEFT:
-					rect.x = 6;
+					rect.x += 6;
 					break;
 
 				case NEUIK_HJUSTIFY_CENTER:
-					rect.x = (int) ((float)(rSize->w - textW)/2.0);
+					rect.x += (int) ((float)(rSize->w - textW)/2.0);
 					break;
 
 				case NEUIK_HJUSTIFY_RIGHT:
-					rect.x = (int) (rSize->w - textW - 6);
+					rect.x += (int) (rSize->w - textW - 6);
 					break;
 			}
-			rect.y = 1;
-			rect.w = textW;
-			rect.h = rSize->h - 2;
 
 			// SDL_RenderCopy(rend, te->textTex, &srcRect, &rect);
 			SDL_RenderCopy(rend, te->textTex, NULL, &rect);
@@ -1203,8 +1204,9 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 		else
 		{
 			TTF_SizeText(font, te->text, &textW, &textH);
-			rect.x = 6;
-			rect.y = 1;
+
+			rect.x = rl.x + 6;
+			rect.y = rl.y + 1;
 			rect.w = normWidth;
 			rect.h = rSize->h - 2;
 
@@ -1225,84 +1227,78 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 
 		/* Draw the border in its selected way */
 
-		/*------------------------------------------------------------------------*/
-		/* Draw the border around the button.                                     */
-		/*------------------------------------------------------------------------*/
+		/*--------------------------------------------------------------------*/
+		/* Draw the border around the button.                                 */
+		/*--------------------------------------------------------------------*/
 		SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
 
 		/*------------------------*/
 		/* Outermost Border lines */
 		/*------------------------*/
 		/* upper border line */
-		SDL_RenderDrawLine(rend, 0, 0, rSize->w - 1, 0); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + 1,              rl.y, 
+			rl.x + (rSize->w - 2), rl.y); 
 		/* left border line */
-		SDL_RenderDrawLine(rend, 0, 0, 0, rSize->h - 1); 
+		SDL_RenderDrawLine(rend, 
+			rl.x, rl.y + 1, 
+			rl.x, rl.y + (rSize->h - 2));
 		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 1, 0, rSize->w - 1, rSize->h - 1); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + (rSize->w - 1), rl.y + 1, 
+			rl.x + (rSize->w - 1), rl.y + (rSize->h - 2));
 		/* lower border line */
-		SDL_RenderDrawLine(rend, 0, rSize->h - 1, rSize->w - 1, rSize->h - 1);
+		SDL_RenderDrawLine(rend, 
+			rl.x + 1,              rl.y + (rSize->h - 1), 
+			rl.x + (rSize->w - 2), rl.y + (rSize->h - 1));
 
 		/*---------------------*/
 		/* Middle Border lines */
 		/*---------------------*/
 		/* upper border line */
-		SDL_RenderDrawLine(rend, 1, 1, rSize->w - 2, 1); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + 1,              rl.y + 1, 
+			rl.x + (rSize->w - 2), rl.y + 1); 
 		/* left border line */
-		SDL_RenderDrawLine(rend, 1, 1, 1, rSize->h - 2); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + 1, rl.y + 1, 
+			rl.x + 1, rl.y + (rSize->h - 2));
 		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 2, 1, rSize->w - 2, rSize->h - 2); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + (rSize->w - 2), rl.y + 1, 
+			rl.x + (rSize->w - 2), rl.y + (rSize->h - 2)); 
 		/* lower border line */
-		SDL_RenderDrawLine(rend, 2, rSize->h - 2, rSize->w - 3, rSize->h - 2);
+		SDL_RenderDrawLine(rend, 
+			rl.x + 2,              rl.y + (rSize->h - 2), 
+			rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 
 		/*------------------------*/
 		/* Innermost Border lines */
 		/*------------------------*/
 		/* upper border line */
-		SDL_RenderDrawLine(rend, 2, 2, rSize->w - 3, 2); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + 2,              rl.y + 2, 
+			rl.x + (rSize->w - 3), rl.y + 2); 
 		/* left border line */
-		SDL_RenderDrawLine(rend, 2, 2, 2, rSize->h - 3); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + 2, rl.y + 2, 
+			rl.x + 2, rl.y + (rSize->h - 3));
 		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 3, 2, rSize->w - 3, rSize->h - 3); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + (rSize->w - 3), rl.y + 2, 
+			rl.x + (rSize->w - 3), rl.y + (rSize->h - 3));
 		/* lower border line */
-		SDL_RenderDrawLine(rend, 3, rSize->h - 3, rSize->w - 3, rSize->h - 3);
+		SDL_RenderDrawLine(rend, 
+			rl.x + 3,              rl.y + (rSize->h - 3), 
+			rl.x + (rSize->w - 3), rl.y + (rSize->h - 3));
 
-		SDL_RenderDrawPoint(rend, 3,            3);
-		SDL_RenderDrawPoint(rend, 3,            rSize->h - 4);
-		SDL_RenderDrawPoint(rend, rSize->w - 4, 3);
-		SDL_RenderDrawPoint(rend, rSize->w - 4, rSize->h - 4);
-
-		/*--------------------------------------------------------------------*/
-		/* Fill in the outermost pixels using a transparent color             */
-		/*--------------------------------------------------------------------*/
-		SDL_SetColorKey(surf, SDL_TRUE, 
-			SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-		SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
-
-		SDL_RenderDrawPoint(rend, 0,            0);
-		SDL_RenderDrawPoint(rend, 0,            rSize->h - 1);
-		SDL_RenderDrawPoint(rend, rSize->w - 1, 0);
-		SDL_RenderDrawPoint(rend, rSize->w - 1, rSize->h - 1);
+		SDL_RenderDrawPoint(rend, rl.x + 3,              rl.y + 3);
+		SDL_RenderDrawPoint(rend, rl.x + 3,              rl.y + (rSize->h - 4));
+		SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 4), rl.y + 3);
+		SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 4), rl.y + (rSize->h - 4));
 	}
 	else
 	{
-		/* Draw the border in its unselected way */
-
-		/*--------------------------------------------------------------------*/
-		/* Fill in the outermost pixels using a transparent color             */
-		/*--------------------------------------------------------------------*/
-		SDL_SetColorKey(surf, SDL_TRUE, 
-			SDL_MapRGB(surf->format, tClr.r, tClr.g, tClr.b));
-		SDL_SetRenderDrawColor(rend, tClr.r, tClr.g, tClr.b, 255);
-
-		/* upper border line */
-		SDL_RenderDrawLine(rend, 0, 0, rSize->w - 1, 0); 
-		/* left border line */
-		SDL_RenderDrawLine(rend, 0, 0, 0, rSize->h - 1); 
-		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 1, 0, rSize->w - 1, rSize->h - 1); 
-		/* lower border line */
-		SDL_RenderDrawLine(rend, 0, rSize->h - 1, rSize->w - 1, rSize->h - 1);
-
 		/*--------------------------------------------------------------------*/
 		/* Draw the border around the TextEntry.                              */
 		/*--------------------------------------------------------------------*/
@@ -1310,38 +1306,38 @@ SDL_Texture * neuik_Element_Render__TextEntry(
 		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
 		/* upper border line */
-		SDL_RenderDrawLine(rend, 1, 1, rSize->w - 2, 1); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + 1,              rl.y + 1, 
+			rl.x + (rSize->w - 2), rl.y + 1); 
 		/* left border line */
-		SDL_RenderDrawLine(rend, 1, 1, 1, rSize->h - 2); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + 1, rl.y + 1, 
+			rl.x + 1, rl.y + (rSize->h - 2));
 		/* right border line */
-		SDL_RenderDrawLine(rend, rSize->w - 2, 1, rSize->w - 2, rSize->h - 2); 
+		SDL_RenderDrawLine(rend, 
+			rl.x + (rSize->w - 2), rl.y + 1, 
+			rl.x + (rSize->w - 2), rl.y + (rSize->h - 2)); 
 
 		/* lower border line */
 		bClr = &(aCfg->borderColorDark);
 		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-		SDL_RenderDrawLine(rend, 2, rSize->h - 2, rSize->w - 3, rSize->h - 2);
+		SDL_RenderDrawLine(rend, 
+			rl.x + 2,              rl.y + (rSize->h - 2), 
+			rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 	}
-
-	/*------------------------------------------------------------------------*/
-	/* Copy the text onto the renderer and update it                          */
-	/*------------------------------------------------------------------------*/
-	SDL_RenderPresent(rend);
-	eBase->eSt.texture = SDL_CreateTextureFromSurface(xRend, surf);
-	if (eBase->eSt.texture == NULL)
-	{
-		eNum = 7;
-		goto out;
-	}
-	eBase->eSt.doRedraw = 0;
 out:
+	eBase->eSt.doRedraw = 0;
+
+	ConditionallyDestroyTexture(&tTex);
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
-	ConditionallyDestroyTexture(&tTex);
-
-	return eBase->eSt.texture;
+	return eNum;
 }
 
 
