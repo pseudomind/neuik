@@ -27,6 +27,7 @@
 #include "neuik_classes.h"
 
 extern int neuik__isInitialized;
+extern int neuik__Report_Debug;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -1195,10 +1196,13 @@ neuik_EventState neuik_Element_CaptureEvent__Transformer(
 		/* Apply the appropriate transformation(s) to the mouse event.        */
 		/*--------------------------------------------------------------------*/
 		evActive = &evTr;
-		printf("eLoc = [%d, %d]\n", eLoc.x, eLoc.y);
-		printf("eSz = [%d, %d]\n", eSz.w, eSz.h);
-		printf("evPos0 = [%d, %d]\n", evPos.x, evPos.y);
-
+		if (neuik__Report_Debug)
+		{
+			printf("eLoc = [%d, %d]\n", eLoc.x, eLoc.y);
+			printf("eSz = [%d, %d]\n", eSz.w, eSz.h);
+			printf("evPos0 = [%d, %d]\n", evPos.x, evPos.y);
+		}
+		
 		/*--------------------------------------------------------------------*/
 		/* Apply scaling transformation (if necessary).                       */
 		/*--------------------------------------------------------------------*/
@@ -1245,7 +1249,10 @@ neuik_EventState neuik_Element_CaptureEvent__Transformer(
 			evPos.x = eLoc.x + (int)((float)(eSz.w)*(yFrac));
 			evPos.y = eLoc.y + (int)((float)(eSz.h)*(1.0 - xFrac)); // correct
 
-			printf("evPosf = [%d, %d]\n", evPos.x, evPos.y);
+			if (neuik__Report_Debug)
+			{
+				printf("evPosf = [%d, %d]\n", evPos.x, evPos.y);
+			}
 		}
 		else if (
 			trans->rotation == -90.0  ||
@@ -1292,8 +1299,11 @@ neuik_EventState neuik_Element_CaptureEvent__Transformer(
 			eLoc = childEBase->eSt.rLoc;
 			eSz  = childEBase->eSt.rSize;
 
-			printf("childELoc = [%d, %d]\n", eLoc.x, eLoc.y);
-			printf("childESz = [%d, %d]\n", eSz.w, eSz.h);
+			if (neuik__Report_Debug)
+			{
+				printf("childELoc = [%d, %d]\n", eLoc.x, eLoc.y);
+				printf("childESz = [%d, %d]\n", eSz.w, eSz.h);
+			}
 
 			evCaputred = neuik_Element_CaptureEvent(elem, evActive);
 			if (evCaputred == NEUIK_EVENTSTATE_OBJECT_FREED)

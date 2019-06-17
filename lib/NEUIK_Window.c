@@ -33,6 +33,7 @@
 #include "neuik_classes.h"
 
 extern int neuik__isInitialized;
+extern int neuik__Report_Frametime;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -1607,15 +1608,21 @@ int NEUIK_Window_Redraw(
 		neuik_Element_StoreSizeAndLocation(w->elem, rSize, rLoc, rLoc);
 		if (doResize) neuik_Element_ForceRedraw(w->elem);
 
-		timeBeforeRedraw = SDL_GetTicks();
+		if (neuik__Report_Frametime)
+		{
+			timeBeforeRedraw = SDL_GetTicks();
+		}
 		if (neuik_Element_Render(w->elem, &rSize, NULL, w->rend, NULL))
 		{
 			eNum = 3;
 			goto out;
 		}
 
-		frameTime = SDL_GetTicks() - timeBeforeRedraw;
-		printf("NEUIK_Window_Redraw() : frameTime = %d ms\n", frameTime);
+		if (neuik__Report_Frametime)
+		{
+			frameTime = SDL_GetTicks() - timeBeforeRedraw;
+			printf("NEUIK_Window_Redraw() : frameTime = %d ms\n", frameTime);
+		}
 	}
 
 	/*------------------------------------------------------------------------*/

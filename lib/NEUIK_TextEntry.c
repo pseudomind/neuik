@@ -33,6 +33,8 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
+extern int neuik__Report_Debug;
+
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
 /*----------------------------------------------------------------------------*/
@@ -1214,8 +1216,11 @@ int neuik_Element_Render__TextEntry(
 			srcRect.y = 0;
 			srcRect.w = normWidth;
 			srcRect.h = textHFull;
-			printf("Redraw: panCursor = %d, cursorX = %d, normW = %d\n", 
-				te->panCursor, te->cursorX, normWidth);
+			if (neuik__Report_Debug)
+			{
+				printf("Redraw: panCursor = %d, cursorX = %d, normW = %d\n", 
+					te->panCursor, te->cursorX, normWidth);
+			}
 
 			SDL_RenderCopy(rend, te->textTex, &srcRect, &rect);
 		}

@@ -28,6 +28,7 @@
 #include "neuik_classes.h"
 
 extern int neuik__isInitialized;
+extern int neuik__Report_Debug;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -544,8 +545,10 @@ int neuik_Element_Render__Plot2D(
 		goto out;
 	}
 	dwg_rs = dwg_eBase->eSt.rSize;
-	printf("Drawing rs [w:%d, h:%d]\n", dwg_rs.w, dwg_rs.h);
-
+	if (neuik__Report_Debug)
+	{
+		printf("Drawing rs [w:%d, h:%d]\n", dwg_rs.w, dwg_rs.h);
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Draw in the labels for the y-axis/x-axis tic marks                     */

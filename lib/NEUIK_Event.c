@@ -22,6 +22,8 @@
 #include "NEUIK_Window.h"
 #include "NEUIK_Window_internal.h"
 
+extern int neuik__Report_About;
+
 /*----------------------------------------------------------------------------*/
 /* Typedef(s)                                                                 */
 /*----------------------------------------------------------------------------*/
@@ -196,6 +198,17 @@ void NEUIK_EventLoop(
 		if (killOnError) goto out;
 	}
 	
+	if (neuik__Report_About == 1)
+	{
+		neuik__Report_About = 2;
+		printf(
+			"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+			"| Developed using NEUIK (Nuclear Engineer's User Interface Kit) |\n"
+			"|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|\n"
+			"| NOTE: The NEUIK project was started in 2014 by Michael Leimon |\n"
+			"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+	}
+
 	for (;;) {
 		didRedraw = 0;
 		SDL_PumpEvents();

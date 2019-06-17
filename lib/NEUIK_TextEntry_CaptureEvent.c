@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,8 @@
 #include "NEUIK_platform.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
+
+extern int neuik__Report_Debug;
 
 static char * errMsgs[]  = {"",                                      // [0] no error
 	"FontSet_GetFont returned NULL."                                 // [1]
@@ -79,13 +81,19 @@ int neuik_TextEntry_UpdatePanCursor(
 	if (te->text == NULL)
 	{
 		te->panCursor = 0;
-		printf("case0;\n");
+		if (neuik__Report_Debug)
+		{
+			printf("case0;\n");
+		}
 		goto out;
 	}
 	if (te->text[0] == '\0') 
 	{
 		te->panCursor = 0;
-		printf("case1;\n");
+		if (neuik__Report_Debug)
+		{
+			printf("case1;\n");
+		}
 		goto out;
 	}
 
@@ -120,14 +128,20 @@ int neuik_TextEntry_UpdatePanCursor(
 	TTF_SizeText(font, te->text, &textW, &textH);
 	textW++;
 	normWidth = (eBase->eSt.rSize).w - 12; 
-	printf("textW: %d, normWidth %d, `%s`\n", textW, normWidth, te->text);
+	if (neuik__Report_Debug)
+	{
+		printf("textW: %d, normWidth %d, `%s`\n", textW, normWidth, te->text);
+	}
 	if (textW < normWidth) 
 	{
 		/*--------------------------------------------------------------------*/
 		/* The text doesn't completely fill the available space; don't pan.   */
 		/*--------------------------------------------------------------------*/
 		te->panCursor = 0;
-		printf("case2;\n");
+		if (neuik__Report_Debug)
+		{
+			printf("case2;\n");
+		}
 	}
 	else
 	{
@@ -160,14 +174,20 @@ int neuik_TextEntry_UpdatePanCursor(
 				{
 					te->panCursor = te->cursorX;
 				}
-				printf("case3;\n");
+				if (neuik__Report_Debug)
+				{
+					printf("case3;\n");
+				}
 				break;
 			case CURSORPAN_MOVE_FORWARD:
 				if (te->cursorX > te->panCursor + normWidth)
 				{
 					te->panCursor = (1 + te->cursorX) - normWidth;
 				}
-				printf("case4;\n");
+				if (neuik__Report_Debug)
+				{
+					printf("case4;\n");
+				}
 				break;
 			case CURSORPAN_TEXT_DELTETED:
 				if (textW - te->panCursor < normWidth)
@@ -179,7 +199,10 @@ int neuik_TextEntry_UpdatePanCursor(
 					/*--------------------------------------------------------*/
 					te->panCursor = textW - normWidth;
 				}
-				printf("case5;\n");
+				if (neuik__Report_Debug)
+				{
+					printf("case5;\n");
+				}
 				break;
 		}
 	}
@@ -189,7 +212,10 @@ out:
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 	}
 
-	printf("UpdatePanCursor: te->panCursor = %d\n", te->panCursor);
+	if (neuik__Report_Debug)
+	{
+		printf("UpdatePanCursor: te->panCursor = %d\n", te->panCursor);
+	}
 
 	return eNum;
 }

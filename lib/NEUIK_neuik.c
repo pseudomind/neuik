@@ -27,13 +27,17 @@ int           neuik__isInitialized = 0;
 neuik_SetID   neuik__SetID_NEUIK   = -1;
 int           neuik__AppNameSet    = 0;
 char          neuik__AppName[2048];
+int           neuik__Report_About = 0;
+int           neuik__Report_Debug = 0;
+int           neuik__Report_Frametime = 0;
 
 int NEUIK_Init()
 {
-	int           eNum  = 0;
-	int           rvErr = 0;
+	int           eNum   = 0;
+	int           rvErr  = 0;
+	char        * envVar = NULL;
 	static char   funcName[] = "NEUIK_Init";
-	static char * errMsgs[] = {"",          // [0] no error
+	static char * errMsgs[] = {"", // [0] no error
 		"Failed to Initialize SDL2.",       // [1]
 		"Failed to Initialize SDL2_ttf.",   // [2]
 		"Failed to Initialize SDL2_image.", // [3]
@@ -71,7 +75,8 @@ int NEUIK_Init()
 		/*--------------------------------------------------------------------*/
 		/* Register the "NEUIK" class set                                     */
 		/*--------------------------------------------------------------------*/
-		rvErr = neuik_RegisterClassSet("NEUIK", "Base NEUIK Object Set", &neuik__Set_NEUIK);
+		rvErr = neuik_RegisterClassSet(
+			"NEUIK", "Base NEUIK Object Set", &neuik__Set_NEUIK);
 		if (rvErr)
 		{
 			eNum = 4;
@@ -121,6 +126,17 @@ int NEUIK_Init()
 
 
 		neuik_RegisterClass_MaskMap();
+
+		/*--------------------------------------------------------------------*/
+		/* Check for diagnostic environment settings                          */
+		/*--------------------------------------------------------------------*/
+		envVar = getenv("NEUIK_REPORT_FRAMETIME");
+		if (envVar != NULL) neuik__Report_Frametime = 1;
+		envVar = getenv("NEUIK_REPORT_DEBUG");
+		if (envVar != NULL) neuik__Report_Debug = 1;
+		envVar = getenv("NEUIK_REPORT_ABOUT");
+		if (envVar != NULL) neuik__Report_About = 1;
+
 	}
 out:
 	if (eNum != 0)
