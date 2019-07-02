@@ -69,6 +69,36 @@ int
 			int             y2);
 
 int 
+	neuik_MaskMap_MaskRect(
+			neuik_MaskMap * map, 
+			int             x,
+			int             y,
+			int             w,
+			int             h);
+
+int 
+	neuik_MaskMap_UnmaskPoint(
+			neuik_MaskMap * map, 
+			int             x,
+			int             y);
+
+int 
+	neuik_MaskMap_UnmaskLine(
+			neuik_MaskMap * map, 
+			int             x1,
+			int             y1,
+			int             x2,
+			int             y2);
+
+int 
+	neuik_MaskMap_UnmaskRect(
+			neuik_MaskMap * map, 
+			int             x,
+			int             y,
+			int             w,
+			int             h);
+
+int 
 	neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 			neuik_MaskMap  * map, 
 			int              y,

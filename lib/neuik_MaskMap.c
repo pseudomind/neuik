@@ -517,21 +517,91 @@ out:
 }
 
 
-
-
 /*******************************************************************************
  *
- *  Name:          neuik_MaskMap_MaskLine
+ *  Name:          neuik_MaskMap_UnmaskPoint
  *
- *  Description:   Flag a line of points within the map as masked. Masked points
- *                 are used to identify portions of an image that should not be 
+ *  Description:   Flag a point within the map as unmasked. Masked points are
+ *                 used to identify portions of an image that should not be 
  *                 rendered.
  *
  *  Returns:       A non-zero value if there was an error.
  *
  ******************************************************************************/
-int neuik_MaskMap_MaskLine(
+int neuik_MaskMap_UnmaskPoint(
 	neuik_MaskMap * map, 
+	int             x,
+	int             y)
+{
+	int           pos  = 0; /* position of point within mapData */
+	int           eNum = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_MaskMap_UnmaskPoint";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `map` does not implement MaskMap class.", // [1]
+		"Argument `x` invalid;  value (<0) supplied.",      // [2]
+		"Argument `y` invalid; value (<0) supplied.",       // [3]
+		"Argument `x` invalid; exceeds mask bounds.",       // [4]
+		"Argument `y` invalid; exceeds mask bounds..",      // [5]
+	};
+
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (x < 0)
+	{
+		/* invalid x-value (<0) */
+		eNum = 2;
+		goto out;
+	}
+	else if (x >= map->sizeW)
+	{
+		/* x-value beyond bounds */
+		eNum = 4;
+		goto out;
+	}
+	if (y < 0)
+	{
+		/* invalid y-value */
+		eNum = 3;
+		goto out;
+	}
+	else if (y >= map->sizeH)
+	{
+		/* y-value beyond bounds */
+		eNum = 5;
+		goto out;
+	}
+
+
+	pos = map->sizeW*y + x;
+	map->mapData[pos] = 0;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_SetMaskLine
+ *
+ *  Description:   Set the mask setting for a line of points within the map. 
+ *                 Masked points are used to identify portions of an image that
+ *                 should not be rendered.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_SetMaskLine(
+	neuik_MaskMap * map, 
+	int             maskVal, /* 0 (unmaksed) or 1 (masked) */
 	int             x1,
 	int             y1,
 	int             x2,
@@ -548,22 +618,29 @@ int neuik_MaskMap_MaskLine(
 	double        dyInt = 0.0; /* dy resulting from a single loop interval */
 	double        hyp   = 0.0; /* length of the hypotenuse */
 	double        fCtr  = 0.0; /* float counter */
-	static char   funcName[] = "neuik_MaskMap_MaskLine";
+	static char   funcName[] = "neuik_MaskMap_SetMaskLine";
 	static char * errMsgs[]  = {"", // [0] no error
-		"Argument `map` does not implement MaskMap class.", // [1]
-		"Argument `x1` invalid; value (<0) supplied.",      // [2]
-		"Argument `y1` invalid; value (<0) supplied.",      // [3]
-		"Argument `x1` invalid; exceeds mask bounds.",      // [4]
-		"Argument `y1` invalid; exceeds mask bounds..",     // [5]
-		"Argument `x2` invalid; value (<0) supplied.",      // [6]
-		"Argument `y2` invalid; value (<0) supplied.",      // [7]
-		"Argument `x2` invalid; exceeds mask bounds.",      // [8]
-		"Argument `y2` invalid; exceeds mask bounds..",     // [9]
+		"Argument `map` does not implement MaskMap class.",  // [1]
+		"Argument `x1` invalid; value (<0) supplied.",       // [2]
+		"Argument `y1` invalid; value (<0) supplied.",       // [3]
+		"Argument `x1` invalid; exceeds mask bounds.",       // [4]
+		"Argument `y1` invalid; exceeds mask bounds..",      // [5]
+		"Argument `x2` invalid; value (<0) supplied.",       // [6]
+		"Argument `y2` invalid; value (<0) supplied.",       // [7]
+		"Argument `x2` invalid; exceeds mask bounds.",       // [8]
+		"Argument `y2` invalid; exceeds mask bounds..",      // [9]
+		"Argument `maskVal` invalid; value must be 0 or 1.", // [10]
 	};
 
 	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
 	{
 		eNum = 1;
+		goto out;
+	}
+
+	if (!(maskVal == 0 || maskVal == 1))
+	{
+		eNum = 10;
 		goto out;
 	}
 
@@ -695,6 +772,307 @@ out:
 	return eNum;
 }
 
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_MaskLine
+ *
+ *  Description:   Flag a line of points within the map as masked. Masked points
+ *                 are used to identify portions of an image that should not be 
+ *                 rendered.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_MaskLine(
+	neuik_MaskMap * map, 
+	int             x1,
+	int             y1,
+	int             x2,
+	int             y2)
+{
+	int           eNum  = 0;   /* which error to report (if any) */
+	static char   funcName[] = "neuik_MaskMap_MaskLine";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Failure in `neuik_MaskMap_SetMaskLine()`.", // [1]
+	};
+
+	if (neuik_MaskMap_SetMaskLine(map, 1, x1, y1, x2, y2))
+	{
+		eNum = 1;
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_UnmaskLine
+ *
+ *  Description:   Flag a line of points within the map as unmasked. Masked 
+ *                 points are used to identify portions of an image that should 
+ *                 not be rendered.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_UnmaskLine(
+	neuik_MaskMap * map, 
+	int             x1,
+	int             y1,
+	int             x2,
+	int             y2)
+{
+	int           eNum  = 0;   /* which error to report (if any) */
+	static char   funcName[] = "neuik_MaskMap_UnmaskLine";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Failure in `neuik_MaskMap_SetMaskLine()`.", // [1]
+	};
+
+	if (neuik_MaskMap_SetMaskLine(map, 0, x1, y1, x2, y2))
+	{
+		eNum = 1;
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_SetMaskRect
+ *
+ *  Description:   Set the mask setting for a rect of points within the map. 
+ *                 Masked points are used to identify portions of an image that
+ *                 should not be rendered.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_SetMaskRect(
+	neuik_MaskMap * map,
+	int             maskVal, /* 0 (unmaksed) or 1 (masked) */
+	int             x,
+	int             y,
+	int             w,
+	int             h)
+{
+	int           pos   = 0;   /* position of point within mapData */
+	int           eNum  = 0;   /* which error to report (if any) */
+	int           xCtr  = 0;
+	int           yCtr  = 0;
+	int           xf    = 0;   /* final x-position for the rect */
+	int           yf    = 0;   /* final y-position for the rect */
+	static char   funcName[] = "neuik_MaskMap_SetMaskRect";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `map` does not implement MaskMap class.",  // [1]
+		"Argument `x` invalid; value (<0) supplied.",        // [2]
+		"Argument `x` invalid; exceeds mask bounds.",        // [3]
+		"Argument `y` invalid; value (<0) supplied.",        // [4]
+		"Argument `y` invalid; exceeds mask bounds..",       // [5]
+		"Argument `w` invalid; value (<=0) supplied.",       // [6]
+		"Argument `h` invalid; value (<=0) supplied.",       // [7]
+		"Argument `maskVal` invalid; value must be 0 or 1.", // [8]
+	};
+
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (!(maskVal == 0 || maskVal == 1))
+	{
+		eNum = 8;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Check for coordinate argument input errors (invalid/out-of-bounds).    */
+	/*------------------------------------------------------------------------*/
+	/* Check the x,y values.                                                  */
+	/*------------------------------------------------------------------------*/
+	if (x < 0)
+	{
+		/* invalid x-value (<0) */
+		eNum = 2;
+		goto out;
+	}
+	else if (x >= map->sizeW)
+	{
+		/* x-value beyond bounds */
+		eNum = 3;
+		goto out;
+	}
+	if (y < 0)
+	{
+		/* invalid y-value */
+		eNum = 4;
+		goto out;
+	}
+	else if (y >= map->sizeH)
+	{
+		/* y-value beyond bounds */
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Check the w,h values.                                                  */
+	/*------------------------------------------------------------------------*/
+	if (w < 0)
+	{
+		/* invalid w-value (<0) */
+		eNum = 6;
+		goto out;
+	}
+	if (h < 0)
+	{
+		/* invalid h-value */
+		eNum = y;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the actual final bounds of the rect.                         */
+	/*------------------------------------------------------------------------*/
+	xf = x + w;
+	if (xf > map->sizeW)
+	{
+		xf = map->sizeW - 1;
+	}
+
+	yf = y + h;
+	if (yf > map->sizeH)
+	{
+		yf = map->sizeH - 1;
+	}
+
+	if (w == 0 && h == 0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This rect is actually just a point.                                */
+		/*--------------------------------------------------------------------*/
+		pos = map->sizeW*y + x;
+		map->mapData[pos] = maskVal;
+		goto out;
+	}
+	else if (w == 0 && h > 0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This rect is actually just a vertical line.                        */
+		/*--------------------------------------------------------------------*/
+		for (yCtr = y; yCtr <= yf; yCtr++)
+		{
+			pos = map->sizeW*yCtr + x;
+			map->mapData[pos] = maskVal;
+		}
+		goto out;
+	}
+	else if (w > 0 && h == 0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This rect is actually just a horizontal line.                      */
+		/*--------------------------------------------------------------------*/
+		for (xCtr = x; xCtr <= xf; xCtr++)
+		{
+			pos = map->sizeW*y + xCtr;
+			map->mapData[pos] = maskVal;
+		}
+		goto out;
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a proper rect (non-zero w & h).                            */
+		/*--------------------------------------------------------------------*/
+		for (yCtr = y; yCtr <= yf; yCtr++)
+		{
+			for (xCtr = x; xCtr <= xf; xCtr++)
+			{
+				pos = map->sizeW*yCtr + xCtr;
+				map->mapData[pos] = maskVal;
+			}
+		}
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_MaskRect
+ *
+ *  Description:   Flag a rect of points within the map as masked. Masked points
+ *                 are used to identify portions of an image that should not be 
+ *                 rendered.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_MaskRect(
+	neuik_MaskMap * map, 
+	int             x,
+	int             y,
+	int             w,
+	int             h)
+{
+	int           eNum  = 0;   /* which error to report (if any) */
+	static char   funcName[] = "neuik_MaskMap_MaskRect";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Failure in `neuik_MaskMap_SetMaskRect()`.", // [1]
+	};
+
+	if (neuik_MaskMap_SetMaskRect(map, 1, x, y, w, h))
+	{
+		eNum = 1;
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_UnmaskRect
+ *
+ *  Description:   Flag a rect of points within the map as unmasked. Masked 
+ *                 pointsare used to identify portions of an image that should 
+ *                 not be rendered.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_UnmaskRect(
+	neuik_MaskMap * map, 
+	int             x,
+	int             y,
+	int             w,
+	int             h)
+{
+	int           eNum  = 0;   /* which error to report (if any) */
+	static char   funcName[] = "neuik_MaskMap_UnmaskRect";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Failure in `neuik_MaskMap_SetMaskRect()`.", // [1]
+	};
+
+	if (neuik_MaskMap_SetMaskRect(map, 0, x, y, w, h))
+	{
+		eNum = 1;
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
 
 
 /*******************************************************************************
