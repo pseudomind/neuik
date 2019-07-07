@@ -48,6 +48,21 @@ int
 			unsigned int       yDim);
 
 int
+	NEUIK_GridLayout_GetElementAt(
+			NEUIK_GridLayout * grid,
+			unsigned int       xLoc,
+			unsigned int       yLoc,
+			NEUIK_Element    * elem);
+
+int
+	NEUIK_GridLayout_GetElementPos(
+			NEUIK_GridLayout * grid,
+			NEUIK_Element      elem,
+			int              * hasElem,
+			int              * xLoc,
+			int              * yLoc);
+
+int
 	NEUIK_GridLayout_SetElementAt(
 			NEUIK_GridLayout * grid,
 			unsigned int       xLoc,

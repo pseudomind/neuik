@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,7 @@ typedef enum {
 	NEUIK_CALLBACK_ON_HOVER,
 	NEUIK_CALLBACK_ON_MOUSE_ENTER,
 	NEUIK_CALLBACK_ON_MOUSE_LEAVE,
+	NEUIK_CALLBACK_ON_MOUSE_OVER,
 	NEUIK_CALLBACK_ON_SELECTED,
 	NEUIK_CALLBACK_ON_DESELECTED,
 	NEUIK_CALLBACK_ON_ACTIVATED,
@@ -62,13 +63,14 @@ typedef struct {
 	void  *  OnHover;       /*  4 */
 	void  *  OnMouseEnter;  /*  5 */
 	void  *  OnMouseLeave;  /*  6 */
-	void  *  OnSelected;    /*  7 */
-	void  *  OnDeselected;  /*  8 */
-	void  *  OnActivated;   /*  9 */
-	void  *  OnDeactivated; /* 10 */
-	void  *  OnTextChanged; /* 11 */
-	void  *  OnExpanded;    /* 12 */
-	void  *  OnCollapsed;   /* 13 */
+	void  *  OnMouseOver;   /*  7 */
+	void  *  OnSelected;    /*  8 */
+	void  *  OnDeselected;  /*  9 */
+	void  *  OnActivated;   /* 10 */
+	void  *  OnDeactivated; /* 11 */
+	void  *  OnTextChanged; /* 12 */
+	void  *  OnExpanded;    /* 13 */
+	void  *  OnCollapsed;   /* 14 */
 } NEUIK_CallbackTable;
 
 

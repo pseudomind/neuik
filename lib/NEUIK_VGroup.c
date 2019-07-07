@@ -558,6 +558,10 @@ int neuik_Element_GetMinSize__VGroup(
 
 	rSize->h = (int)(thisH);
 out:
+	if (elemsCfg != NULL)   free(elemsCfg);
+	if (elemsShown != NULL) free(elemsShown);
+	if (elemsMinSz != NULL) free(elemsMinSz);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);

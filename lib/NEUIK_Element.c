@@ -1047,6 +1047,7 @@ out:
 	if (imTex  != NULL) SDL_DestroyTexture(imTex);
 	if (cpTex  != NULL) SDL_DestroyTexture(cpTex);
 	if (cpRend != NULL) SDL_DestroyRenderer(cpRend);
+	if (imSurf != NULL) SDL_FreeSurface(imSurf);
 	if (cpSurf != NULL) SDL_FreeSurface(cpSurf);
 
 	if (eNum > 0)
@@ -1934,6 +1935,13 @@ int  neuik_Element_TriggerCallback(
 			if (eBase->eCT.OnMouseLeave) 
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnMouseLeave, eBase->eSt.window);
+			}
+			break;
+
+		case NEUIK_CALLBACK_ON_MOUSE_OVER:
+			if (eBase->eCT.OnMouseOver) 
+			{
+				NEUIK_Callback_Trigger(eBase->eCT.OnMouseOver, eBase->eSt.window);
 			}
 			break;
 

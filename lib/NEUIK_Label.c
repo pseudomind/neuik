@@ -849,6 +849,12 @@ int NEUIK_Label_Configure(
 
 	for (ctr = 0;; ctr++)
 	{
+		if (ctr > 0)
+		{
+			/* before starting */
+			set = va_arg(args, const char *);
+		}
+
 		isBool = 0;
 		name   = NULL;
 		value  = NULL;
@@ -1009,7 +1015,12 @@ int NEUIK_Label_Configure(
 					NEUIK_RaiseError(funcName, errMsgs[9]);
 					continue;
 				}
+				if (cfg->fgColor.r == clr.r &&
+					cfg->fgColor.g == clr.g &&
+					cfg->fgColor.b == clr.b &&
+					cfg->fgColor.a == clr.a) continue;
 
+				/* else: The previous setting was changed */
 				cfg->fgColor = clr;
 				doRedraw = 1;
 			}
@@ -1030,6 +1041,9 @@ int NEUIK_Label_Configure(
 					NEUIK_RaiseError(funcName, errMsgs[12]);
 					continue;
 				}
+				if (cfg->fontSize == fontSize) continue;
+
+				/* else: The previous setting was changed */
 				cfg->fontSize = fontSize;
 				doRedraw = 1;
 			}
@@ -1059,9 +1073,6 @@ int NEUIK_Label_Configure(
 				}
 			}
 		}
-
-		/* before starting */
-		set = va_arg(args, const char *);
 	}
 	va_end(args);
 out:

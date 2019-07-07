@@ -660,6 +660,169 @@ out:
 
 /*******************************************************************************
  *
+ *  Name:          NEUIK_GridLayout_GetElementAt
+ *
+ *  Description:   Return a pointer to the element stored within an x/y location
+ *                 of a GridLayout.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_GridLayout_GetElementAt(
+	NEUIK_GridLayout * grid,
+	unsigned int       xLoc,
+	unsigned int       yLoc,
+	NEUIK_Element    * elem)
+{
+	int                 eNum       = 0;    /* which error to report (if any) */
+	int                 offset     = 0;
+	NEUIK_Container   * cBase      = NULL;
+	static char         funcName[] = "NEUIK_GridLayout_GetElementAt";
+	static char       * errMsgs[]  = {"",                                // [0] no error
+		"Argument `grid` is not of GridLayout class.",                   // [1]
+		"Argument `grid` caused `neuik_Object_GetClassObject` to fail.", // [2]
+		"Output Argument `elem` is NULL.",                               // [3]
+		"Argument `xLoc` is beyond specified `xDim` of GridLayout.",     // [4]
+		"Argument `yLoc` is beyond specified `yDim` of GridLayout.",     // [5]
+	};
+
+	if (!neuik_Object_IsClass(grid, neuik__Class_GridLayout))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (neuik_Object_GetClassObject(grid, neuik__Class_Container, (void**)&cBase))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (elem == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Check that specified location is within GridLayout bounds.             */
+	/*------------------------------------------------------------------------*/
+	if (xLoc >= grid->xDim)
+	{
+		eNum = 4;
+		goto out;
+	}
+	if (yLoc >= grid->yDim)
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	offset = xLoc + yLoc*(grid->xDim);
+	*elem = cBase->elems[offset];
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_GridLayout_GetElementPos
+ *
+ *  Description:   Return the x/y location corresponding to where the element 
+ *                 is stored within a GridLayout.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int	NEUIK_GridLayout_GetElementPos(
+	NEUIK_GridLayout * grid,
+	NEUIK_Element      elem,
+	int              * hasElem,
+	int              * xLoc,
+	int              * yLoc)
+{
+	int                 eNum       = 0;    /* which error to report (if any) */
+	int                 ctr        = 0;
+	int                 nAlloc     = 0;
+	NEUIK_Container   * cBase      = NULL;
+	static char         funcName[] = "NEUIK_GridLayout_GetElementPos";
+	static char       * errMsgs[]  = {"",                                // [0] no error
+		"Argument `grid` is not of GridLayout class.",                   // [1]
+		"Argument `grid` caused `neuik_Object_GetClassObject` to fail.", // [2]
+		"Argument `elem` is NULL.",                                      // [3]
+		"Output Argument `hasElem` is NULL.",                            // [4]
+		"Output Argument `xLoc` is NULL.",                               // [5]
+		"Output Argument `yLoc` is NULL.",                               // [6]
+	};
+
+	if (!neuik_Object_IsClass(grid, neuik__Class_GridLayout))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (neuik_Object_GetClassObject(grid, neuik__Class_Container, (void**)&cBase))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (elem == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+	if (hasElem == NULL)
+	{
+		eNum = 4;
+		goto out;
+	}
+	if (xLoc == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (yLoc == NULL)
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set a default set of values for unlocated elements.                    */
+	/*------------------------------------------------------------------------*/
+	*hasElem = 0;
+	*xLoc    = 0;
+	*yLoc    = 0;
+
+	nAlloc = grid->xDim*grid->yDim;
+
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		if (cBase->elems[ctr] == elem)
+		{
+			*hasElem = 1;
+			*xLoc = ctr % grid->xDim;
+			*yLoc = (ctr - (*xLoc)) / grid->xDim;
+		}
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+
+/*******************************************************************************
+ *
  *  Name:          NEUIK_GridLayout_SetElementAt
  *
  *  Description:   Set the element stored within an x/y location of a 

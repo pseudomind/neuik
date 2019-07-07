@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -48,6 +48,7 @@ NEUIK_CallbackTable NEUIK_NewCallbackTable()
 	cbt.OnHover       = NULL;
 	cbt.OnMouseEnter  = NULL;
 	cbt.OnMouseLeave  = NULL;
+	cbt.OnMouseOver   = NULL;
 	cbt.OnSelected    = NULL;
 	cbt.OnDeselected  = NULL;
 	cbt.OnActivated   = NULL;
