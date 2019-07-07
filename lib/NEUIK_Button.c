@@ -505,6 +505,40 @@ int NEUIK_Button_SetText(
 	}
 
 	/*------------------------------------------------------------------------*/
+	/* Check first if the button already contained the desired text.          */
+	/*------------------------------------------------------------------------*/
+	if (btn->text != NULL)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Button currently contains text; check if new text is the same.     */
+		/*--------------------------------------------------------------------*/
+		if (text != NULL)
+		{
+			if (!strcmp(btn->text, text))
+			{
+				/* no change in button text; return */
+				goto out;
+			}
+		}
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* Button currently contains no text; check if new text is also empty */
+		/*--------------------------------------------------------------------*/
+		if (text == NULL)
+		{
+			/* no change in button text; return */
+			goto out;
+		}
+		else if (text[0] == '\0')
+		{
+			/* no change in button text; return */
+			goto out;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
 	/* Conditionally free button text before setting the new contents         */
 	/*------------------------------------------------------------------------*/
 	if (btn->text != NULL) {
