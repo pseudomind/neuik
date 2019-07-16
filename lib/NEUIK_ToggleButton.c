@@ -41,7 +41,7 @@ int neuik_Element_GetMinSize__ToggleButton(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ToggleButton(
 	NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__ToggleButton(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -493,10 +493,13 @@ int NEUIK_ToggleButton_SetText(
 {
 	size_t         sLen = 1;
 	int            eNum = 0; /* which error to report (if any) */
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	static char    funcName[] = "NEUIK_ToggleButton_SetText";
-	static char  * errMsgs[] = {"",               // [0] no error
-		"Argument `btn` is not of Button class.", // [1]
-		"Failure to allocate memory.",            // [2]
+	static char  * errMsgs[] = {"",                         // [0] no error
+		"Argument `btn` is not of Button class.",           // [1]
+		"Failure to allocate memory.",                      // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(btn, neuik__Class_ToggleButton))
@@ -570,7 +573,12 @@ int NEUIK_ToggleButton_SetText(
 		strcpy(btn->text, text);
 	}
 
-	neuik_Element_RequestRedraw((NEUIK_Element)btn);
+	if (neuik_Element_GetSizeAndLocation(btn, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(btn, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -668,6 +676,8 @@ int NEUIK_ToggleButton_Configure(
 	int                   typeMixup;
 	int                   fontSize;
 	char                  buf[4096];
+	RenderSize            rSize;
+	RenderLoc             rLoc;
 	va_list               args;
 	char                * strPtr    = NULL;
 	char                * name      = NULL;
@@ -712,6 +722,7 @@ int NEUIK_ToggleButton_Configure(
 		"FontSize value is invalid; must be int.",                         // [12]
 		"BoolType name used as ValueType, skipping.",                      // [13]
 		"NamedSet.name type unknown, skipping.",                           // [14]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",                // [15]
 	};
 
 	if (!neuik_Object_IsClass(tbtn, neuik__Class_ToggleButton))
@@ -1005,7 +1016,15 @@ out:
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
-	if (doRedraw) neuik_Element_RequestRedraw(tbtn);
+	if (doRedraw)
+	{
+		if (neuik_Element_GetSizeAndLocation(tbtn, &rSize, &rLoc))
+		{
+			eNum = 15;
+			goto out;
+		}
+		neuik_Element_RequestRedraw(tbtn, rLoc, rSize);
+	}
 
 	return eNum;
 }
@@ -1026,7 +1045,8 @@ int neuik_Element_Render__ToggleButton(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                        eNum       = 0;    /* which error to report (if any) */
 	int                        textW      = 0;
@@ -1070,6 +1090,13 @@ int neuik_Element_Render__ToggleButton(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -1240,7 +1267,7 @@ int neuik_Element_Render__ToggleButton(
 		SDL_RenderCopy(rend, tTex, NULL, &rect);
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
@@ -1269,6 +1296,8 @@ neuik_EventState neuik_Element_CaptureEvent__ToggleButton(
 	SDL_Event     * ev)
 {
 	neuik_EventState       evCaptured  = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
 	SDL_Event            * e;
 	SDL_MouseMotionEvent * mouseMotEv;
 	SDL_MouseButtonEvent * mouseButEv;
@@ -1308,7 +1337,10 @@ neuik_EventState neuik_Element_CaptureEvent__ToggleButton(
 				btn->wasSelected = 1;
 				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 				neuik_Window_TakeFocus(eBase->eSt.window, btn);
-				neuik_Element_RequestRedraw(btn);
+
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(btn, rLoc, rSize);
 				neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_CLICK);
 				if (!neuik_Object_IsNEUIKObject_NoError(btn))
 				{
@@ -1392,7 +1424,9 @@ neuik_EventState neuik_Element_CaptureEvent__ToggleButton(
 
 			if (btn->wasSelected != btn->selected)
 			{
-				neuik_Element_RequestRedraw(btn);
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(btn, rLoc, rSize);
 			}
 			btn->wasSelected = btn->selected;
 			evCaptured = NEUIK_EVENTSTATE_CAPTURED;

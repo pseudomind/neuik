@@ -38,7 +38,7 @@ int neuik_Object_Free__ListRow(void * rowPtr);
 int neuik_Element_GetMinSize__ListRow(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ListRow(NEUIK_Element rowElem, SDL_Event * ev);
 int neuik_Element_Render__ListRow(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 void neuik_Element_Defocus__ListRow(NEUIK_Element rowElem);
 
 /*----------------------------------------------------------------------------*/
@@ -334,11 +334,14 @@ int NEUIK_ListRow_SetSelected(
 	NEUIK_ListRow  * row,
 	int              isSelected)
 {
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	int            eNum       = 0;    /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_ListRow_SetSelected";
 	static char  * errMsgs[]  = {"",                            // [0] no error
 		"Argument `row` is not of ListRow class.",              // [1]
 		"Argument `isSelected` is invalid may be zero or one.", // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",     // [3]
 	};
 
 	if (!neuik_Object_IsClass(row, neuik__Class_ListRow))
@@ -369,7 +372,13 @@ int NEUIK_ListRow_SetSelected(
 		row->wasSelected = 0;
 		neuik_Element_TriggerCallback(row, NEUIK_CALLBACK_ON_DESELECTED);
 	}
-	neuik_Element_RequestRedraw(row);
+
+	if (neuik_Element_GetSizeAndLocation(row, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(row, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -636,7 +645,8 @@ int neuik_Element_Render__ListRow(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	RenderSize            rs;
 	RenderLoc             rl         = {0, 0};
@@ -737,12 +747,15 @@ int neuik_Element_Render__ListRow(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(row, xSurf, rlMod, NULL))
+	if (!mock)
 	{
-		eNum = 10;
-		goto out;
+		if (neuik_Element_RedrawBackground(row, xSurf, rlMod, NULL))
+		{
+			eNum = 10;
+			goto out;
+		}
 	}
-
+	
 	/*------------------------------------------------------------------------*/
 	/* Draw the UI elements into the ListRow                                  */
 	/*------------------------------------------------------------------------*/
@@ -892,7 +905,7 @@ int neuik_Element_Render__ListRow(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
+			if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
 			{
 				eNum = 5;
 				goto out;
@@ -902,7 +915,7 @@ int neuik_Element_Render__ListRow(
 		}
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	if (eNum > 0)
 	{
@@ -927,6 +940,8 @@ neuik_EventState neuik_Element_CaptureEvent__ListRow(
 	SDL_Event     * ev)
 {
 	int                    wasSelected = 0;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
 	neuik_EventState       evCaputred  = NEUIK_EVENTSTATE_NOT_CAPTURED;
 	RenderLoc              eLoc;
 	RenderSize             eSz;
@@ -1007,7 +1022,10 @@ neuik_EventState neuik_Element_CaptureEvent__ListRow(
 						goto out;
 					}
 				} 
-				neuik_Element_RequestRedraw(row);
+
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(row, rLoc, rSize);
 				goto out;
 			}
 		}
@@ -1035,7 +1053,10 @@ neuik_EventState neuik_Element_CaptureEvent__ListRow(
 			}
 			row->clickOrigin = 0;
 			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
-			neuik_Element_RequestRedraw(row);
+
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(row, rLoc, rSize);
 			goto out;
 		}
 		break;
@@ -1085,6 +1106,8 @@ void neuik_Element_Defocus__ListRow(
 	NEUIK_Element   rowElem)
 {
 	NEUIK_ListRow * row = NULL;
+	RenderSize   rSize  = {0, 0};
+	RenderLoc    rLoc   = {0, 0};
 
 	/*------------------------------------------------------------------------*/
 	/* Check for problems before proceding                                    */
@@ -1098,7 +1121,13 @@ void neuik_Element_Defocus__ListRow(
 		row->selected    = 0;
 		row->wasSelected = 0;
 		neuik_Element_TriggerCallback(row, NEUIK_CALLBACK_ON_DESELECTED);
-		neuik_Element_RequestRedraw(row);
+
+		if (neuik_Element_GetSizeAndLocation(row, &rSize, &rLoc))
+		{
+			return;
+		}
+
+		neuik_Element_RequestRedraw(row, rLoc, rSize);
 	}
 	else
 	{

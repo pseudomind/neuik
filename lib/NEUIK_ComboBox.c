@@ -38,7 +38,7 @@ int neuik_Object_Free__ComboBox(void * cbPtr);
 int neuik_Element_GetMinSize__ComboBox(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ComboBox(NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__ComboBox(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -488,12 +488,15 @@ int NEUIK_ComboBox_SetText(
 	NEUIK_ComboBox * cb,
 	const char   * text)
 {
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	size_t         sLen = 1;
 	int            eNum = 0; /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_ComboBox_SetText";
-	static char  * errMsgs[] = {"",                // [0] no error
-		"Argument `cb` is not of ComboBox class.", // [1]
-		"Failure to allocate memory.",             // [2]
+	static char  * errMsgs[] = {"",                         // [0] no error
+		"Argument `cb` is not of ComboBox class.",          // [1]
+		"Failure to allocate memory.",                      // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(cb, neuik__Class_ComboBox))
@@ -533,7 +536,12 @@ int NEUIK_ComboBox_SetText(
 		strcpy(cb->aEntry, text);
 	}
 
-	neuik_Element_RequestRedraw(cb);
+	if (neuik_Element_GetSizeAndLocation(cb, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(cb, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -606,7 +614,8 @@ int neuik_Element_Render__ComboBox(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                    eNum       = 0;    /* which error to report (if any) */
 	int                    textW      = 0;
@@ -652,6 +661,13 @@ int neuik_Element_Render__ComboBox(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -832,7 +848,7 @@ int neuik_Element_Render__ComboBox(
 		SDL_RenderCopy(rend, tTex, NULL, &rect);
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
@@ -861,6 +877,8 @@ neuik_EventState neuik_Element_CaptureEvent__ComboBox(
 	SDL_Event     * ev)
 {
 	neuik_EventState       evCaputred = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
 	SDL_Event            * e;
 	NEUIK_ComboBox       * cb         = NULL;
 	NEUIK_ElementBase    * eBase      = NULL;
@@ -904,7 +922,9 @@ neuik_EventState neuik_Element_CaptureEvent__ComboBox(
 					goto out;
 				}
 
-				neuik_Element_RequestRedraw(cb);
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(cb, rLoc, rSize);
 				goto out;
 			}
 		}
@@ -959,7 +979,10 @@ neuik_EventState neuik_Element_CaptureEvent__ComboBox(
 			cb->wasSelected       = 0;
 			cb->clickOrigin       = 0;
 			evCaputred            = NEUIK_EVENTSTATE_CAPTURED;
-			neuik_Element_RequestRedraw((NEUIK_Element)cb);
+
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(cb, rLoc, rSize);
 			goto out;
 		}
 		break;
@@ -988,7 +1011,9 @@ neuik_EventState neuik_Element_CaptureEvent__ComboBox(
 
 			if (cb->wasSelected != cb->selected)
 			{
-				neuik_Element_RequestRedraw(cb);
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(cb, rLoc, rSize);
 			}
 			cb->wasSelected = cb->selected;
 			evCaputred      = NEUIK_EVENTSTATE_CAPTURED;

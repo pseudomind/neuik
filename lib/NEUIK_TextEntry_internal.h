@@ -44,7 +44,7 @@ neuik_EventState
 		NEUIK_Element, SDL_Event*);
 int 
 	neuik_Element_Render__TextEntry(
-		NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+		NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 void 
 	neuik_Element_Defocus__TextEntry(
 		NEUIK_Element);

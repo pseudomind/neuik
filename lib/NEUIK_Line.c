@@ -35,7 +35,7 @@ int neuik_Object_Free__Line(void *);
 
 int neuik_Element_GetMinSize__Line(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Line(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -450,7 +450,8 @@ int neuik_Element_Render__Line(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                 eNum       = 0; /* which error to report (if any) */
 	const NEUIK_Color * lClr       = NULL;
@@ -485,6 +486,13 @@ int neuik_Element_Render__Line(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -550,7 +558,7 @@ int neuik_Element_Render__Line(
 	}
 
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	if (eNum > 0)
 	{
@@ -575,10 +583,13 @@ int NEUIK_Line_SetThickness(
 	int           px)
 {
 	int            eNum       = 0;    /* which error to report (if any) */
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	static char    funcName[] = "NEUIK_Line_SetThickness";
-	static char  * errMsgs[]  = {"",             // [0] no error
-		"Argument `line` is not of Line class.", // [1]
-		"Argument `px` can not be negative.",    // [2]
+	static char  * errMsgs[]  = {"",                        // [0] no error
+		"Argument `line` is not of Line class.",            // [1]
+		"Argument `px` can not be negative.",               // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(line, neuik__Class_Line))
@@ -598,8 +609,12 @@ int NEUIK_Line_SetThickness(
 	if (px == line->thickness) goto out;
 
 	line->thickness = px;
-	neuik_Element_RequestRedraw(line);
-
+	if (neuik_Element_GetSizeAndLocation(line, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(line, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{

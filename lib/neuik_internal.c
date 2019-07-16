@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -739,7 +739,7 @@ int	neuik_Object_ImplementsClass_NoEror(
 	neuik_Class       * sClass     = NULL; // superClass of a class
 	neuik_Object_Base * objBase    = NULL;
 
-	if (!neuik_Object_IsNEUIKObject(objPtr))
+	if (!neuik_Object_IsNEUIKObject_NoError(objPtr))
 	{
 		impClass = 0;
 		goto out;
@@ -851,7 +851,7 @@ int	neuik_Object_IsClass_NoErr(
 	neuik_Object      * nObj    = NULL;
 	neuik_Object_Base * objBase = NULL;
 
-	if (!neuik_Object_IsNEUIKObject(objPtr)) return 0;
+	if (!neuik_Object_IsNEUIKObject_NoError(objPtr)) return 0;
 
 	objBase = (neuik_Object_Base*)(objPtr);
 	nObj = &(objBase->object);

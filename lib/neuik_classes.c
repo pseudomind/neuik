@@ -68,3 +68,4 @@ neuik_Class * neuik__Class_MaskMap            = NULL;
 neuik_VirtualFunc neuik_Element_vfunc_CaptureEvent     = NULL;
 neuik_VirtualFunc neuik_Element_vfunc_IsShown          = NULL;
 neuik_VirtualFunc neuik_Element_vfunc_SetWindowPointer = NULL;
+neuik_VirtualFunc neuik_Element_vfunc_RequestRedraw    = NULL;

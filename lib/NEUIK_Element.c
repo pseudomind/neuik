@@ -26,8 +26,10 @@
 #include "NEUIK_structs_basic.h"
 #include "NEUIK_Event.h"
 #include "NEUIK_Window.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Element.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Container.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
@@ -354,7 +356,11 @@ int NEUIK_Element_Configure(
 	int                   isBool;
 	int                   boolVal    = 0;
 	int                   doRedraw   = 0;
+	int                   fullRedraw = 0;
+	int                   intVal     = 0;
 	int                   typeMixup;
+	RenderSize            rSize;
+	RenderLoc             rLoc;
 	va_list               args;
 	char                * strPtr     = NULL;
 	char                * name       = NULL;
@@ -404,6 +410,7 @@ int NEUIK_Element_Configure(
 		"Invalid `name=value` string.",                                  // [10]
 		"ValueType name used as BoolType, skipping.",                    // [11]
 		"BoolType name used as ValueType, skipping.",                    // [12]
+		"Failure in `neuik_Window_RequestFullRedraw()`.",                // [13]
 	};
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -486,24 +493,42 @@ int NEUIK_Element_Configure(
 		{
 			if (!strcmp("VFill", name))
 			{
-				eCfg->VFill = boolVal;
-				doRedraw = 1;
+				if (eCfg->VFill != boolVal)
+				{
+					eCfg->VFill = boolVal;
+					doRedraw = 1;
+				}
 			}
 			else if (!strcmp("HFill", name))
 			{
-				eCfg->HFill = boolVal;
-				doRedraw = 1;
+				if (eCfg->HFill != boolVal)
+				{
+					eCfg->HFill = boolVal;
+					doRedraw = 1;
+				}
 			}
 			else if (!strcmp("FillAll", name))
 			{
-				eCfg->HFill = boolVal;
-				eCfg->VFill = boolVal;
-				doRedraw = 1;
+				if (eCfg->HFill != boolVal || eCfg->VFill != boolVal)
+				{
+					eCfg->HFill = boolVal;
+					eCfg->VFill = boolVal;
+					doRedraw = 1;
+				}
 			}
 			else if (!strcmp("Show", name))
 			{
-				eCfg->Show = boolVal;
-				doRedraw = 1;
+				if (eCfg->Show != boolVal)
+				{
+					eCfg->Show = boolVal;
+					doRedraw   = 1;
+					/*--------------------------------------------------------*/
+					/* Showing/hiding elements can result in drastic changes  */
+					/* to locations and exactly how things must be redrawn.   */
+					/* For now the safest thing to do is a complete redraw.   */
+					/*--------------------------------------------------------*/
+					fullRedraw = 1;
+				}
 			}
 			else
 			{
@@ -555,23 +580,35 @@ int NEUIK_Element_Configure(
 			{
 				if (!strcmp("left", value))
 				{
-					eCfg->HJustify = NEUIK_HJUSTIFY_LEFT;
-					doRedraw = 1;
+					if (eCfg->HJustify != NEUIK_HJUSTIFY_LEFT)
+					{
+						eCfg->HJustify = NEUIK_HJUSTIFY_LEFT;
+						doRedraw = 1;
+					}
 				}
 				else if (!strcmp("center", value))
 				{
-					eCfg->HJustify = NEUIK_HJUSTIFY_CENTER;
-					doRedraw = 1;
+					if (eCfg->HJustify != NEUIK_HJUSTIFY_CENTER)
+					{
+						eCfg->HJustify = NEUIK_HJUSTIFY_CENTER;
+						doRedraw = 1;
+					}
 				}
 				else if (!strcmp("right", value))
 				{
-					eCfg->HJustify = NEUIK_HJUSTIFY_RIGHT;
-					doRedraw = 1;
+					if (eCfg->HJustify != NEUIK_HJUSTIFY_RIGHT)
+					{
+						eCfg->HJustify = NEUIK_HJUSTIFY_RIGHT;
+						doRedraw = 1;
+					}
 				}
 				else if (!strcmp("default", value))
 				{
-					eCfg->HJustify = NEUIK_HJUSTIFY_DEFAULT;
-					doRedraw = 1;
+					if (eCfg->HJustify != NEUIK_HJUSTIFY_DEFAULT)
+					{
+						eCfg->HJustify = NEUIK_HJUSTIFY_DEFAULT;
+						doRedraw = 1;
+					}
 				}
 				else 
 				{
@@ -582,23 +619,35 @@ int NEUIK_Element_Configure(
 			{
 				if (!strcmp("top", value))
 				{
-					eCfg->VJustify = NEUIK_VJUSTIFY_TOP;
-					doRedraw = 1;
+					if (eCfg->VJustify != NEUIK_VJUSTIFY_TOP)
+					{
+						eCfg->VJustify = NEUIK_VJUSTIFY_TOP;
+						doRedraw = 1;
+					}
 				}
 				else if (!strcmp("center", value))
 				{
-					eCfg->VJustify = NEUIK_VJUSTIFY_CENTER;
-					doRedraw = 1;
+					if (eCfg->VJustify != NEUIK_VJUSTIFY_CENTER)
+					{
+						eCfg->VJustify = NEUIK_VJUSTIFY_CENTER;
+						doRedraw = 1;
+					}
 				}
 				else if (!strcmp("bottom", value))
 				{
-					eCfg->VJustify = NEUIK_VJUSTIFY_BOTTOM;
-					doRedraw = 1;
+					if (eCfg->VJustify != NEUIK_VJUSTIFY_BOTTOM)
+					{
+						eCfg->VJustify = NEUIK_VJUSTIFY_BOTTOM;
+						doRedraw = 1;
+					}
 				}
 				else if (!strcmp("default", value))
 				{
-					eCfg->VJustify = NEUIK_VJUSTIFY_DEFAULT;
-					doRedraw = 1;
+					if (eCfg->VJustify != NEUIK_VJUSTIFY_DEFAULT)
+					{
+						eCfg->VJustify = NEUIK_VJUSTIFY_DEFAULT;
+						doRedraw = 1;
+					}
 				}
 				else 
 				{
@@ -607,31 +656,55 @@ int NEUIK_Element_Configure(
 			}
 			else if (!strcmp("PadLeft", name))
 			{
-				eCfg->PadLeft = atoi(value);
-				doRedraw = 1;
+				intVal = atoi(value);
+				if (eCfg->PadLeft != intVal)
+				{
+					eCfg->PadLeft = intVal;
+					doRedraw = 1;
+				}
 			}
 			else if (!strcmp("PadRight", name))
 			{
-				eCfg->PadRight = atoi(value);
-				doRedraw = 1;
+				intVal = atoi(value);
+				if (eCfg->PadRight != intVal)
+				{
+					eCfg->PadRight = intVal;
+					doRedraw = 1;
+				}
 			}
 			else if (!strcmp("PadTop", name))
 			{
-				eCfg->PadTop = atoi(value);
-				doRedraw = 1;
+				intVal = atoi(value);
+				if (eCfg->PadTop != intVal)
+				{
+					eCfg->PadTop = intVal;
+					doRedraw = 1;
+				}
 			}
 			else if (!strcmp("PadBottom", name))
 			{
-				eCfg->PadBottom = atoi(value);
-				doRedraw = 1;
+				intVal = atoi(value);
+				if (eCfg->PadBottom != intVal)
+				{
+					eCfg->PadBottom = intVal;
+					doRedraw = 1;
+				}
 			}
 			else if (!strcmp("PadAll", name))
 			{
-				eCfg->PadLeft   = atoi(value);
-				eCfg->PadRight  = eCfg->PadLeft;
-				eCfg->PadTop    = eCfg->PadLeft;
-				eCfg->PadBottom = eCfg->PadLeft;
-				doRedraw = 1;
+				intVal = atoi(value);
+				if (eCfg->PadLeft   != intVal ||
+					eCfg->PadRight  != intVal ||
+					eCfg->PadTop    != intVal ||
+					eCfg->PadBottom != intVal)
+				{
+					eCfg->PadLeft   = intVal;
+					eCfg->PadRight  = intVal;
+					eCfg->PadTop    = intVal;
+					eCfg->PadBottom = intVal;
+					doRedraw = 1;
+				}
+
 			}
 			else
 			{
@@ -665,7 +738,19 @@ int NEUIK_Element_Configure(
 	}
 	va_end(args);
 
-	if (doRedraw) neuik_Element_RequestRedraw(elem);
+	if (doRedraw)
+	{
+		if (fullRedraw)
+		{
+			if (neuik_Window_RequestFullRedraw((NEUIK_Window*)eBase->eSt.window))
+			{
+				NEUIK_RaiseError(funcName, errMsgs[13]);
+			}
+		}
+		rSize = eBase->eSt.rSize;
+		rLoc  = eBase->eSt.rLoc;
+		neuik_Element_RequestRedraw(elem, rLoc, rSize);
+	}
 
 	return 0;
 }
@@ -750,6 +835,7 @@ int neuik_Element_GetLocation(
 	static char          funcName[] = "neuik_Element_GetLocation";
 	static char        * errMsgs[] = {"",                                // [0] no error
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Output argument `rLoc` is NULL.",                               // [2]
 	};
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -757,8 +843,91 @@ int neuik_Element_GetLocation(
 		eNum = 1;
 		goto out;
 	}
+	if (rLoc == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
 
 	(*rLoc) = eBase->eSt.rLoc;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+int neuik_Element_GetSize(
+	NEUIK_Element   elem, 
+	RenderSize    * rSize)
+{
+	int                  eNum      = 0;
+	NEUIK_ElementBase  * eBase     = NULL;
+	static char          funcName[] = "neuik_Element_GetSize";
+	static char        * errMsgs[] = {"",                                // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Output argument `rSize` is NULL.",                              // [2]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (rSize == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	(*rSize) = eBase->eSt.rSize;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+int neuik_Element_GetSizeAndLocation(
+	NEUIK_Element   elem, 
+	RenderSize    * rSize,
+	RenderLoc     * rLoc)
+{
+	int                  eNum      = 0;
+	NEUIK_ElementBase  * eBase     = NULL;
+	static char          funcName[] = "neuik_Element_GetSizeAndLocation";
+	static char        * errMsgs[] = {"",                                // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Output argument `rSize` is NULL.",                              // [2]
+		"Output argument `rLoc` is NULL.",                               // [3]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (rSize == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (rLoc == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	(*rSize) = eBase->eSt.rSize;
+	(*rLoc)  = eBase->eSt.rLoc;
 out:
 	if (eNum > 0)
 	{
@@ -776,10 +945,11 @@ int
 
 int neuik_Element_Render(
 	NEUIK_Element   elem, 
-	RenderSize    * rSize, 
-	RenderLoc     * rlMod,
-	SDL_Renderer  * xRend,
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
+	SDL_Renderer  * xRend, /* The external renderer to prepare the texture for */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	NEUIK_ElementBase * eBase;
 
@@ -790,16 +960,17 @@ int neuik_Element_Render(
 	if (eBase->eFT == NULL) return 1;
 	if (eBase->eFT->Render == NULL) return 1;
 
-	return (eBase->eFT->Render)(elem, rSize, rlMod, xRend, xSurf);
+	return (eBase->eFT->Render)(elem, rSize, rlMod, xRend, xSurf, mock);
 }
 
 
 int neuik_Element_RenderRotate(
 	NEUIK_Element   elem, 
-	RenderSize    * rSize, 
-	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
-	SDL_Renderer  * xRend,
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	RenderSize    * rSize,    /* in/out the size the tex occupies when complete */
+	RenderLoc     * rlMod,    /* A relative location modifier (for rendering) */
+	SDL_Renderer  * xRend,    /* The external renderer to prepare the texture for */
+	SDL_Surface   * xSurf,    /* the external surface (used for transp. bg) */
+	int             mock,     /* If true; calculate sizes/locations but don't draw */
 	double          rotation)
 {
 	NEUIK_ElementBase * eBase;
@@ -865,7 +1036,7 @@ int neuik_Element_RenderRotate(
 
 	if (rotation == 0.0)
 	{
-		return neuik_Element_Render(elem, rSize, rlMod, xRend, xSurf);
+		return neuik_Element_Render(elem, rSize, rlMod, xRend, xSurf, mock);
 	}
 
 	rl = eBase->eSt.rLoc;
@@ -902,13 +1073,19 @@ int neuik_Element_RenderRotate(
 	SDL_SetRenderDrawColor(cpRend, 255, 255, 255, 0);
 	SDL_RenderClear(cpRend);
 
-	if ((eBase->eFT->Render)(elem, rSize, rlMod, cpRend, cpSurf))
+	if ((eBase->eFT->Render)(elem, rSize, rlMod, cpRend, cpSurf, mock))
 	{
 		eNum = 4;
 		goto out;
 	}
-
 	SDL_RenderPresent(cpRend);
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Attempt to directly copy the pixels from the source to destination     */
@@ -1167,6 +1344,8 @@ int NEUIK_Element_SetBackgroundColorGradient(
 	NEUIK_Color           clr;
 	float                 frac;
 	char                  buf[4096];
+	RenderSize            rSize;
+	RenderLoc             rLoc;
 	va_list               args;
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_ColorStop   *** cstops     = NULL; /* pointer to the active colorstops */
@@ -1378,7 +1557,9 @@ int NEUIK_Element_SetBackgroundColorGradient(
 	}
 	va_end(args);
 
-	if (neuik_Element_RequestRedraw(elem))
+	rSize = eBase->eSt.rSize;
+	rLoc  = eBase->eSt.rLoc;
+	if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
 	{
 		eNum = 5;
 		goto out;
@@ -1413,6 +1594,8 @@ int NEUIK_Element_SetBackgroundColorSolid(
 	int                 eNum       = 0;
 	NEUIK_ElementBase * eBase      = NULL;
 	NEUIK_Color       * aClr       = NULL;
+	RenderSize          rSize;
+	RenderLoc           rLoc;
 	static char         funcName[] = "NEUIK_Element_SetBackgroundColorSolid";
 	static char       * errMsgs[]  = {"",                               // [0] no error
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
@@ -1463,7 +1646,10 @@ int NEUIK_Element_SetBackgroundColorSolid(
 	aClr->g = g;
 	aClr->b = b;
 	aClr->a = a;
-	if (neuik_Element_RequestRedraw(elem))
+
+	rSize = eBase->eSt.rSize;
+	rLoc  = eBase->eSt.rLoc;
+	if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
 	{
 		eNum = 5;
 		goto out;
@@ -1572,6 +1758,8 @@ int NEUIK_Element_SetBackgroundColorTransparent(
 {
 	int                 eNum       = 0;
 	NEUIK_ElementBase * eBase      = NULL;
+	RenderSize          rSize;
+	RenderLoc           rLoc;
 	static char         funcName[] = "NEUIK_Element_SetBackgroundColorTransparent";
 	static char       * errMsgs[]  = {"",                                // [0] no error
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
@@ -1602,7 +1790,9 @@ int NEUIK_Element_SetBackgroundColorTransparent(
 		if (eBase->eBg.bgstyle_normal != NEUIK_BGSTYLE_TRANSPARENT)
 		{
 			eBase->eBg.bgstyle_normal = NEUIK_BGSTYLE_TRANSPARENT;
-			if (neuik_Element_RequestRedraw(elem))
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
 			{
 				eNum = 5;
 				goto out;
@@ -1614,7 +1804,9 @@ int NEUIK_Element_SetBackgroundColorTransparent(
 		if (eBase->eBg.bgstyle_selected != NEUIK_BGSTYLE_TRANSPARENT)
 		{
 			eBase->eBg.bgstyle_selected = NEUIK_BGSTYLE_TRANSPARENT;
-			if (neuik_Element_RequestRedraw(elem))
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
 			{
 				eNum = 5;
 				goto out;
@@ -1626,7 +1818,9 @@ int NEUIK_Element_SetBackgroundColorTransparent(
 		if (eBase->eBg.bgstyle_hover != NEUIK_BGSTYLE_TRANSPARENT)
 		{
 			eBase->eBg.bgstyle_hover = NEUIK_BGSTYLE_TRANSPARENT;
-			if (neuik_Element_RequestRedraw(elem))
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
 			{
 				eNum = 5;
 				goto out;
@@ -2168,45 +2362,131 @@ int neuik_Element_ForceRedraw(
  *
  ******************************************************************************/
 int neuik_Element_RequestRedraw(
-	NEUIK_Element elem)
+	NEUIK_Element elem,
+	RenderLoc     rLoc,
+	RenderSize    rSize)
 {
 	NEUIK_ElementBase  * eBase;
 	NEUIK_Window       * win;
+	int               (*funcImp) (NEUIK_Element, RenderLoc, RenderSize);
+	int                  eNum       = 0; /* which error to report (if any) */
 	static char          funcName[] = "neuik_Element_RequestRedraw";
-	static char          errMsg[] = 
-		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.";
+	static char        * errMsgs[] = {"" // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Failure in `neuik_MaskMap_UnmaskRect()`",                       // [2]
+	};
+
+
+	funcImp = neuik_VirtualFunc_GetImplementation(
+		neuik_Element_vfunc_RequestRedraw, elem);
+	if (funcImp != NULL)
+	{
+		/*--------------------------------------------------------------------*/
+		/* A virtual reimplementation is availible for this function          */
+		/*--------------------------------------------------------------------*/
+		return (*funcImp)(elem, rLoc, rSize);
+	}
+	/*------------------------------------------------------------------------*/
+	/* ELSE: Fall back to standard Element_IsShown operation                  */
+	/*------------------------------------------------------------------------*/
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
 	{
-		NEUIK_RaiseError(funcName, errMsg);
-		return 1;
+		eNum = 1;
+		goto out;
 	}
 
 	eBase->eSt.doRedraw = 1;
 	if (eBase->eSt.parent != NULL)
 	{
-		neuik_Element_RequestRedraw(eBase->eSt.parent);
+		neuik_Element_RequestRedraw(eBase->eSt.parent, rLoc, rSize);
 	}
 	else
 	{
 		/* notify the parent window that it will probably need to be redrawn */
 		win = (NEUIK_Window*)(eBase->eSt.window);
-		if (win != NULL) win->doRedraw = 1;
+		if (win != NULL)
+		{
+			if (win->redrawMask != NULL)
+			{
+				if (neuik_MaskMap_UnmaskRect(win->redrawMask, 
+					rLoc.x, rLoc.y, rSize.w, rSize.h))
+				{
+					eNum = 2;
+					goto out;
+				}
+			}
+			win->doRedraw = 1;
+		}
 	}
 
-	/* No errors*/
-	return 0;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
 }
 
 
 int neuik_Element_NeedsRedraw(
 	NEUIK_Element elem)
 {
+	NEUIK_Window      * win;
+	NEUIK_ElementBase * nextEBase;
 	NEUIK_ElementBase * eBase;
+	NEUIK_ElementBase * pBase;
+	NEUIK_Container   * cont;
+	NEUIK_Element     * parent;
 
-	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	if (neuik_Object_GetClassObject_NoError(elem, 
+			neuik__Class_Element, (void**)&eBase))
 	{
 		return 0;
+	}
+
+	if (eBase->eSt.window != NULL)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Check of a full-window redraw was requested...                     */
+		/*--------------------------------------------------------------------*/
+		win = (NEUIK_Window*)(eBase->eSt.window);
+		if (win->redrawAll)
+		{
+			return 1;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Check if a parent container has requested a full redraw.           */
+		/*--------------------------------------------------------------------*/
+		nextEBase = eBase;
+		for (;;)
+		{
+			parent = nextEBase->eSt.parent;
+			/*----------------------------------------------------------------*/
+			/* The toplevel element within a window has no parent elem; break */
+			/*----------------------------------------------------------------*/
+			if (parent == NULL) break;
+
+			if (neuik_Object_GetClassObject_NoError(parent, 
+					neuik__Class_Container, (void**)&cont))
+			{
+				break;
+			}
+			if (cont->redrawAll)
+			{
+				return 1;
+			}
+
+			if (neuik_Object_GetClassObject_NoError(parent, 
+					neuik__Class_Element, (void**)&pBase))
+			{
+				break;
+			}
+			nextEBase = pBase;
+		}
 	}
 
 	return 	eBase->eSt.doRedraw;
@@ -2590,7 +2870,7 @@ int neuik_Element_RedrawBackground(
 				/* A transparency mask is included, draw unmasked regions.    */
 				/*------------------------------------------------------------*/
 				y0 = 0;
-				yf = rSize.h - 1;
+				yf = rSize.h;
 				for (y = y0; y < yf; y++)
 				{
 					if (neuik_MaskMap_GetUnmaskedRegionsOnHLine(

@@ -34,7 +34,7 @@ int neuik_Object_Free__Fill(void *);
 
 int neuik_Element_GetMinSize__Fill(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Fill(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -436,7 +436,8 @@ int neuik_Element_Render__Fill(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                 eNum       = 0; /* which error to report (if any) */
 	NEUIK_Fill        * fill       = NULL;
@@ -468,6 +469,13 @@ int neuik_Element_Render__Fill(
 		eNum = 4;
 		goto out;
 	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
@@ -478,8 +486,9 @@ int neuik_Element_Render__Fill(
 		goto out;
 	}
 
-	eBase->eSt.doRedraw = 0;
 out:
+	if (!mock) eBase->eSt.doRedraw = 0;
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);

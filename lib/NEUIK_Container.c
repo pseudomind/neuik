@@ -195,6 +195,7 @@ int neuik_Object_New__Container(
 	cont->n_used       = 0;
 	cont->cType        = NEUIK_CONTAINER_UNSET;
 	cont->shownIfEmpty = 0;
+	cont->redrawAll    = 0;
 	cont->VJustify     = NEUIK_VJUSTIFY_CENTER;
 	cont->HJustify     = NEUIK_HJUSTIFY_CENTER;
 
@@ -432,6 +433,68 @@ out:
 
 /*******************************************************************************
  *
+ *  Name:          neuik_Container_RequestFullRedraw
+ *
+ *  Description:   Redraw the entire background for the container and force a
+ *                 redraw of all contained elements.
+ *
+ *  Returns:       1 if there is an error, 0 otherwise
+ *
+ ******************************************************************************/
+int neuik_Container_RequestFullRedraw(
+	NEUIK_Element cont)
+{
+	int               eNum       = 0; /* which error to report (if any) */
+	NEUIK_Container * cBase      = NULL;
+	RenderSize        rSize;
+	RenderLoc         rLoc;
+	static char       funcName[] = "neuik_Container_RequestFullRedraw";
+	static char     * errMsgs[]  = {"", // [ 0] no error
+		"Argument `cont` does not implement Container class.",           // [1]
+		"Argument `cont` caused `neuik_Object_GetClassObject` to fail.", // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",              // [3]
+		"Failure in `neuik_Element_RequestRedraw()`.",                   // [4]
+	};
+
+	if (!neuik_Object_ImplementsClass(cont, neuik__Class_Container))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (neuik_Object_GetClassObject(cont, neuik__Class_Container, (void**)&cBase))
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	cBase->redrawAll  = 1;
+	/*------------------------------------------------------------------------*/
+	/* Make sure the window redraws the background for the entire size of the */
+	/* current container.                                                     */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_GetSizeAndLocation(cont, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	if (neuik_Element_RequestRedraw(cont, rLoc, rSize))
+	{
+		eNum = 4;
+		goto out;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
  *  Name:          NEUIK_Container_SetElement
  *
  *  Description:   Set the child element of a single-element container.
@@ -547,6 +610,8 @@ int NEUIK_Container_AddElement(
 	int                 eNum       = 0;    /* which error to report (if any) */
 	NEUIK_ElementBase * eBase      = NULL;
 	NEUIK_Container   * cBase      = NULL;
+	RenderSize          rSize;
+	RenderLoc           rLoc;
 	static char         funcName[] = "NEUIK_Container_AddElement";
 	static char       * errMsgs[]  = {"",                                 // [0] no error
 		"Argument `cont` does not implement Container class.",            // [1]
@@ -557,6 +622,7 @@ int NEUIK_Container_AddElement(
 		"Failure to reallocate memory.",                                  // [6]
 		"Argument `cont` does not allow the use of method AddElement().", // [7]
 		"Failure in `neuik_Element_RequestRedraw()`.",                    // [8]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [9]
 	};
 
 	if (!neuik_Object_ImplementsClass(cont, neuik__Class_Container))
@@ -676,7 +742,12 @@ int NEUIK_Container_AddElement(
 	/*------------------------------------------------------------------------*/
 	/* When a new element is added to a container trigger a redraw            */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RequestRedraw(cont))
+	if (neuik_Element_GetSizeAndLocation(cont, &rSize, &rLoc))
+	{
+		eNum = 9;
+		goto out;
+	}
+	if (neuik_Element_RequestRedraw(cont, rLoc, rSize))
 	{
 		eNum = 8;
 		goto out;
@@ -961,6 +1032,8 @@ int NEUIK_Container_RemoveElement(
 	int                 wasLocated = 0;
 	int                 eNum       = 0;    /* which error to report (if any) */
 	NEUIK_Container   * cBase      = NULL;
+	RenderSize          rSize;
+	RenderLoc           rLoc;
 	static char         funcName[] = "NEUIK_Container_RemoveElement";
 	static char       * errMsgs[]  = {"",                                 // [0] no error
 		"Argument `cont` does not implement Container class.",            // [1]
@@ -969,6 +1042,7 @@ int NEUIK_Container_RemoveElement(
 		"Container does not contain any child elements.",                 // [4]
 		"Unable to locate specified `elem` within Container.",            // [5]
 		"Failure in `neuik_Element_RequestRedraw()`.",                    // [6]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [7]
 	};
 
 	if (!neuik_Object_ImplementsClass(cont, neuik__Class_Container))
@@ -1050,7 +1124,12 @@ int NEUIK_Container_RemoveElement(
 	/*------------------------------------------------------------------------*/
 	/* When an element is removed from a container; trigger a redraw          */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RequestRedraw(cont))
+	if (neuik_Element_GetSizeAndLocation(cont, &rSize, &rLoc))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (neuik_Element_RequestRedraw(cont, rLoc, rSize))
 	{
 		eNum = 6;
 		goto out;
@@ -1080,6 +1159,8 @@ int NEUIK_Container_DeleteElements(
 	int               ctr;
 	int               eNum       = 0;    /* which error to report (if any) */
 	NEUIK_Container * cBase      = NULL;
+	RenderSize        rSize;
+	RenderLoc         rLoc;
 	static char       funcName[] = "NEUIK_Container_RemoveElements";
 	static char     * errMsgs[]  = {"",                                  // [0] no error
 		"Argument `cont` does not implement Container class.",           // [1]
@@ -1088,6 +1169,7 @@ int NEUIK_Container_DeleteElements(
 		"Container does not contain any child elements.",                // [4]
 		"Unable to locate specified `elem` within Container.",           // [5]
 		"Failure in `neuik_Element_RequestRedraw()`.",                   // [6]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",              // [7]
 	};
 
 	if (!neuik_Object_ImplementsClass(cont, neuik__Class_Container))
@@ -1137,7 +1219,12 @@ int NEUIK_Container_DeleteElements(
 	/*------------------------------------------------------------------------*/
 	/* When an element is removed from a container; trigger a redraw          */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RequestRedraw(cont))
+	if (neuik_Element_GetSizeAndLocation(cont, &rSize, &rLoc))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (neuik_Element_RequestRedraw(cont, rLoc, rSize))
 	{
 		eNum = 6;
 		goto out;
@@ -1180,6 +1267,8 @@ int NEUIK_Container_Configure(
 	char            * value      = NULL;
 	const char      * set        = NULL;
 	char              buf[4096];
+	RenderSize        rSize      = {0, 0};
+	RenderLoc         rLoc       = {0, 0};;
 	NEUIK_Container * cBase      = NULL;
 	/*------------------------------------------------------------------------*/
 	/* If a `name=value` string with an unsupported name is found, check to   */
@@ -1211,6 +1300,7 @@ int NEUIK_Container_Configure(
 		"Invalid `name=value` string.",                                  // [10]
 		"ValueType name used as BoolType, skipping.",                    // [11]
 		"BoolType name used as ValueType, skipping.",                    // [12]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",              // [13]
 	};
 
 	if (neuik_Object_GetClassObject(cont, neuik__Class_Container, (void**)&cBase))
@@ -1381,7 +1471,15 @@ int NEUIK_Container_Configure(
 	}
 	va_end(args);
 
-	if (doRedraw) neuik_Element_RequestRedraw(cont);
+	if (doRedraw)
+	{
+		if (neuik_Element_GetSizeAndLocation(cont, &rSize, &rLoc))
+		{
+			NEUIK_RaiseError(funcName, errMsgs[13]);
+			return 1;
+		}
+		neuik_Element_RequestRedraw(cont, rLoc, rSize);
+	}
 
 	return 0;
 }

@@ -36,7 +36,7 @@ int neuik_Object_Free__Frame(void * fPtr);
 
 int neuik_Element_GetMinSize__Frame(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Frame(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -411,10 +411,11 @@ out:
  ******************************************************************************/
 int neuik_Element_Render__Frame(
 	NEUIK_Element   fElem, 
-	RenderSize    * rSize, 
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
-	SDL_Renderer  * xRend,
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
 	int                   offLeft    = 0;
@@ -476,10 +477,13 @@ int neuik_Element_Render__Frame(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(fElem, xSurf, rlMod, NULL))
+	if (!mock)
 	{
-		eNum = 9;
-		goto out;
+		if (neuik_Element_RedrawBackground(fElem, xSurf, rlMod, NULL))
+		{
+			eNum = 9;
+			goto out;
+		}
 	}
 	rl = eBase->eSt.rLoc;
 
@@ -494,15 +498,17 @@ int neuik_Element_Render__Frame(
 	offTop    = rl.y;
 	offBottom = rl.y + (rSize->h - 1);
 
-	/* upper border line */
-	SDL_RenderDrawLine(rend, offLeft, offTop, offRight, offTop); 
-	/* left border line */
-	SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
-	/* right border line */
-	SDL_RenderDrawLine(rend, offRight, offTop, offRight, offBottom); 
-	/* lower border line */
-	SDL_RenderDrawLine(rend, offLeft, offBottom, offRight, offBottom);
-
+	if (!mock)
+	{
+		/* upper border line */
+		SDL_RenderDrawLine(rend, offLeft, offTop, offRight, offTop); 
+		/* left border line */
+		SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
+		/* right border line */
+		SDL_RenderDrawLine(rend, offRight, offTop, offRight, offBottom); 
+		/* lower border line */
+		SDL_RenderDrawLine(rend, offLeft, offBottom, offRight, offBottom);
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Render the contained Element                                           */
@@ -633,13 +639,13 @@ int neuik_Element_Render__Frame(
 	rlRel.y = destRect.y;
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
+	if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
 	{
 		eNum = 7;
 		goto out;
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	if (eNum > 0)
 	{

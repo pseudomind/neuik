@@ -39,7 +39,7 @@ int neuik_Object_Free__ProgressBar(void * wPtr);
 int neuik_Element_GetMinSize__ProgressBar(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ProgressBar(NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__ProgressBar(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -477,10 +477,13 @@ int NEUIK_ProgressBar_SetFraction(
 		double              frac)
 {
 	int                       eNum = 0;    /* which error to report (if any) */
+	RenderSize                rSize;
+	RenderLoc                 rLoc;
 	NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
 	static char               funcName[] = "NEUIK_ProgressBar_SetFraction";
-	static char             * errMsgs[] = {"",        // [0] no error
-		"Argument `pb` is not of ProgressBar class.", // [1]
+	static char             * errMsgs[] = {"",              // [0] no error
+		"Argument `pb` is not of ProgressBar class.",       // [1]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [2]
 	};
 
 	if (!neuik_Object_IsClass(pb, neuik__Class_ProgressBar))
@@ -518,7 +521,12 @@ int NEUIK_ProgressBar_SetFraction(
 			sprintf(pb->fracText, "%.2f%%", 100.0*pb->frac);
 		}
 
-		neuik_Element_RequestRedraw(pb);
+		if (neuik_Element_GetSizeAndLocation(pb, &rSize, &rLoc))
+		{
+			eNum = 2;
+			goto out;
+		}
+		neuik_Element_RequestRedraw(pb, rLoc, rSize);
 	}
 out:
 	if (eNum > 0)
@@ -545,7 +553,8 @@ int neuik_Element_Render__ProgressBar(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	const NEUIK_Color       * fgClr  = NULL;
 	const NEUIK_Color       * bgClr  = NULL;
@@ -593,6 +602,13 @@ int neuik_Element_Render__ProgressBar(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 3;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -781,7 +797,7 @@ int neuik_Element_Render__ProgressBar(
 		SDL_RenderCopy(rend, tTex, NULL, &rect);
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 	ConditionallyDestroyTexture(&gTex);
@@ -812,6 +828,8 @@ neuik_EventState neuik_Element_CaptureEvent__ProgressBar(
 	SDL_Event     * ev)
 {
 	neuik_EventState       evCaputred = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
 	NEUIK_ProgressBar    * pb         = NULL;
 	NEUIK_ElementBase    * eBase      = NULL;
 	SDL_Event            * e;
@@ -844,7 +862,10 @@ neuik_EventState neuik_Element_CaptureEvent__ProgressBar(
 				pb->selected    = 1;
 				pb->wasSelected = 1;
 				neuik_Window_TakeFocus(eBase->eSt.window, pb);
-				neuik_Element_RequestRedraw(pb);
+
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(pb, rLoc, rSize);
 				neuik_Element_TriggerCallback(pb, NEUIK_CALLBACK_ON_CLICK);
 				evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 				if (!neuik_Object_IsNEUIKObject_NoError(pb))
@@ -880,7 +901,10 @@ neuik_EventState neuik_Element_CaptureEvent__ProgressBar(
 			pb->selected    = 0;
 			pb->wasSelected = 0;
 			pb->clickOrigin = 0;
-			neuik_Element_RequestRedraw(pb);
+
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(pb, rLoc, rSize);
 			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 		}
@@ -909,7 +933,9 @@ neuik_EventState neuik_Element_CaptureEvent__ProgressBar(
 
 			if (pb->wasSelected != pb->selected)
 			{
-				neuik_Element_RequestRedraw(pb);
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(pb, rLoc, rSize);
 			}
 			pb->wasSelected = pb->selected;
 			evCaputred = NEUIK_EVENTSTATE_CAPTURED;

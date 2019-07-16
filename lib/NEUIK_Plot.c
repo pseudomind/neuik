@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1543,6 +1543,8 @@ int NEUIK_Plot_SetTitle(
 	char *        strPtr1  = NULL;
 	NEUIK_Label * newLabel = NULL;
 	NEUIK_Plot  * plot     = NULL;
+	RenderSize    rSize;
+	RenderLoc     rLoc;
 	static char   funcName[] = "NEUIK_Plot_SetTitle";
 	static char * errMsgs[] = {"",                                         // [0] no error
 		"Argument `plot` does not implement Plot class.",                  // [1]
@@ -1551,6 +1553,7 @@ int NEUIK_Plot_SetTitle(
 		"Failure in `NEUIK_MakeLabel()`.",                                 // [4]
 		"Failure to `String_Duplicate()`.",                                // [5]
 		"Failure to `NEUIK_Container_AddElement()`.",                      // [6]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",                // [7]
 	};
 
 	if (!neuik_Object_ImplementsClass(plotPtr, neuik__Class_Plot))
@@ -1636,7 +1639,12 @@ int NEUIK_Plot_SetTitle(
 		}
 	}
 
-	neuik_Element_RequestRedraw((NEUIK_Element)plot);
+	if (neuik_Element_GetSizeAndLocation(plot, &rSize, &rLoc))
+	{
+		eNum = 7;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(plot, rLoc, rSize);
 out:
 	if (textCopy != NULL) free(textCopy);
 	if (eNum > 0)
@@ -1668,6 +1676,8 @@ int NEUIK_Plot_SetXAxisLabel(
 	char *        strPtr1  = NULL;
 	NEUIK_Label * newLabel = NULL;
 	NEUIK_Plot  * plot     = NULL;
+	RenderSize    rSize    = {0, 0};
+	RenderLoc     rLoc     = {0, 0};;
 	static char   funcName[] = "NEUIK_Plot_SetXAxisLabel";
 	static char * errMsgs[] = {"",                                         // [0] no error
 		"Argument `plot` does not implement Plot class.",                  // [1]
@@ -1676,6 +1686,7 @@ int NEUIK_Plot_SetXAxisLabel(
 		"Failure in `NEUIK_MakeLabel()`.",                                 // [4]
 		"Failure to `String_Duplicate()`.",                                // [5]
 		"Failure to `NEUIK_Container_AddElement()`.",                      // [6]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",                // [7]
 	};
 
 	if (!neuik_Object_ImplementsClass(plotPtr, neuik__Class_Plot))
@@ -1761,7 +1772,12 @@ int NEUIK_Plot_SetXAxisLabel(
 		}
 	}
 
-	neuik_Element_RequestRedraw((NEUIK_Element)plot);
+	if (neuik_Element_GetSizeAndLocation(plot, &rSize, &rLoc))
+	{
+		eNum = 7;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(plot, rLoc, rSize);
 out:
 	if (textCopy != NULL) free(textCopy);
 	if (eNum > 0)

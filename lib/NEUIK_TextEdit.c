@@ -50,7 +50,7 @@ int neuik_Element_GetMinSize__TextEdit(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__TextEdit(
 	NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__TextEdit(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 void neuik_Element_Defocus__TextEdit(NEUIK_Element);
 
 /*----------------------------------------------------------------------------*/
@@ -578,11 +578,14 @@ int NEUIK_TextEdit_SetText(
 	size_t        sLen    = 1;
 	size_t        textLen = 0;
 	int           eNum    = 0; /* which error to report (if any) */
+	RenderSize    rSize;
+	RenderLoc     rLoc;
 	static char   funcName[] = "NEUIK_TextEdit_SetText";
-	static char * errMsgs[] = {"",                      // [0] no error
-		"Argument `te` is not of TextEdit class.",        // [1]
-		"Failure to allocate memory.",                    // [2]
-		"Failure in function `neuik_TextBlock_SetText`.", // [3]
+	static char * errMsgs[] = {"",                          // [0] no error
+		"Argument `te` is not of TextEdit class.",          // [1]
+		"Failure to allocate memory.",                      // [2]
+		"Failure in function `neuik_TextBlock_SetText`.",   // [3]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [4]
 	};
 
 	if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
@@ -639,7 +642,13 @@ int NEUIK_TextEdit_SetText(
 	te->highlightEndLine   = 0;
 	te->clickOrigin        = 0;
 	te->clickHeld          = 0;
-	neuik_Element_RequestRedraw((NEUIK_Element)te);
+
+	if (neuik_Element_GetSizeAndLocation(te, &rSize, &rLoc))
+	{
+		eNum = 4;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(te, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -920,7 +929,8 @@ int neuik_Element_Render__TextEdit(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	char                   tempChar;          /* a temporary character */
 	int                    yPos       = 0;
@@ -978,6 +988,13 @@ int neuik_Element_Render__TextEdit(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -1379,7 +1396,7 @@ draw_border:
 		rl.x + 2,              rl.y + (rSize->h - 2),
 		rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
@@ -1404,13 +1421,20 @@ out:
  *
  ******************************************************************************/
 void neuik_Element_Defocus__TextEdit(
-		NEUIK_Element    el)
+	NEUIK_Element el)
 {
 	NEUIK_TextEdit * te;
+	RenderSize       rSize = {0, 0};
+	RenderLoc        rLoc  = {0, 0};
 
 	SDL_StopTextInput();
-	neuik_Element_RequestRedraw((NEUIK_Element)el);
 	te = (NEUIK_TextEdit*) el;
+
+	if (neuik_Element_GetSizeAndLocation(te, &rSize, &rLoc))
+	{
+		return;
+	}
+	neuik_Element_RequestRedraw(te, rLoc, rSize);
 	te->highlightIsSet     = 0;
 	te->highlightBeginLine = 0;
 	te->highlightBeginPos  = 0;

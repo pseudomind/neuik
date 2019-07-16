@@ -38,7 +38,7 @@ int neuik_Object_Free__ListGroup(void * lgPtr);
 int neuik_Element_GetMinSize__ListGroup(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ListGroup(NEUIK_Element lgElem, SDL_Event * ev);
 int neuik_Element_Render__ListGroup(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -143,6 +143,8 @@ int neuik_Object_New__ListGroup(
 	NEUIK_Color       bgSelectClr = COLOR_MBLUE;
 	NEUIK_Color       bgOddClr    = COLOR_WHITE;
 	NEUIK_Color       bgEvenClr   = COLOR_LWHITE;
+	RenderSize        rSize;
+	RenderLoc         rLoc;
 	static char       funcName[]  = "neuik_Object_New__ListGroup";
 	static char     * errMsgs[]   = {"",                                  // [0] no error
 		"Output Argument `lgPtr` is NULL.",                               // [1]
@@ -153,6 +155,7 @@ int neuik_Object_New__ListGroup(
 		"Argument `lgPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
 		"Failure in `NEUIK_Element_SetBackgroundColorSolid()`.",          // [7]
 		"Failure in `neuik_Element_RequestRedraw()`.",                    // [8]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [9]
 	};
 
 	if (lgPtr == NULL)
@@ -210,7 +213,12 @@ int neuik_Object_New__ListGroup(
 	cont->cType        = NEUIK_CONTAINER_NO_DEFAULT_ADD_SET;
 	cont->shownIfEmpty = 1;
 
-	if (neuik_Element_RequestRedraw(lg))
+	if (neuik_Element_GetSizeAndLocation(lg, &rSize, &rLoc))
+	{
+		eNum = 9;
+		goto out;
+	}
+	if (neuik_Element_RequestRedraw(lg, rLoc, rSize))
 	{
 		eNum = 8;
 		goto out;
@@ -357,7 +365,8 @@ int neuik_Element_Render__ListGroup(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   tempW;
 	int                   offLeft;
@@ -428,32 +437,38 @@ int neuik_Element_Render__ListGroup(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(lgElem, xSurf, rlMod, NULL))
+	if (!mock)
 	{
-		eNum = 9;
-		goto out;
+		if (neuik_Element_RedrawBackground(lgElem, xSurf, rlMod, NULL))
+		{
+			eNum = 9;
+			goto out;
+		}
 	}
 	rl = eBase->eSt.rLoc;
 
 	/*------------------------------------------------------------------------*/
 	/* Draw the border of the ListGroup.                                      */
 	/*------------------------------------------------------------------------*/
-	bClr = &(lg->colorBorder);
-	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
+	if (!mock)
+	{
+		bClr = &(lg->colorBorder);
+		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
-	offLeft   = rl.x;
-	offRight  = rl.x + (rSize->w - 1);
-	offTop    = rl.y;
-	offBottom = rl.y + (rSize->h - 1);
+		offLeft   = rl.x;
+		offRight  = rl.x + (rSize->w - 1);
+		offTop    = rl.y;
+		offBottom = rl.y + (rSize->h - 1);
 
-	/* upper border line */
-	SDL_RenderDrawLine(rend, offLeft, offTop, offRight, offTop); 
-	/* left border line */
-	SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
-	/* right border line */
-	SDL_RenderDrawLine(rend, offRight, offTop, offRight, offBottom); 
-	/* lower border line */
-	SDL_RenderDrawLine(rend, offLeft, offBottom, offRight, offBottom);
+		/* upper border line */
+		SDL_RenderDrawLine(rend, offLeft, offTop, offRight, offTop); 
+		/* left border line */
+		SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
+		/* right border line */
+		SDL_RenderDrawLine(rend, offRight, offTop, offRight, offBottom); 
+		/* lower border line */
+		SDL_RenderDrawLine(rend, offLeft, offBottom, offRight, offBottom);
+	}
 
 	xPos = 2;
 
@@ -598,7 +613,7 @@ int neuik_Element_Render__ListGroup(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
+			if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
 			{
 				eNum = 5;
 				goto out;
@@ -612,7 +627,8 @@ int neuik_Element_Render__ListGroup(
 	/* Present all changes and create a texture from this surface             */
 	/*------------------------------------------------------------------------*/
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
@@ -637,6 +653,8 @@ int NEUIK_ListGroup_AddRow(
 {
 	int                 len;
 	int                 ctr;
+	RenderSize          rSize;
+	RenderLoc           rLoc;
 	int                 newInd;            /* index for newly added item */
 	int                 eNum       = 0;    /* which error to report (if any) */
 	NEUIK_ElementBase * eBase      = NULL;
@@ -649,6 +667,7 @@ int NEUIK_ListGroup_AddRow(
 		"Failure to allocate memory.",                                 // [4]
 		"Failure to reallocate memory.",                               // [5]
 		"Failure in `neuik_Element_RequestRedraw()`.",                 // [6]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",            // [7]
 	};
 
 	if (!neuik_Object_IsClass(lg, neuik__Class_ListGroup))
@@ -732,7 +751,12 @@ int NEUIK_ListGroup_AddRow(
 	/*------------------------------------------------------------------------*/
 	/* When a new row is added, trigger a redraw                              */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RequestRedraw(lg))
+	if (neuik_Element_GetSizeAndLocation(lg, &rSize, &rLoc))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (neuik_Element_RequestRedraw(lg, rLoc, rSize))
 	{
 		eNum = 6;
 		goto out;

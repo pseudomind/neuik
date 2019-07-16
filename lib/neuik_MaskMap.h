@@ -55,6 +55,20 @@ int
 			int             height);
 
 int 
+	neuik_MaskMap_Resize(
+			neuik_MaskMap * map, 
+			int             width,
+			int             height);
+
+int 
+	neuik_MaskMap_MaskAll(
+			neuik_MaskMap * map);
+
+int 
+	neuik_MaskMap_UnmaskAll(
+			neuik_MaskMap * map);
+
+int 
 	neuik_MaskMap_MaskPoint(
 			neuik_MaskMap * map, 
 			int             x,

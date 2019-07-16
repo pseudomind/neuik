@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,6 +15,13 @@
  ******************************************************************************/
 #ifndef NEUIK_NEUIK_H
 #define NEUIK_NEUIK_H
+
+#ifndef FALSE
+	#define FALSE (0)
+#endif /* FALSE */
+#ifndef TRUE
+	#define TRUE (1)
+#endif /* FALSE */
 
 int  NEUIK_Init();
 

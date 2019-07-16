@@ -36,7 +36,7 @@ int neuik_Object_Free__HGroup(void * hgPtr);
 
 int neuik_Element_GetMinSize__HGroup(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__HGroup(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -583,7 +583,8 @@ int neuik_Element_Render__HGroup(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	RenderSize            rs;
 	RenderLoc             rl;
@@ -651,10 +652,13 @@ int neuik_Element_Render__HGroup(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(hgElem, xSurf, rlMod, NULL))
+	if (!mock)
 	{
-		eNum = 9;
-		goto out;
+		if (neuik_Element_RedrawBackground(hgElem, xSurf, rlMod, NULL))
+		{
+			eNum = 9;
+			goto out;
+		}
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -662,9 +666,9 @@ int neuik_Element_Render__HGroup(
 	/*------------------------------------------------------------------------*/
 	if (cont->elems != NULL)
 	{
-		/*-------------------------------------------------------*/
-		/* Determine the (maximum) height of any of the elements */
-		/*-------------------------------------------------------*/
+		/*--------------------------------------------------------------------*/
+		/* Determine the (maximum) height of any of the elements              */
+		/*--------------------------------------------------------------------*/
 		elHeight = rSize->h;
 		vctr = 0;
 		for (ctr = 0;; ctr++)
@@ -707,9 +711,9 @@ int neuik_Element_Render__HGroup(
 			goto out2;
 		}
 
-		/*-------------------------------------------------------------*/
-		/* Check if there are any elements which can fill horizontally */
-		/*-------------------------------------------------------------*/
+		/*--------------------------------------------------------------------*/
+		/* Check if there are any elements which can fill horizontally        */
+		/*--------------------------------------------------------------------*/
 		for (ctr = 0;; ctr++)
 		{
 			elem = (NEUIK_Element)cont->elems[ctr];
@@ -836,10 +840,13 @@ int neuik_Element_Render__HGroup(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
+			if (neuik_Element_NeedsRedraw(elem))
 			{
-				eNum = 5;
-				goto out;
+				if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
+				{
+					eNum = 5;
+					goto out;
+				}
 			}
 
 			xPos += xSize + (eCfg->PadLeft + eCfg->PadRight) ;
@@ -850,7 +857,7 @@ int neuik_Element_Render__HGroup(
 	/* Present all changes and create a texture from this surface             */
 	/*------------------------------------------------------------------------*/
 out2:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 out:
 	if (eNum > 0)
 	{

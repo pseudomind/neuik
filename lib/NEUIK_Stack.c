@@ -24,6 +24,7 @@
 #include "NEUIK_Stack.h"
 #include "NEUIK_Element_internal.h"
 #include "NEUIK_Container.h"
+#include "NEUIK_Container_internal.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
@@ -38,7 +39,7 @@ int neuik_Object_Free__Stack(void * stkPtr);
 int neuik_Element_CaptureEvent__Stack(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_GetMinSize__Stack(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Stack(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -424,10 +425,11 @@ out:
  ******************************************************************************/
 int neuik_Element_Render__Stack(
 	NEUIK_Element   stkElem, 
-	RenderSize    * rSize, 
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
-	SDL_Renderer  * xRend,
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                      ctr      = 0;
 	int                      eNum     = 0; /* which error to report (if any) */
@@ -485,10 +487,13 @@ int neuik_Element_Render__Stack(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(stkElem, xSurf, rlMod, NULL))
+	if (!mock)
 	{
-		eNum = 8;
-		goto out;
+		if (neuik_Element_RedrawBackground(stkElem, xSurf, rlMod, NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
 	}
 	rl = eBase->eSt.rLoc;
 
@@ -633,13 +638,13 @@ int neuik_Element_Render__Stack(
 	rlRel.y = rect.y;
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf))
+	if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
 	{
 		eNum = 5;
 		goto out;
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	if (eNum > 0)
 	{
@@ -709,6 +714,7 @@ int NEUIK_Stack_SetActiveElement(
 		"Argument `elem` does not implement Element class.",            // [2]
 		"Active element not within this stack.",                        // [3]
 		"Argument `stk` caused `neuik_Object_GetClassObject` to fail.", // [4]
+		"Failure in `neuik_Container_RequestFullRedraw()`.",            // [5]
 	};
 
 	if (!neuik_Object_IsClass(stk, neuik__Class_Stack))
@@ -751,6 +757,11 @@ int NEUIK_Stack_SetActiveElement(
 	}
 
 	stk->elemActive = elem;
+	if (neuik_Container_RequestFullRedraw(stk))
+	{
+		eNum = 5;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{

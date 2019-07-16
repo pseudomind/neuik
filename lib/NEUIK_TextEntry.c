@@ -541,11 +541,14 @@ int NEUIK_TextEntry_SetText(
 {
 	size_t          sLen    = 1;
 	size_t          textLen = 0;
+	RenderSize      rSize;
+	RenderLoc       rLoc;
 	int             eNum    = 0; /* which error to report (if any) */
 	static char     funcName[] = "NEUIK_TextEntry_SetText";
-	static char   * errMsgs[] = {"",                // [0] no error
-		"Argument `te` is not of TextEntry class.", // [1]
-		"Failure to allocate memory.",              // [2]
+	static char   * errMsgs[] = {"",                        // [0] no error
+		"Argument `te` is not of TextEntry class.",         // [1]
+		"Failure to allocate memory.",                      // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(te, neuik__Class_TextEntry))
@@ -607,7 +610,12 @@ int NEUIK_TextEntry_SetText(
 	te->cursorX        =  0;
 	te->clickOrigin    =  0;
 	te->clickHeld      =  0;
-	neuik_Element_RequestRedraw((NEUIK_Element)te);
+	if (neuik_Element_GetSizeAndLocation(te, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(te, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -888,7 +896,8 @@ int neuik_Element_Render__TextEntry(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	char                    tempChar;          /* a temporary character */
 	int                     textW      = 0;
@@ -939,6 +948,13 @@ int neuik_Element_Render__TextEntry(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -1200,7 +1216,6 @@ int neuik_Element_Render__TextEntry(
 					break;
 			}
 
-			// SDL_RenderCopy(rend, te->textTex, &srcRect, &rect);
 			SDL_RenderCopy(rend, te->textTex, NULL, &rect);
 		}
 		else
@@ -1331,7 +1346,7 @@ int neuik_Element_Render__TextEntry(
 			rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
@@ -1356,13 +1371,20 @@ out:
  *
  ******************************************************************************/
 void neuik_Element_Defocus__TextEntry(
-		NEUIK_Element    el)
+	NEUIK_Element el)
 {
 	NEUIK_TextEntry * te;
+	RenderSize        rSize = {0, 0};
+	RenderLoc         rLoc  = {0, 0};
 
 	SDL_StopTextInput();
-	neuik_Element_RequestRedraw((NEUIK_Element)el);
 	te = (NEUIK_TextEntry*) el;
+
+	if (neuik_Element_GetSizeAndLocation(te, &rSize, &rLoc))
+	{
+		return;
+	}
+	neuik_Element_RequestRedraw(te, rLoc, rSize);
 	te->highlightBegin = -1;
 	te->highlightStart = -1;
 	te->highlightEnd   = -1;

@@ -13,38 +13,15 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef NEUIK_WINDOW_INTERNAL_H
-#define NEUIK_WINDOW_INTERNAL_H
+#ifndef NEUIK_CONTAINER_INTERNAL_H
+#define NEUIK_CONTAINER_INTERNAL_H
 
-#include "NEUIK_Window.h"
-#include "NEUIK_WindowConfig.h"
+#include "NEUIK_Container.h"
 
-
-/*----------------------------------------------------------------------------*/
-/* Functions Prototype(s)                                                     */
-/*----------------------------------------------------------------------------*/
-void 
-	neuik_Window_TakeFocus(
-			NEUIK_Window * w,
-			void         * elem);
 
 int 
-	neuik_Window_AddPopup(
-			NEUIK_Window   * w,
-			NEUIK_Element  * pu,
-			NEUIK_Element    parent);
+	neuik_Container_RequestFullRedraw(
+			NEUIK_Element cont);
 
-int 
-	NEUIK_Window_CaptureEvent(
-			NEUIK_Window * w, 
-			SDL_Event    * ev);
 
-NEUIK_WindowConfig* 
-	neuik_Window_GetConfig(
-			NEUIK_Window *w);
-
-int 
-	neuik_Window_RequestFullRedraw(
-			NEUIK_Window  * w);
-
-#endif /* NEUIK_WINDOW_INTERNAL_H */
+#endif /* NEUIK_CONTAINER_INTERNAL_H */

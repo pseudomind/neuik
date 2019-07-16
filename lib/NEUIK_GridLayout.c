@@ -40,7 +40,7 @@ neuik_EventState neuik_Element_CaptureEvent__GridLayout(
 	NEUIK_Element, SDL_Event*);
 int neuik_Element_GetMinSize__GridLayout(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__GridLayout(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 int neuik_Element_SetWindowPointer__GridLayout(NEUIK_Element, void*);
 int neuik_Element_IsShown__GridLayout(NEUIK_Element);
 
@@ -522,11 +522,14 @@ int NEUIK_GridLayout_SetHSpacing(
 	NEUIK_GridLayout * grid,
 	int                spacing)
 {
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	int            eNum       = 0;    /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_GridLayout_SetHSpacing";
-	static char  * errMsgs[]  = {"",                   // [0] no error
-		"Argument `grid` is not of GridLayout class.", // [1]
-		"Argument `spacing` can not be negative.",     // [2]
+	static char  * errMsgs[]  = {"",                        // [0] no error
+		"Argument `grid` is not of GridLayout class.",      // [1]
+		"Argument `spacing` can not be negative.",          // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(grid, neuik__Class_GridLayout))
@@ -546,7 +549,12 @@ int NEUIK_GridLayout_SetHSpacing(
 	if (spacing == grid->HSpacing) goto out;
 
 	grid->HSpacing = spacing;
-	neuik_Element_RequestRedraw(grid);
+	if (neuik_Element_GetSizeAndLocation(grid, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(grid, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -571,11 +579,14 @@ int NEUIK_GridLayout_SetVSpacing(
 	NEUIK_GridLayout * grid,
 	int                spacing)
 {
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	int            eNum       = 0;    /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_GridLayout_SetVSpacing";
-	static char  * errMsgs[]  = {"",                   // [0] no error
-		"Argument `grid` is not of GridLayout class.", // [1]
-		"Argument `spacing` can not be negative.",     // [2]
+	static char  * errMsgs[]  = {"",                        // [0] no error
+		"Argument `grid` is not of GridLayout class.",      // [1]
+		"Argument `spacing` can not be negative.",          // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(grid, neuik__Class_GridLayout))
@@ -595,7 +606,12 @@ int NEUIK_GridLayout_SetVSpacing(
 	if (spacing == grid->VSpacing) goto out;
 
 	grid->VSpacing = spacing;
-	neuik_Element_RequestRedraw(grid);
+	if (neuik_Element_GetSizeAndLocation(grid, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(grid, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -621,11 +637,14 @@ int NEUIK_GridLayout_SetSpacing(
 	NEUIK_GridLayout * grid,
 	int                spacing)
 {
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	int            eNum       = 0;    /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_GridLayout_SetSpacing";
-	static char  * errMsgs[]  = {"",                   // [0] no error
-		"Argument `grid` is not of GridLayout class.", // [1]
-		"Argument `spacing` can not be negative.",     // [2]
+	static char  * errMsgs[]  = {"",                        // [0] no error
+		"Argument `grid` is not of GridLayout class.",      // [1]
+		"Argument `spacing` can not be negative.",          // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(grid, neuik__Class_GridLayout))
@@ -646,7 +665,12 @@ int NEUIK_GridLayout_SetSpacing(
 
 	grid->HSpacing = spacing;
 	grid->VSpacing = spacing;
-	neuik_Element_RequestRedraw(grid);
+	if (neuik_Element_GetSizeAndLocation(grid, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(grid, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -943,6 +967,8 @@ int NEUIK_GridLayout_Configure(
 	int          isBool;
 	int          boolVal   = 0;
 	int          typeMixup;
+	RenderSize   rSize     = {0, 0};
+	RenderLoc    rLoc      = {0, 0};;
 	char         buf[4096];
 	va_list      args;
 	char       * strPtr    = NULL;
@@ -974,6 +1000,7 @@ int NEUIK_GridLayout_Configure(
 		"NamedSet.name is blank, skipping..",                   // [7]
 		"BoolType name used as ValueType, skipping.",           // [8]
 		"NamedSet.name type unknown, skipping.",                // [9]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",     // [10]
 	};
 
 	if (!neuik_Object_IsClass(grid, neuik__Class_GridLayout))
@@ -1136,7 +1163,14 @@ out:
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
-	if (doRedraw) neuik_Element_RequestRedraw(grid);
+	if (doRedraw) {
+		if (neuik_Element_GetSizeAndLocation(grid, &rSize, &rLoc))
+		{
+			eNum = 10;
+			goto out;
+		}
+		neuik_Element_RequestRedraw(grid, rLoc, rSize);
+	}
 
 	return eNum;
 }
@@ -1551,9 +1585,10 @@ out:
 int neuik_Element_Render__GridLayout(
 	NEUIK_Element   gridElem,
 	RenderSize    * rSize,    /* in/out the size the tex occupies when complete */
-	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
+	RenderLoc     * rlMod,    /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,    /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf)    /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf,    /* the external surface (used for transp. bg) */
+	int             mock)     /* If true; calculate sizes/locations but don't draw */
 {
 	int                    nAlloc        = 0;
 	int                    tempH         = 0;
@@ -1649,10 +1684,13 @@ int neuik_Element_Render__GridLayout(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(gridElem, xSurf, rlMod, NULL))
+	if (!mock)
 	{
-		eNum = 9;
-		goto out;
+		if (neuik_Element_RedrawBackground(gridElem, xSurf, rlMod, NULL))
+		{
+			eNum = 9;
+			goto out;
+		}
 	}
 	rl = eBase->eSt.rLoc;
 
@@ -2209,15 +2247,19 @@ int neuik_Element_Render__GridLayout(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, *rs, rl, rlRel);
 
-			if (neuik_Element_Render(elem, rs, rlMod, rend, xSurf))
+			if (neuik_Element_NeedsRedraw(elem))
 			{
-				eNum = 2;
-				goto out;
+				if (neuik_Element_Render(elem, rs, rlMod, rend, xSurf, mock))
+				{
+					eNum = 2;
+					goto out;
+				}
 			}
 		}
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
+
 	if (elemsCfg   != NULL) free(elemsCfg);
 	if (elemsShown != NULL) free(elemsShown);
 	if (elemsValid != NULL) free(elemsValid);

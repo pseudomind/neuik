@@ -93,13 +93,16 @@ typedef struct {
 	int (*GetMinSize) (NEUIK_Element, RenderSize *);
 
 	/* Render(): Redraw the element  element  */
-	int (*Render) (NEUIK_Element, RenderSize *, RenderLoc *, SDL_Renderer *, SDL_Surface *);
+	int (*Render) (NEUIK_Element, RenderSize *, RenderLoc *, SDL_Renderer *, SDL_Surface *, int);
 
 	/* CaptureEvent(): Determine if this element caputures a given event */
 	neuik_EventState (*CaptureEvent) (NEUIK_Element, SDL_Event *);
 	
 	/* Defocus(): This function will be called when an element looses focus */
 	void (*Defocus) (NEUIK_Element);
+	
+	/* RequestRedraw(): This function will be called when redraw is requested */
+	int (*RequestRedraw) (NEUIK_Element, RenderLoc, RenderSize);
 
 } NEUIK_Element_FuncTable;
 
@@ -153,16 +156,28 @@ int
 			RenderLoc     * rLoc);
 
 int 
+	neuik_Element_GetSize(
+			NEUIK_Element   elem, 
+			RenderSize    * rSize);
+
+int 
+	neuik_Element_GetSizeAndLocation(
+			NEUIK_Element   elem, 
+			RenderSize    * rSize,
+			RenderLoc     * rLoc);
+
+int 
 	neuik_Element_NeedsRedraw(
 			NEUIK_Element elem);
 
 int
 	neuik_Element_Render(
-	 		NEUIK_Element    elem, 
-	 		RenderSize     * rSize, 
-	 		RenderLoc      * rlMod, 
-	 		SDL_Renderer   * xRend,
-	 		SDL_Surface    * xSurf);
+	 		NEUIK_Element   elem, 
+	 		RenderSize    * rSize, 
+	 		RenderLoc     * rlMod, 
+	 		SDL_Renderer  * xRend,
+	 		SDL_Surface   * xSurf,
+	 		int             mock);
 
 int 
 	neuik_Element_RenderRotate(
@@ -171,6 +186,7 @@ int
 			RenderLoc     * rlMod,
 			SDL_Renderer  * xRend,
 	 		SDL_Surface   * xSurf,
+	 		int             mock,
 			double          rotation);
 
 int
@@ -182,7 +198,9 @@ int
 
 int 
 	neuik_Element_RequestRedraw(
-			NEUIK_Element elem);
+			NEUIK_Element elem,
+			RenderLoc     rLoc,
+			RenderSize    rSize);
 
 int 
 	neuik_Element_Resize(

@@ -39,7 +39,7 @@ int neuik_Object_New__Label(void ** lblPtr);
 int neuik_Object_Free__Label(void * lblPtr);
 int neuik_Element_GetMinSize__Label(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Label(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -482,12 +482,15 @@ int NEUIK_Label_SetText(
 	NEUIK_Label * label,
 	const char  * text)
 {
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	size_t         sLen = 1;
 	int            eNum = 0; /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_Label_SetText";
-	static char  * errMsgs[] = {"",                // [0] no error
-		"Argument `label` is not of Label class.", // [1]
-		"Failure to allocate memory.",             // [2]
+	static char  * errMsgs[] = {"",                         // [0] no error
+		"Argument `label` is not of Label class.",          // [1]
+		"Failure to allocate memory.",                      // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(label, neuik__Class_Label))
@@ -527,7 +530,12 @@ int NEUIK_Label_SetText(
 		strcpy(label->text, text);
 	}
 
-	neuik_Element_RequestRedraw((NEUIK_Element)label);
+	if (neuik_Element_GetSizeAndLocation(label, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(label, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -600,7 +608,8 @@ int neuik_Element_Render__Label(
 	RenderSize    * rSize, /* [in] the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	const NEUIK_Color       * fgClr      = NULL;
 	SDL_Renderer            * rend       = NULL;
@@ -644,6 +653,13 @@ int neuik_Element_Render__Label(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 7;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -732,9 +748,8 @@ int neuik_Element_Render__Label(
 			SDL_RenderCopy(rend, tTex, NULL, &rect);
 		}
 	}
-
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 
@@ -786,6 +801,8 @@ int NEUIK_Label_Configure(
 	int                  typeMixup;
 	int                  fontSize;
 	char                 buf[4096];
+	RenderSize           rSize;
+	RenderLoc            rLoc;
 	va_list              args;
 	char               * strPtr    = NULL;
 	char               * name      = NULL;
@@ -822,7 +839,7 @@ int NEUIK_Label_Configure(
 		"NamedSet.name is blank, skipping..",                             // [ 7]
 		"FontColor value invalid; should be comma separated RGBA.",       // [ 8]
 		"FontColor value invalid; RGBA value range is 0-255.",            // [ 9]
-		"",                                                               // [10]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [10]
 		"",                                                               // [11]
 		"FontSize value is invalid; must be int.",                        // [12]
 		"BoolType name used as ValueType, skipping.",                     // [13]
@@ -1081,7 +1098,19 @@ out:
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
-	if (doRedraw) neuik_Element_RequestRedraw(lbl);
+	if (doRedraw)
+	{
+		if (neuik_Element_GetSizeAndLocation(lbl, &rSize, &rLoc))
+		{
+			eNum = 10;
+			NEUIK_RaiseError(funcName, errMsgs[eNum]);
+			eNum = 1;
+		}
+		else
+		{
+			neuik_Element_RequestRedraw(lbl, rLoc, rSize);
+		}
+	}
 
 	return eNum;
 }

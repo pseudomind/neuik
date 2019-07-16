@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -255,7 +255,6 @@ void NEUIK_EventLoop(
 			}			
 		}
 
- 		// do some other stuff here -- draw your app, etc.
 		if (!first)
 		{
 			/*----------------------------------------------------------------*/
@@ -470,7 +469,6 @@ NEUIK_EventHandler * NEUIK_NewEventHandler(
 	eH->eHFn   = eHFunc;
 	eH->eHArg1 = eHArg1;
 	eH->eHArg2 = eHArg2;
-
 out:
 	if (eNum != 0)
 	{

@@ -40,7 +40,7 @@ int neuik_Object_Free__Button(void * btnPtr);
 int neuik_Element_GetMinSize__Button(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__Button(NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__Button(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -490,12 +490,15 @@ int NEUIK_Button_SetText(
 	NEUIK_Button * btn,
 	const char   * text)
 {
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	size_t         sLen = 1;
 	int            eNum = 0; /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_Button_SetText";
-	static char  * errMsgs[] = {"",               // [0] no error
-		"Argument `btn` is not of Button class.", // [1]
-		"Failure to allocate memory.",            // [2]
+	static char  * errMsgs[] = {"",                         // [0] no error
+		"Argument `btn` is not of Button class.",           // [1]
+		"Failure to allocate memory.",                      // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(btn, neuik__Class_Button))
@@ -569,7 +572,12 @@ int NEUIK_Button_SetText(
 		strcpy(btn->text, text);
 	}
 
-	neuik_Element_RequestRedraw((NEUIK_Element)btn);
+	if (neuik_Element_GetSizeAndLocation(btn, &rSize, &rLoc))
+	{
+		eNum = 3;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(btn, rLoc, rSize);
 out:
 	if (eNum > 0)
 	{
@@ -668,6 +676,8 @@ int NEUIK_Button_Configure(
 	int                   fontSize;
 	char                  buf[4096];
 	va_list               args;
+	RenderSize            rSize     = {0, 0};
+	RenderLoc             rLoc      = {0, 0};;
 	char                * strPtr    = NULL;
 	char                * name      = NULL;
 	char                * value     = NULL;
@@ -711,6 +721,7 @@ int NEUIK_Button_Configure(
 		"FontSize value is invalid; must be int.",                        // [12]
 		"BoolType name used as ValueType, skipping.",                     // [13]
 		"NamedSet.name type unknown, skipping.",                          // [14]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [15]
 	};
 
 	if (!neuik_Object_IsClass(btn, neuik__Class_Button))
@@ -1004,7 +1015,19 @@ out:
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
-	if (doRedraw) neuik_Element_RequestRedraw(btn);
+	if (doRedraw) 
+	{
+		if (neuik_Element_GetSizeAndLocation(btn, &rSize, &rLoc))
+		{
+			eNum = 15;
+			NEUIK_RaiseError(funcName, errMsgs[eNum]);
+			eNum = 1;
+		}
+		else
+		{
+			neuik_Element_RequestRedraw(btn, rLoc, rSize);
+		}
+	}
 
 	return eNum;
 }
@@ -1023,7 +1046,8 @@ int neuik_Element_Render__Button(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   eNum       = 0;    /* which error to report (if any) */
 	int                   textW      = 0;
@@ -1068,6 +1092,13 @@ int neuik_Element_Render__Button(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -1238,7 +1269,7 @@ int neuik_Element_Render__Button(
 		SDL_RenderCopy(rend, tTex, NULL, &rect);
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tTex);
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
@@ -1267,6 +1298,8 @@ neuik_EventState neuik_Element_CaptureEvent__Button(
 	SDL_Event     * ev)
 {
 	neuik_EventState       evCaputred   = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
 	SDL_Event            * e;
 	NEUIK_Button         * btn          = NULL;
 	NEUIK_ElementBase    * eBase        = NULL;
@@ -1308,7 +1341,9 @@ neuik_EventState neuik_Element_CaptureEvent__Button(
 					evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
 					goto out;
 				}
-				neuik_Element_RequestRedraw(btn);
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(btn, rLoc, rSize);
 				goto out;
 			}
 		}
@@ -1338,7 +1373,10 @@ neuik_EventState neuik_Element_CaptureEvent__Button(
 			btn->wasSelected      = 0;
 			btn->clickOrigin      = 0;
 			evCaputred            = NEUIK_EVENTSTATE_CAPTURED;
-			neuik_Element_RequestRedraw(btn);
+
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(btn, rLoc, rSize);
 			goto out;
 		}
 		break;
@@ -1367,7 +1405,9 @@ neuik_EventState neuik_Element_CaptureEvent__Button(
 
 			if (btn->wasSelected != btn->selected)
 			{
-				neuik_Element_RequestRedraw(btn);
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(btn, rLoc, rSize);
 			}
 			btn->wasSelected = btn->selected;
 			evCaputred = NEUIK_EVENTSTATE_CAPTURED;

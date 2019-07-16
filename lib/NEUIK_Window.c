@@ -33,6 +33,7 @@
 #include "neuik_classes.h"
 
 extern int neuik__isInitialized;
+extern int neuik__Report_Debug;
 extern int neuik__Report_Frametime;
 
 /*----------------------------------------------------------------------------*/
@@ -167,6 +168,7 @@ int NEUIK_NewWindow(
 	/* initialize pointers to NULL */
 	w->win         = NULL;
 	w->rend        = NULL;
+	w->lastFrame   = NULL;
 	w->title       = NULL;
 	w->mmenu       = NULL;
 	w->cfgPtr      = NULL;
@@ -174,8 +176,10 @@ int NEUIK_NewWindow(
 	w->focused     = NULL;
 	w->popups      = NULL;
 	w->icon        = NULL;
+	w->redrawMask  = NULL;
 
 	/* set default values */
+	w->redrawAll   = 0;
 	w->posX        = -1;
 	w->posY        = -1;
 	w->sizeW       = 320;
@@ -185,8 +189,8 @@ int NEUIK_NewWindow(
 	w->updateIcon  = 0;
 	w->doRedraw    = 1;
 
-	w->eHT       = NEUIK_NewEventHandlerTable();
-	w->eCT       = NEUIK_NewCallbackTable();
+	w->eHT = NEUIK_NewEventHandlerTable();
+	w->eCT = NEUIK_NewCallbackTable();
 
 	if (!NEUIK_MakeImage_FromStock(&icon, NEUIK_STOCKIMAGE_NEUIK_ICON))
 	{
@@ -301,6 +305,7 @@ int NEUIK_Window_Configure(
 		"BoolType name used as ValueType, skipping.",             // [19]
 		"BGColor value invalid; should be comma separated RGBA.", // [20]
 		"BGColor value invalid; RGBA value range is 0-255."       // [21]
+		"Failure in `neuik_Window_RequestFullRedraw()`.",         // [22]
 	};
 
 	if (!neuik_Object_IsClass(w, neuik__Class_Window))
@@ -322,6 +327,12 @@ int NEUIK_Window_Configure(
 
 	for (ctr = 0;; ctr++)
 	{
+		if (ctr > 0)
+		{
+			/* before starting */
+			set = va_arg(args, const char *);
+		}
+
 		isBool = 0;
 		name   = NULL;
 		value  = NULL;
@@ -562,9 +573,22 @@ int NEUIK_Window_Configure(
 					NEUIK_RaiseError(funcName, errMsgs[21]);
 					continue;
 				}
+				if (wCfg->colorBG.r == clr.r &&
+					wCfg->colorBG.g == clr.g &&
+					wCfg->colorBG.b == clr.b &&
+					wCfg->colorBG.a == clr.a) continue;
 
+				/* else: The previous setting was changed */
 				wCfg->colorBG = clr;
 				w->doRedraw   = 1;
+				/*------------------------------------------------------------*/
+				/* If the window BG color is changed; everything will need to */
+				/* be redrawn.                                                */
+				/*------------------------------------------------------------*/
+				if (neuik_Window_RequestFullRedraw(w))
+				{
+					NEUIK_RaiseError(funcName, errMsgs[22]);
+				}
 			}
 			else if (!strcmp("AutoResize", name))
 			{
@@ -714,9 +738,6 @@ int NEUIK_Window_Configure(
 				}
 			}
 		}
-
-		/* before starting */
-		set = va_arg(args, const char *);
 	}
 	va_end(args);
 out:
@@ -783,6 +804,10 @@ int NEUIK_Window_Free(
 	if (w->title != NULL)
 	{
 		free(w->title);
+	}
+	if (w->redrawMask != NULL)
+	{
+		neuik_Object_Free(&w->redrawMask);
 	}
 
 	free(w);
@@ -1034,6 +1059,7 @@ int NEUIK_Window_Create(
 		"Element_GetConfig returned NULL.",                                   // [6]
 		"SDL_GetDisplayBounds() failed.",                                     // [7]
 		"Aborting... Errors were already present before attempted creation.", // [8]
+		"Failure in `neuik_MakeMaskMap()`",                                   // [9]
 	};
 
 	if (NEUIK_HasErrors())
@@ -1181,6 +1207,16 @@ int NEUIK_Window_Create(
 	SDL_GetWindowPosition(w->win, &(w->posX), &(w->posY));
 
 	/*------------------------------------------------------------------------*/
+	/* Create a maskMap for identifying regions to redraw. When first created */
+	/* the entire surface will be unmasked (flagged for a redraw).            */
+	/*------------------------------------------------------------------------*/
+	if (neuik_MakeMaskMap(&(w->redrawMask), w->sizeW, w->sizeH))
+	{
+		eNum = 9;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
 	/* Set the child pointers to this NEUIK_Window                            */
 	/*------------------------------------------------------------------------*/
 	if (w->mmenu != NULL)
@@ -1239,6 +1275,10 @@ int NEUIK_Window_CaptureEvent(
 	int                   evCaputred = 0;
 	int                   tempX;
 	int                   tempY;
+	int                   oldW;  /* old window width (px) */
+	int                   oldH;  /* old window height (px) */
+	int                   newW;  /* new window width (px) */
+	int                   newH;  /* new window height (px) */
 	SDL_Event           * e;
 	SDL_KeyboardEvent   * keyEv;
 	NEUIK_WindowConfig  * wCfg      = NULL;
@@ -1250,7 +1290,6 @@ int NEUIK_Window_CaptureEvent(
 	/*------------------------------------------------------------------------*/
 	/* Check if the event belongs to this window                              */
 	/*------------------------------------------------------------------------*/
-	// TODO 
 	if (e->type == SDL_WINDOWEVENT)
 	{
 		// printf("Event for WindowID: %d\n", e->window.windowID);
@@ -1277,11 +1316,22 @@ int NEUIK_Window_CaptureEvent(
 
 			case SDL_WINDOWEVENT_RESIZED:
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
-				SDL_GetWindowSize(w->win, &(w->sizeW), &(w->sizeH));
+				oldW = w->sizeW;
+				oldH = w->sizeH;
+				SDL_GetWindowSize(w->win, &newW, &newH);
 				SDL_GetWindowPosition(w->win, &tempX, &tempY);
-				// printf("Resized: Window Position moved to: (%d, %d)\n", tempX, tempY);
-				/* Force a full redraw of the contained elements */
-				if (w->elem != NULL) neuik_Element_ForceRedraw(w->elem);
+
+				if (oldW != newW || oldH != newH)
+				{
+					/*--------------------------------------------------------*/
+					/* The Resize/SizeChange resulted in an effective change  */
+					/* to the size of the window; Force a redraw.             */
+					/*--------------------------------------------------------*/
+					if (w->elem != NULL) neuik_Element_ForceRedraw(w->elem);
+
+					w->sizeW = newW;
+					w->sizeH = newH;
+				}
 				break;
 
 			case SDL_WINDOWEVENT_MOVED:
@@ -1375,6 +1425,190 @@ out:
 
 /*******************************************************************************
  *
+ *  Name:          neuik_Window_RedrawBackground
+ *
+ *  Description:   Redraw the background of the window.
+ *
+ *  Returns:       Non-zero if error, 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Window_RedrawBackground(
+	NEUIK_Window * w)
+{
+	int                  y           = 0;      /* current y-position */
+	int                  y0          = 0;      /* first y-position to draw */
+	int                  yf          = 0;      /* final y-position to draw */
+	int                  eNum        = 0;      /* which error to report (if any) */
+	int                  maskCtr;              /* maskMap counter */
+	int                  maskRegions;          /* number of regions in maskMap */
+	const int          * regionX0;             /* Array of region X0 values */
+	const int          * regionXf;             /* Array of region Xf values */
+	SDL_Renderer       * rend        = NULL;
+	NEUIK_WindowConfig * aCfg        = NULL;
+	neuik_MaskMap      * maskMap     = NULL;
+	NEUIK_Color        * color_solid = NULL;   /* pointer to active solid color */
+	RenderLoc            rl          = {0, 0}; /* Location of element background */
+	RenderSize           rSize;                /* Size of the element background to fill */
+	static char          funcName[]  = "neuik_Element_RedrawBackground";
+	static char        * errMsgs[]   = {"", // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Failure in `neuik_MaskMap_GetUnmaskedRegionsOnHLine()`.",       // [2]
+		"Argument `w` does not implement Window class.",                 // [3]
+		"Failure in `SDL_GetWindowSurface()`.",                          // [4]
+		"Failure in `SDL_RenderCopy()`.",                                // [5]
+		"Failure in `neuik_MaskMap_MaskAll()`.",                         // [6]
+	};
+
+	if (!neuik_Object_IsClass(w, neuik__Class_Window))
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	rSize.w = w->sizeW;
+	rSize.h = w->sizeH;
+	rend    = w->rend;
+
+	/* select the correct WindowConfig to use (pointer or internal) */
+	if (w->cfgPtr != NULL)
+	{
+		aCfg = w->cfgPtr;
+	}
+	else 
+	{
+		aCfg = w->cfg;
+	}
+
+	color_solid = &(aCfg->colorBG);
+	SDL_SetRenderDrawColor(rend,
+		color_solid->r, color_solid->g, color_solid->b, color_solid->a);
+
+
+	/*------------------------------------------------------------------------*/
+	/* Redraw the background for the entire window.                           */
+	/*------------------------------------------------------------------------*/
+	SDL_RenderClear(w->rend);
+
+	maskMap = w->redrawMask;
+	if (maskMap != NULL)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Only redraw the background for a part of the window.               */
+		/*--------------------------------------------------------------------*/
+		/* Copy over the data from the previous frame before redrawing        */
+		/* sections that need to be updated.                                  */
+		/*--------------------------------------------------------------------*/
+		if (w->lastFrame != NULL)
+		{
+			if (SDL_RenderCopy(rend, w->lastFrame, NULL, NULL))
+			{
+				/*------------------------------------------------------------*/
+				/* Sometimes (for reasons unknown to me) the `w->lastFrame`   */
+				/* texture can be (on rare occasion) invalid. In these        */
+				/* circumstances force all of the contained elements to be    */
+				/* redrawn.                                                   */
+				/*------------------------------------------------------------*/
+				if (neuik__Report_Frametime)
+				{
+					printf("Invalid `w->lastFrame`: FULL Redraw required...\n");
+				}
+				w->redrawAll = 1;
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Now redraw the background for the unmasked regions.                */
+		/*--------------------------------------------------------------------*/
+		y0 = 0;
+		yf = rSize.h;
+		for (y = y0; y < yf; y++)
+		{
+			if (neuik_MaskMap_GetUnmaskedRegionsOnHLine(
+					maskMap, y, &maskRegions, &regionX0, &regionXf))
+			{
+				eNum = 2;
+				goto out;
+			}
+
+			for (maskCtr = 0; maskCtr < maskRegions; maskCtr++)
+			{
+				SDL_RenderDrawLine(rend, 
+					rl.x + regionX0[maskCtr], rl.y + y, 
+					rl.x + regionXf[maskCtr], rl.y + y);
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Mask off the entire window background so that unnecessary          */
+		/* redrawing won't happen on the next frame.                          */
+		/*--------------------------------------------------------------------*/
+		if (neuik_MaskMap_MaskAll(maskMap))
+		{
+			eNum = 6;
+			goto out;
+		}
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Window_RequestFullRedraw
+ *
+ *  Description:   Prime the window for a full redraw procedure (on next draw).
+ *
+ *  Returns:       1 if there is an error, 0 otherwise
+ *
+ ******************************************************************************/
+int neuik_Window_RequestFullRedraw(
+	NEUIK_Window  * w)
+{
+	int           eNum       = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_Window_RequestFullRedraw";
+	static char * errMsgs[]  = {"", // [ 0] no error
+		"Failure in `neuik_MaskMap_UnmaskAll()`.", // [1]
+	};
+
+	if (!neuik_Object_IsClass_NoErr(w, neuik__Class_Window))
+	{
+		/*--------------------------------------------------------------------*/
+		/* Since this function might be called by elements before being       */
+		/* associated with a window, we don't want to error out on this.      */
+		/*--------------------------------------------------------------------*/
+		goto out;
+	}
+
+	w->doRedraw   = 1;
+	w->redrawAll  = 1;
+	if (w->redrawMask != NULL)
+	{
+		if (neuik_MaskMap_UnmaskAll(w->redrawMask))
+		{
+			eNum = 1;
+			goto out;
+		}
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
  *  Name:          NEUIK_Window_Redraw
  *
  *  Description:   Redraw the window and its contents.
@@ -1396,30 +1630,39 @@ int NEUIK_Window_Redraw(
 	int                   minH;           /* minimum element height */
 	int                   oldMinW;        /* old minimum element width */
 	int                   oldMinH;        /* old minimum element height */
+	int                   lastFrameW;     /* width of Texture from last frame */
+	int                   lastFrameH;     /* height of Texture from last frame */
 	unsigned int          timeBeforeRedraw; /* for calculating frame time */
 	unsigned int          frameTime;        /* time required to redraw elem */
-	NEUIK_Color         * clr;
 	NEUIK_WindowConfig  * aCfg       = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
 	// NEUIK_PopUp         * popup      = NULL;
+	SDL_Texture         * bgTex      = NULL;
 	SDL_Rect              dispBnds;
 	RenderSize            rSize      = {0, 0};
 	RenderLoc             rLoc       = {0, 0};
 	static char           funcName[] = "NEUIK_Window_Redraw";
-	static char         * errMsgs[]  = {"",              // [ 0] no error
-		"Element_GetConfig returned NULL.",              // [ 1]
-		"Element_GetMinSize Failed.",                    // [ 2]
-		"Failure in `neuik_Element_Render()`",           // [ 3]
-		"MainMenu_GetMinSize Failed.",                   // [ 4]
-		"MainMenu_Render returned NULL.",                // [ 5]
-		"Argument `w` does not implement Window class.", // [ 6]
-		"`w->elem` does not implement Element class.",   // [ 7]
-		"`popup` does not implement Element class.",     // [ 8]
-		"Popup Element_GetMinSize Failed.",              // [ 9]
-		"Popup Element_GetConfig returned NULL.",        // [10]
-		"Popup Element_Render returned NULL.",           // [11]
-		"Popup Element_GetLocation Failed.",             // [12]
-		"SDL_GetDisplayBounds() failed.",                // [13]
+	static char         * errMsgs[]  = {"",               // [ 0] no error
+		"Element_GetConfig returned NULL.",               // [ 1]
+		"Element_GetMinSize Failed.",                     // [ 2]
+		"Failure in `neuik_Element_Render()`",            // [ 3]
+		"MainMenu_GetMinSize Failed.",                    // [ 4]
+		"MainMenu_Render returned NULL.",                 // [ 5]
+		"Argument `w` does not implement Window class.",  // [ 6]
+		"`w->elem` does not implement Element class.",    // [ 7]
+		"`popup` does not implement Element class.",      // [ 8]
+		"Popup Element_GetMinSize Failed.",               // [ 9]
+		"Popup Element_GetConfig returned NULL.",         // [10]
+		"Popup Element_Render returned NULL.",            // [11]
+		"Popup Element_GetLocation Failed.",              // [12]
+		"SDL_GetDisplayBounds() failed.",                 // [13]
+		"Failure in `neuik_MakeMask_Resize()`",           // [14]
+		"Failure in `neuik_Window_RedrawBackground()`",   // [15]
+		"Failure in `SDL_CreateTexture()`.",              // [16]
+		"Failure in `SDL_SetRenderTarget()`.",            // [17]
+		"Failure in `SDL_RenderCopy()`.",                 // [18]
+		"Failure in `neuik_Window_RequestFullRedraw()`.", // [19]
+		"Failure in `SDL_QueryTexture()`.",               // [20]
 	};
 
 	if (!neuik_Object_IsClass(w, neuik__Class_Window))
@@ -1429,6 +1672,22 @@ int NEUIK_Window_Redraw(
 	}
 
 	w->doRedraw = 0;
+
+	/*------------------------------------------------------------------------*/
+	/* Check if the maskMap needs to be resized and do so if necessary.       */
+	/*------------------------------------------------------------------------*/
+	if (w->redrawMask != NULL)
+	{
+		if (w->redrawMask->sizeW != w->sizeW || 
+			w->redrawMask->sizeH != w->sizeH)
+		{
+			if (neuik_MaskMap_Resize(w->redrawMask, w->sizeW, w->sizeH))
+			{
+				eNum = 14;
+				goto out;
+			}
+		}
+	}
 
 	/* select the correct WindowConfig to use (pointer or internal) */
 	if (w->cfgPtr != NULL)
@@ -1440,9 +1699,77 @@ int NEUIK_Window_Redraw(
 		aCfg = w->cfg;
 	}
 
-	clr = &(aCfg->colorBG);
-	SDL_SetRenderDrawColor(w->rend, clr->r, clr->g, clr->b, 255);
-	SDL_RenderClear(w->rend);
+	bgTex = SDL_CreateTexture(w->rend, 
+		SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+		w->sizeW, w->sizeH);
+	if (bgTex == NULL)
+	{
+		eNum = 16;
+		goto out;
+	}
+	if (SDL_SetRenderTarget(w->rend, bgTex))
+	{
+		eNum = 17;
+		goto out;
+	}
+
+	if (w->lastFrame != NULL)
+	{
+		if (SDL_QueryTexture(w->lastFrame, NULL, NULL, &lastFrameW, &lastFrameH))
+		{
+			if (neuik__Report_Debug)
+			{
+				printf("Chucking the lastFrame SDL_Texture.\n");
+			}
+			ConditionallyDestroyTexture((SDL_Texture**)&w->lastFrame);
+			if (neuik_Window_RequestFullRedraw(w))
+			{
+				eNum = 19;
+				goto out;
+			}
+			/*----------------------------------------------------------------*/
+			/* The previous call to `neuik_Window_RequestFullRedraw()` will   */
+			/* set this flag. We don't want to redraw an additional time      */
+			/* after this, we just need to make sure it redraws everything.   */
+			/* Long story short, unset this flag now...                       */
+			/*----------------------------------------------------------------*/
+			w->doRedraw = 0;
+		}
+		else if (w->sizeW != lastFrameW || w->sizeH != lastFrameH)
+		{
+			/*----------------------------------------------------------------*/
+			/* The window had a change in size; chuck the old texture in the  */
+			/* garbage and start from scratch.                                */
+			/*----------------------------------------------------------------*/
+			if (neuik__Report_Debug)
+			{
+				printf("Chucking the lastFrame SDL_Texture.\n");
+			}
+			ConditionallyDestroyTexture((SDL_Texture**)&w->lastFrame);
+			if (neuik_Window_RequestFullRedraw(w))
+			{
+				eNum = 19;
+				goto out;
+			}
+			/*----------------------------------------------------------------*/
+			/* The previous call to `neuik_Window_RequestFullRedraw()` will   */
+			/* set this flag. We don't want to redraw an additional time      */
+			/* after this, we just need to make sure it redraws everything.   */
+			/* Long story short, unset this flag now...                       */
+			/*----------------------------------------------------------------*/
+			w->doRedraw = 0;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Redraw the background of the window; this includes copying over the    */
+	/* pixel data from the previous frame.                                    */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Window_RedrawBackground(w))
+	{
+		eNum = 15;
+		goto out;
+	}
 
 	if (SDL_GetDisplayBounds(0, &dispBnds) != 0)
 	{
@@ -1612,7 +1939,7 @@ int NEUIK_Window_Redraw(
 		{
 			timeBeforeRedraw = SDL_GetTicks();
 		}
-		if (neuik_Element_Render(w->elem, &rSize, NULL, w->rend, NULL))
+		if (neuik_Element_Render(w->elem, &rSize, NULL, w->rend, NULL, FALSE))
 		{
 			eNum = 3;
 			goto out;
@@ -1720,8 +2047,35 @@ int NEUIK_Window_Redraw(
 	// 	}
 	// }
 
+	/*------------------------------------------------------------------------*/
+	/* Complete the rendering to the bgTex texture.                           */
+	/*------------------------------------------------------------------------*/
 	SDL_RenderPresent(w->rend);
+
+	/*------------------------------------------------------------------------*/
+	/* Now copy the bgTex texture on to the window.                           */
+	/*------------------------------------------------------------------------*/
+	if (SDL_SetRenderTarget(w->rend, NULL))
+	{
+		eNum = 17;
+		goto out;
+	}
+
+	if (SDL_RenderCopy(w->rend, bgTex, NULL, NULL))
+	{
+		eNum = 18;
+		goto out;
+	}
+	SDL_RenderPresent(w->rend);
+
+	/*------------------------------------------------------------------------*/
+	/* Save the fully rendered texture to Window->lastFrame.                  */
+	/*------------------------------------------------------------------------*/
+	ConditionallyDestroyTexture((SDL_Texture**)&w->lastFrame);
+	w->lastFrame = bgTex;
 out:
+	w->redrawAll = 0;
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
@@ -1792,10 +2146,12 @@ int NEUIK_Window_SetSize(
 {
 	int           eNum = 0;   /* which error to report (if any) */
 	static char   funcName[] = "NEUIK_Window_SetSize";
-	static char * errMsgs[]  = {"",                      // [0] no error
-		"Argument `w` does not implement Window class.", // [1]
-		"Invalid window width (<=0) supplied.",          // [2]
-		"Invalid window height (<=0) supplied.",         // [3]
+	static char * errMsgs[]  = {"",                       // [0] no error
+		"Argument `w` does not implement Window class.",  // [1]
+		"Invalid window width (<=0) supplied.",           // [2]
+		"Invalid window height (<=0) supplied.",          // [3]
+		"Failure in `neuik_MakeMask_Resize()`",           // [4]
+		"Failure in `neuik_Window_RequestFullRedraw()`.", // [5]
 	};
 
 	if (!neuik_Object_IsClass(w, neuik__Class_Window))
@@ -1804,26 +2160,46 @@ int NEUIK_Window_SetSize(
 		goto out;
 	}
 
-	if (w != NULL)
+	if (width <= 0)
 	{
-		if (width <= 0)
-		{
-			/* invalid window width */
-			eNum = 2;
-			goto out;
-		}
+		/* invalid window width */
+		eNum = 2;
+		goto out;
+	}
+	if (height <= 0)
+	{
+		/* invalid window height */
+		eNum = 3;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Check to see if the window size is actually changing.                  */
+	/*------------------------------------------------------------------------*/
+	if (w->sizeW != width || w->sizeH != height)
+	{
+		/*--------------------------------------------------------------------*/
+		/* There is an actual change to window size.                          */
+		/*--------------------------------------------------------------------*/
 		w->sizeW = width;
-		if (height <= 0)
-		{
-			/* invalid window height */
-			eNum = 3;
-			goto out;
-		}
 		w->sizeH = height;
 
 		if (w->shown && w->win != NULL)
 		{
 			SDL_SetWindowSize(w->win, width, height);
+		}
+
+		if (w->redrawMask != NULL)
+		{
+			if (neuik__Report_Debug)
+			{
+				printf("Resizing maskMap to size: [%d,%d]\n", width, height);
+			}
+			if (neuik_MaskMap_Resize(w->redrawMask, width, height))
+			{
+				eNum = 4;
+				goto out;
+			}
 		}
 	}
 out:

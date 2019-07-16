@@ -35,7 +35,7 @@ int neuik_Object_Free__Canvas(void *);
 
 int neuik_Element_GetMinSize__Canvas(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Canvas(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -397,7 +397,8 @@ int neuik_Element_GetMinSize__Canvas(
  *
  *  Name:          NEUIK_RenderCanvas
  *
- *  Description:   Renders a single button as an SDL_Texture*.
+ *  Description:   Run a series of canvas operations to create the resulting 
+ *                 rendered canvas.
  *
  *                 If `*rSize = (0, 0)`; use the native GetMinSize function to 
  *                 determine the rendered object size. Otherwise use the 
@@ -411,7 +412,8 @@ int neuik_Element_Render__Canvas(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                 eNum       = 0; /* which error to report (if any) */
 	int                 ctr;            /* loop iteration counter */
@@ -469,6 +471,13 @@ int neuik_Element_Render__Canvas(
 	else if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 6;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -608,7 +617,7 @@ int neuik_Element_Render__Canvas(
 		}
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (mock) eBase->eSt.doRedraw = 0;
 
 	if (eNum > 0)
 	{
@@ -632,10 +641,13 @@ out:
 int NEUIK_Canvas_Clear(
 	NEUIK_Canvas * cnvs)
 {
+	RenderSize     rSize;
+	RenderLoc      rLoc;
 	int            eNum       = 0;    /* which error to report (if any) */
 	static char    funcName[] = "NEUIK_Canvas_Clear";
-	static char  * errMsgs[]  = {"",               // [0] no error
-		"Argument `cnvs` is not of Canvas class.", // [1]
+	static char  * errMsgs[]  = {"",                        // [0] no error
+		"Argument `cnvs` is not of Canvas class.",          // [1]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [2]
 	};
 
 	if (!neuik_Object_IsClass(cnvs, neuik__Class_Canvas))
@@ -650,8 +662,11 @@ int NEUIK_Canvas_Clear(
 	if (cnvs->ops_used == 0) goto out;
 
 	cnvs->ops_used = 0;
-	neuik_Element_RequestRedraw(cnvs);
-
+	if (neuik_Element_GetSizeAndLocation(cnvs, &rSize, &rLoc))
+	{
+		eNum = 2;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{

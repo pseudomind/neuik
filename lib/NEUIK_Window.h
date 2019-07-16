@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,30 +25,34 @@
 #include "NEUIK_structs_basic.h"
 #include "NEUIK_WindowConfig.h"
 #include "NEUIK_Callback.h"
+#include "neuik_MaskMap.h"
 
 /*----------------------------------------------------------------------------*/
 /* Typedef(s)                                                                 */
 /*----------------------------------------------------------------------------*/
 typedef struct {
-	neuik_Object              objBase;   /* this structure is requied to be an neuik object */
-	void                    * win;       /* SDL_Window           */
-	void                    * rend;      /* SDL_Renderer         */
-	char                    * title;     /* title of the window  */
-	NEUIK_MainMenu          * mmenu;     /* MainMenu             */
-	NEUIK_WindowConfig      * cfg;       /* WindowConfig         */
-	NEUIK_WindowConfig      * cfgPtr;    /* if NULL, the non-Pointer version is used */
+	neuik_Object              objBase;    /* this structure is requied to be an neuik object */
+	void                    * win;        /* SDL_Window           */
+	void                    * rend;       /* SDL_Renderer         */
+	void                    * lastFrame;  /* SDL_Texture          */
+	char                    * title;      /* title of the window  */
+	NEUIK_MainMenu          * mmenu;      /* MainMenu             */
+	NEUIK_WindowConfig      * cfg;        /* WindowConfig         */
+	NEUIK_WindowConfig      * cfgPtr;     /* if NULL, the non-Pointer version is used */
 	NEUIK_Element             elem;
 	NEUIK_Element             focused;
 	NEUIK_Element           * popups;
 	NEUIK_Image             * icon;
 	NEUIK_CallbackTable       eCT;
-	NEUIK_EventHandlerTable   eHT;       /* optional event handler */
-	int                       posX;      /* X position of window */     
-	int                       posY;      /* Y position of window */
-	int                       sizeW;     /* width of window  (px) */
-	int                       sizeH;     /* height of window (px) */
-	int                       shown;     /* whether or not the window is shown */
-	int                       winID;     /* the Window index when registered for event handling */
+	NEUIK_EventHandlerTable   eHT;        /* optional event handler */
+	neuik_MaskMap           * redrawMask; /* Mask used to identify regions to redraw */
+	int                       redrawAll;  /* Forces redraw of all contained elements */
+	int                       posX;       /* X position of window */     
+	int                       posY;       /* Y position of window */
+	int                       sizeW;      /* width of window  (px) */
+	int                       sizeH;      /* height of window (px) */
+	int                       shown;      /* whether or not the window is shown */
+	int                       winID;      /* the Window index when registered for event handling */
 	int                       updateIcon;
 	int                       updateTitle;
 	int                       doRedraw;

@@ -49,7 +49,8 @@ int
 			RenderSize*, 
 			RenderLoc*,
 			SDL_Renderer*,
-			SDL_Surface*);
+			SDL_Surface*,
+			int);
 
 void
 	neuik_Element_Defocus__TextEdit(

@@ -239,7 +239,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	TTF_Font             * font         = NULL;
 	SDL_Rect               rect         = {0, 0, 0 ,0};
 	SDL_Keymod             keyMod;
-	RenderSize           * rSize;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
+	RenderSize           * rSizePtr;
 	SDL_MouseMotionEvent * mouseMotEv;
 	SDL_MouseButtonEvent * mouseButEv;
 	NEUIK_TextEdit       * te         = NULL;
@@ -310,7 +312,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					te->wasSelected = 1;
 					neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)te);
 					SDL_StartTextInput();
-					neuik_Element_RequestRedraw((NEUIK_Element)te);
+
+					rSize = eBase->eSt.rSize;
+					rLoc  = eBase->eSt.rLoc;
+					neuik_Element_RequestRedraw(te, rLoc, rSize);
 				}
 				doContinue = 1;
 				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
@@ -320,7 +325,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		if (!doContinue) goto out;
 		doContinue = 0;
 
-		rSize = &(eBase->eSt.rSize);
+		rSizePtr = &(eBase->eSt.rSize);
 
 		/*--------------------------------------------------------------------*/
 		/* If this is the start of text selection highlighting, then save the */
@@ -386,11 +391,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 								break;
 
 							case NEUIK_HJUSTIFY_CENTER:
-								rect.x = (int) ((float)(rSize->w - textW)/2.0);
+								rect.x = (int) ((float)(rSizePtr->w - textW)/2.0);
 								break;
 
 							case NEUIK_HJUSTIFY_RIGHT:
-								rect.x = (int) (rSize->w - textW - 6);
+								rect.x = (int) (rSizePtr->w - textW - 6);
 								break;
 						}
 					}
@@ -416,7 +421,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 			te->cursorPos = lineLen;
 			// neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
-			neuik_Element_RequestRedraw((NEUIK_Element)te);
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(te, rLoc, rSize);
 
 		}
 
@@ -552,7 +559,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 		}
 
-		neuik_Element_RequestRedraw((NEUIK_Element)te);
+		rSize = eBase->eSt.rSize;
+		rLoc  = eBase->eSt.rLoc;
+		neuik_Element_RequestRedraw(te, rLoc, rSize);
 		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 
 		te->clickHeld = 1;
@@ -592,7 +601,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			if (!doContinue) goto out;
 			doContinue = 0;
 
-			rSize = &(eBase->eSt.rSize);
+			rSizePtr = &(eBase->eSt.rSize);
 
 			/*----------------------------------------------------------------*/
 			/* Determine the line of text in which the click occurred         */
@@ -657,11 +666,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 									break;
 
 								case NEUIK_HJUSTIFY_CENTER:
-									rect.x = (int) ((float)(rSize->w - textW)/2.0);
+									rect.x = (int) ((float)(rSizePtr->w - textW)/2.0);
 									break;
 
 								case NEUIK_HJUSTIFY_RIGHT:
-									rect.x = (int) (rSize->w - textW - 6);
+									rect.x = (int) (rSizePtr->w - textW - 6);
 									break;
 							}
 						}
@@ -709,7 +718,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				}
 
 				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
-				neuik_Element_RequestRedraw((NEUIK_Element)te);
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(te, rLoc, rSize);
 				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			}
 
@@ -829,7 +840,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightEndPos    = te->cursorPos;
 			}
 
-			neuik_Element_RequestRedraw((NEUIK_Element)te);
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(te, rLoc, rSize);
 			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 		}
 	}
@@ -864,6 +877,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 	SDL_TextInputEvent * textInpEv  = NULL;
 	NEUIK_TextEdit     * te         = NULL;
 	NEUIK_ElementBase  * eBase      = NULL;
+	RenderSize           rSize;
+	RenderLoc            rLoc;
 	static char          funcName[] = 
 		"neuik_Element_CaptureEvent__TextEdit_TextInputEvent";
 
@@ -924,7 +939,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 	te->cursorPos += inpLen;
 
 	neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_INSERTED);
-	neuik_Element_RequestRedraw((NEUIK_Element)te);
+	rSize = eBase->eSt.rSize;
+	rLoc  = eBase->eSt.rLoc;
+	neuik_Element_RequestRedraw(te, rLoc, rSize);
 	evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 out:
 	if (eNum > 0)
@@ -960,6 +977,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	SDL_KeyboardEvent * keyEv;
 	NEUIK_TextEdit    * te         = NULL;
 	NEUIK_ElementBase * eBase      = NULL;
+	RenderSize          rSize;
+	RenderLoc           rLoc;
 	static char         funcName[] = 
 		"neuik_Element_CaptureEvent__TextEdit_KeyDownEvent";
 
@@ -1519,7 +1538,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 			te->cursorPos   = 0;
 
 			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_INSERTED);
-			neuik_Element_RequestRedraw((NEUIK_Element)te);
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(te, rLoc, rSize);
 			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 
@@ -1741,7 +1762,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 		}
 
 		neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_ADD_REMOVE);
-		neuik_Element_RequestRedraw((NEUIK_Element)te);
+		rSize = eBase->eSt.rSize;
+		rLoc  = eBase->eSt.rLoc;
+		neuik_Element_RequestRedraw(te, rLoc, rSize);
 		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 	}
 	else if (neuik_KeyShortcut_SelectAll(keyEv, keyMod))
@@ -1780,7 +1803,12 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 		}
 	}
 
-	if (doRedraw) neuik_Element_RequestRedraw((NEUIK_Element)te);
+	if (doRedraw)
+	{
+		rSize = eBase->eSt.rSize;
+		rLoc  = eBase->eSt.rLoc;
+		neuik_Element_RequestRedraw(te, rLoc, rSize);
+	}
 	evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 out:
 	if (eNum > 0)

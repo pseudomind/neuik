@@ -41,7 +41,7 @@ int neuik_Object_Free__Image(void * imgPtr);
 
 int neuik_Element_GetMinSize__Image(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Image(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -650,7 +650,8 @@ int neuik_Element_Render__Image(
 	RenderSize    * rSize, /* [in] the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	SDL_Surface       * imgSurf    = NULL;
 	SDL_Renderer      * rend       = NULL;
@@ -689,6 +690,13 @@ int neuik_Element_Render__Image(
 	if (rSize->w < 0 || rSize->h < 0)
 	{
 		eNum = 4;
+		goto out;
+	}
+	if (mock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is a mock render operation; don't draw anything...            */
+		/*--------------------------------------------------------------------*/
 		goto out;
 	}
 
@@ -743,7 +751,7 @@ int neuik_Element_Render__Image(
 		SDL_RenderCopy(rend, imgTex, NULL, &rect);
 	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&imgTex);
 

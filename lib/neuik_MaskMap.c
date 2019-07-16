@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <math.h>
+#include <string.h>
 
 #include "neuik_MaskMap.h"
 #include "NEUIK_error.h"
@@ -209,7 +210,6 @@ int neuik_MakeMaskMap(
 {
 	int             eNum       = 0; /* which error to report (if any) */
 	int             aSize      = 0; /* allocation size */
-	int             ctr        = 0; /* counter (used for loops) */
 	neuik_MaskMap * map        = NULL;
 	static char     funcName[] = "neuik_MakeMaskMap";
 	static char   * errMsgs[]  = {"", // [0] no error
@@ -295,10 +295,7 @@ int neuik_MakeMaskMap(
 	/*------------------------------------------------------------------------*/
 	/* Initialize all mask map values with zeros.                             */
 	/*------------------------------------------------------------------------*/
-	for (ctr = 0; ctr < aSize; ctr++)
-	{
-		map->mapData[ctr] = 0;
-	}
+	memset(map->mapData, 0, aSize);
 out:
 	if (eNum > 0)
 	{
@@ -384,7 +381,6 @@ int neuik_MaskMap_SetSize(
 	int             width,
 	int             height)
 {
-	int           ctr   = 0; /* counter (used for loops) */
 	int           aSize = 0; /* allocation size */
 	int           eNum  = 0; /* which error to report (if any) */
 	static char   funcName[] = "neuik_MaskMap_SetSize";
@@ -432,15 +428,252 @@ int neuik_MaskMap_SetSize(
 	/*------------------------------------------------------------------------*/
 	/* Initialize all mask map values with zeros.                             */
 	/*------------------------------------------------------------------------*/
-	for (ctr = 0; ctr < aSize; ctr++)
-	{
-		map->mapData[ctr] = 0;
-	}
+	memset(map->mapData, 0, aSize);
 out:
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_Resize
+ *
+ *  Description:   Change the outer (x,y) dimensions of a MaskMap while 
+ *                 preserving as much of the existing maskData as possible.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_Resize(
+	neuik_MaskMap * map, 
+	int             width,
+	int             height)
+{
+	int           ctr     = 0;    /* counter (used for loops) */
+	int           colCtr  = 0;    /* column counter */
+	int           rowCtr  = 0;    /* row counter */
+	int           aSize   = 0;    /* allocation size */
+	int           eNum    = 0;    /* which error to report (if any) */
+	int           pos     = 0;    /* position of point within mapData */
+	int           oldW    = 0;    /* The old maskMap width */
+	int           oldH    = 0;    /* The old maskMap height */
+	char          oldVal;         /* Old mask value at a point */
+	char        * oldData = NULL; /* copy of mask data; FREE AT EXIT */
+	static char   funcName[] = "neuik_MaskMap_Resize";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `map` does not implement MaskMap class.", // [1]
+		"Argument `width` invalid;  value (<=0) supplied.", // [2]
+		"Argument `height` invalid; value (<=0) supplied.", // [3]
+		"Failure to allocate memory.",                      // [4]
+		"Failure to reallocate memory.",                    // [5]
+	};
+
+	/*------------------------------------------------------------------------*/
+	/* Check for some potential input issues before continuing.               */
+	/*------------------------------------------------------------------------*/
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	oldW = map->sizeW;
+	oldH = map->sizeH;
+
+	if (width <= 0)
+	{
+		/* invalid width */
+		eNum = 2;
+		goto out;
+	}
+	if (height <= 0)
+	{
+		/* invalid height */
+		eNum = 3;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Check if this resize command actually results in a change of size.     */
+	/*------------------------------------------------------------------------*/
+	if (oldW == width && oldH == height)
+	{
+		/* Resize called with the current size; return */
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Copy the memory address used for the current mapData array.            */
+	/*------------------------------------------------------------------------*/
+	oldData = map->mapData;
+
+	/*------------------------------------------------------------------------*/
+	/* Resize `map->mapData`. Since there is a dimensional change of the map  */
+	/* there is no benefit to preserving the current data. Therefore a free() */
+	/* & malloc() will be used in favor of a realloc(), as this will result   */
+	/* in better performance.                                                 */
+	/*------------------------------------------------------------------------*/
+	aSize = width*height;
+	map->mapData = malloc(aSize*sizeof(char));
+	if (map->mapData == NULL)
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set all of the initial values to zero before copying over the old mask */
+	/* data.                                                                  */
+	/*------------------------------------------------------------------------*/
+	memset(map->mapData, 0, aSize);
+
+	/*------------------------------------------------------------------------*/
+	/* Copy over the values from the maskData copy into the new maskData.     */
+	/*------------------------------------------------------------------------*/
+	for (rowCtr = 0; rowCtr < oldH; rowCtr++)
+	{
+		if (colCtr >= width)
+		{
+			/*----------------------------------------------------------------*/
+			/* The new maskMap height is smaller and this is out of bounds.   */
+			/*----------------------------------------------------------------*/
+			break;
+		}
+
+		for (colCtr = 0; colCtr < oldW; colCtr++)
+		{
+			if (colCtr >= width)
+			{
+				/*------------------------------------------------------------*/
+				/* The new maskMap width is smaller and this is out of        */
+				/* bounds; continue copying on next row of map.               */
+				/*------------------------------------------------------------*/
+				break;
+			}
+			pos = oldW*rowCtr + colCtr;
+			oldVal = oldData[pos];
+
+			pos = width*rowCtr + colCtr;
+			map->mapData[ctr] = oldVal;
+		}
+	}
+	map->sizeW = width;
+	map->sizeH = height;
+out:
+	if (oldData != NULL) free(oldData);
+
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_MaskAll
+ *
+ *  Description:   Set the entire mask map as masked. Masked points are used to
+ *                 identify portions of an image that should not be rendered.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_MaskAll(
+	neuik_MaskMap * map)
+{
+	int           aSize = 0; /* allocation size */
+	int           eNum  = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_MaskMap_MaskAll";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `map` does not implement MaskMap class.", // [1]
+		"map->mapData is NULL; was the mask size set?",     // [2]
+	};
+
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (map->mapData == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the allocate size.                                           */
+	/*------------------------------------------------------------------------*/
+	aSize = map->sizeW*map->sizeH;
+
+	/*------------------------------------------------------------------------*/
+	/* Initialize all mask map values with ones.                              */
+	/*------------------------------------------------------------------------*/
+	memset(map->mapData, 1, aSize);
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_UnmaskAll
+ *
+ *  Description:   Set the entire mask map as unmasked. Masked points are used
+ *                 to identify portions of an image that should not be rendered.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_UnmaskAll(
+	neuik_MaskMap * map)
+{
+	int           aSize = 0; /* allocation size */
+	int           eNum  = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_MaskMap_UnmaskAll";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `map` does not implement MaskMap class.", // [1]
+		"map->mapData is NULL; was the mask size set?",     // [2]
+	};
+
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (map->mapData == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the allocate size.                                           */
+	/*------------------------------------------------------------------------*/
+	aSize = map->sizeW*map->sizeH;
+
+	/*------------------------------------------------------------------------*/
+	/* Initialize all mask map values with zeros.                             */
+	/*------------------------------------------------------------------------*/
+	memset(map->mapData, 0, aSize);
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 	}
 
 	return eNum;

@@ -40,7 +40,7 @@ int neuik_Element_GetMinSize__Transformer(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__Transformer(
 	NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__Transformer(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -331,6 +331,8 @@ int NEUIK_Transformer_Configure(
 	char                * value      = NULL;
 	const char          * set        = NULL;
 	char                  buf[4096];
+	RenderSize            rSize      = {0, 0};
+	RenderLoc             rLoc       = {0, 0};;
 	NEUIK_ElementBase   * eBase      = NULL;
 	/*------------------------------------------------------------------------*/
 	/* If a `name=value` string with an unsupported name is found, check to   */
@@ -362,6 +364,7 @@ int NEUIK_Transformer_Configure(
 		"Invalid `name=value` string.",                                   // [10]
 		"ValueType name used as BoolType, skipping.",                     // [11]
 		"BoolType name used as ValueType, skipping.",                     // [12]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [13]
 	};
 
 	if (neuik_Object_GetClassObject(trans, neuik__Class_Element, (void**)&eBase))
@@ -483,7 +486,15 @@ int NEUIK_Transformer_Configure(
 	}
 	va_end(args);
 
-	if (doRedraw) neuik_Element_RequestRedraw(trans);
+	if (doRedraw)
+	{
+		if (neuik_Element_GetSizeAndLocation(trans, &rSize, &rLoc))
+		{
+			NEUIK_RaiseError(funcName, errMsgs[13]);
+			return 1;
+		}
+		neuik_Element_RequestRedraw(trans, rLoc, rSize);
+	}
 
 	return 0;
 }
@@ -747,10 +758,11 @@ out:
  ******************************************************************************/
 int neuik_Element_Render__Transformer(
 	NEUIK_Element   tElem, 
-	RenderSize    * rSize, 
+	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
-	SDL_Renderer  * xRend,
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
 	RenderLoc             rl         = {0, 0};
@@ -827,10 +839,13 @@ int neuik_Element_Render__Transformer(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(tElem, surf, rlMod, NULL))
+	if (!mock)
 	{
-		eNum = 9;
-		goto out;
+		if (neuik_Element_RedrawBackground(tElem, surf, rlMod, NULL))
+		{
+			eNum = 9;
+			goto out;
+		}
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -1053,7 +1068,7 @@ int neuik_Element_Render__Transformer(
 	}
 
 	if (neuik_Element_RenderRotate(
-			elem, &rsOrig, &rlModNext, rend, surf, trans->rotation))
+			elem, &rsOrig, &rlModNext, rend, surf, mock, trans->rotation))
 	{
 		eNum = 7;
 		goto out;
@@ -1073,10 +1088,13 @@ int neuik_Element_Render__Transformer(
 	destRect.y = rl.y;
 	destRect.w = eBase->eSt.rSize.w;
 	destRect.h = eBase->eSt.rSize.h;
-	SDL_RenderCopy(xRend, tex, NULL, &destRect);
 
+	if (!mock)
+	{
+		SDL_RenderCopy(xRend, tex, NULL, &destRect);
+	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	ConditionallyDestroyTexture(&tex);
 

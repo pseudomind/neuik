@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,7 @@ typedef struct {
 		unsigned int           n_used;       /* number of element slots in use */
 		neuik_Container_Type   cType;        /* identify the container as single or multi */
 		int                    shownIfEmpty; /* [bool] whether container is visible without children shown */
+		int                    redrawAll;    /* [bool] if all child elements must be redrawn */
 		enum neuik_VJustify    VJustify;     /* Vertical   justification */
 		enum neuik_HJustify    HJustify;     /* Horizontal justification */
 } NEUIK_Container;

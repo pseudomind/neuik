@@ -38,7 +38,7 @@ int neuik_Object_Free__Plot2D(void * vgPtr);
 
 int neuik_Element_GetMinSize__Plot2D(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Plot2D(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -384,7 +384,8 @@ int neuik_Element_Render__Plot2D(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf) /* the external surface (used for transp. bg) */
+	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
+	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
 	RenderLoc             rl         = {0, 0};
@@ -444,10 +445,13 @@ int neuik_Element_Render__Plot2D(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(pltElem, xSurf, rlMod, NULL))
+	if (!mock)
 	{
-		eNum = 9;
-		goto out;
+		if (neuik_Element_RedrawBackground(pltElem, xSurf, rlMod, NULL))
+		{
+			eNum = 9;
+			goto out;
+		}
 	}
 	rl = eBase->eSt.rLoc;
 
@@ -526,8 +530,11 @@ int neuik_Element_Render__Plot2D(
 	rlRel.x = rect.x;
 	rlRel.y = rect.y;
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
-
-	if (neuik_Element_Render(elem, &rs, rlMod, rend, surf))
+	/*------------------------------------------------------------------------*/
+	/* The following render operation will result in a calculated size for    */
+	/* plot drawing area.                                                     */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_Render(elem, &rs, rlMod, rend, surf, TRUE))
 	{
 		eNum = 5;
 		goto out;
@@ -554,6 +561,7 @@ int neuik_Element_Render__Plot2D(
 	/* Draw in the labels for the y-axis/x-axis tic marks                     */
 	/*------------------------------------------------------------------------*/
 	dwg = plt->drawing_ticmarks;
+	NEUIK_Canvas_Clear(dwg);
 	NEUIK_Canvas_SetDrawColor(dwg, 0, 0, 0, 255); /* dwg ticmark label color */
 	NEUIK_Canvas_SetTextSize(dwg, 10);        /* set size of drawn text */
 
@@ -575,6 +583,7 @@ int neuik_Element_Render__Plot2D(
 	/* Fill the background with white and draw the outside border             */
 	/*------------------------------------------------------------------------*/
 	dwg = plt->drawing_background;
+	NEUIK_Canvas_Clear(dwg);
 	NEUIK_Canvas_SetDrawColor(dwg, 255, 255, 255, 255); /* dwg bg color */
 	NEUIK_Canvas_Fill(dwg);
 	NEUIK_Canvas_SetDrawColor(dwg, 150, 150, 150, 255); /* dwg border color */
@@ -583,8 +592,18 @@ int neuik_Element_Render__Plot2D(
 	NEUIK_Canvas_DrawLine(dwg, (dwg_rs.w-1), (dwg_rs.h-1));
 	NEUIK_Canvas_DrawLine(dwg, 0, (dwg_rs.h-1));
 	NEUIK_Canvas_DrawLine(dwg, 0, 0);
+
+	/*------------------------------------------------------------------------*/
+	/* Finally, have the entire visual redraw itself. It will only redraw the */
+	/* drawing portion and with the correct sizing.                           */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_Render(plot->visual, &rs, rlMod, rend, surf, mock))
+	{
+		eNum = 5;
+		goto out;
+	}
 out:
-	eBase->eSt.doRedraw = 0;
+	if (!mock) eBase->eSt.doRedraw = 0;
 
 	if (eNum > 0)
 	{

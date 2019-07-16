@@ -249,7 +249,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 	TTF_Font              * font         = NULL;
 	SDL_Rect                rect         = {0, 0, 0 ,0};
 	SDL_Keymod              keyMod;
-	RenderSize            * rSize;
+	RenderSize              rSize;
+	RenderLoc               rLoc;
+	RenderSize            * rSizePtr;
 	SDL_MouseMotionEvent  * mouseMotEv;
 	SDL_MouseButtonEvent  * mouseButEv;
 	NEUIK_TextEntry       * te         = NULL;
@@ -291,7 +293,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 					te->wasSelected = 1;
 					neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)te);
 					SDL_StartTextInput();
-					neuik_Element_RequestRedraw((NEUIK_Element)te);
+					rSize = eBase->eSt.rSize;
+					rLoc  = eBase->eSt.rLoc;
+					neuik_Element_RequestRedraw(te, rLoc, rSize);
 					evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 				}
 				else
@@ -330,7 +334,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 		aCfg = te->cfgPtr;
 		if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
 
-		rSize = &(eBase->eSt.rSize);
+		rSizePtr = &(eBase->eSt.rSize);
 
 		/*--------------------------------------------------------------------*/
 		/* Get the overall location of the current text                       */
@@ -361,11 +365,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 							break;
 
 						case NEUIK_HJUSTIFY_CENTER:
-							rect.x = (int) ((float)(rSize->w - textW)/2.0);
+							rect.x = (int) ((float)(rSizePtr->w - textW)/2.0);
 							break;
 
 						case NEUIK_HJUSTIFY_RIGHT:
-							rect.x = (int) (rSize->w - textW - 6);
+							rect.x = (int) (rSizePtr->w - textW - 6);
 							break;
 					}
 				}
@@ -594,7 +598,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 			}
 		}
 
-		neuik_Element_RequestRedraw((NEUIK_Element)te);
+		rSize = eBase->eSt.rSize;
+		rLoc  = eBase->eSt.rLoc;
+		neuik_Element_RequestRedraw(te, rLoc, rSize);
 		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 
 		te->clickHeld   = 1;
@@ -645,7 +651,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 			aCfg = te->cfgPtr;
 			if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
 
-			rSize = &(eBase->eSt.rSize);
+			rSizePtr = &(eBase->eSt.rSize);
 
 			/*----------------------------------------------------------------*/
 			/* Get the overall location of the current text                   */
@@ -677,11 +683,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 								break;
 
 							case NEUIK_HJUSTIFY_CENTER:
-								rect.x = (int) ((float)(rSize->w - textW)/2.0);
+								rect.x = (int) ((float)(rSizePtr->w - textW)/2.0);
 								break;
 
 							case NEUIK_HJUSTIFY_RIGHT:
-								rect.x = (int) (rSize->w - textW - 6);
+								rect.x = (int) (rSizePtr->w - textW - 6);
 								break;
 						}
 					}
@@ -792,7 +798,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
 				te->highlightEnd   = te->cursorPos - 1;
 			}
 
-			neuik_Element_RequestRedraw((NEUIK_Element)te);
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(te, rLoc, rSize);
 			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 		}
 		goto out;
@@ -820,19 +828,21 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	neuik_EventState     evCaptured   = NEUIK_EVENTSTATE_NOT_CAPTURED;
-	int                  eNum         = 0; /* which error to report (if any) */
-	size_t               inpLen       = 0;  /* length of text input */
-	size_t               newSize      = 0;  /* realloated text buf size */
+	neuik_EventState     evCaptured = NEUIK_EVENTSTATE_NOT_CAPTURED;
+	int                  eNum       = 0; /* which error to report (if any) */
+	size_t               inpLen     = 0; /* length of text input */
+	size_t               newSize    = 0; /* realloated text buf size */
 	size_t               stopPos;
-	size_t               hlOffset;         /* highlight offset (for copy) */
+	size_t               hlOffset;       /* highlight offset (for copy) */
 	size_t               aPos;
 	size_t               ctr;
 	char                 aChar;
-	char               * clipText     = NULL;
+	char               * clipText   = NULL;
 	SDL_TextInputEvent * textInpEv;
 	NEUIK_TextEntry    * te         = NULL;
 	NEUIK_ElementBase  * eBase      = NULL;
+	RenderSize           rSize;
+	RenderLoc            rLoc;
 	static char          funcName[] = "neuik_Element_CaptureEvent__TextEntry_TextInputEvent";
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_TextEntry))
@@ -986,7 +996,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
 	}
 
 	neuik_TextEntry_UpdatePanCursor(te, CURSORPAN_TEXT_INSERTED);
-	neuik_Element_RequestRedraw((NEUIK_Element)te);
+	rSize = eBase->eSt.rSize;
+	rLoc  = eBase->eSt.rLoc;
+	neuik_Element_RequestRedraw(te, rLoc, rSize);
 	evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 out:
 	if (eNum > 0)
@@ -1026,6 +1038,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 	SDL_KeyboardEvent * keyEv;
 	NEUIK_TextEntry   * te         = NULL;
 	NEUIK_ElementBase * eBase      = NULL;
+	RenderSize          rSize;
+	RenderLoc           rLoc;
 	static char         funcName[] = "neuik_Element_CaptureEvent__TextEntry_KeyDownEvent";
 
 	if (!neuik_Object_IsClass(elem, neuik__Class_TextEntry))
@@ -1623,7 +1637,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 
 		// neuik_TextEntry_UpdateCursorX(te);
 		neuik_TextEntry_UpdatePanCursor(te, CURSORPAN_TEXT_ADD_REMOVE);
-		neuik_Element_RequestRedraw((NEUIK_Element)te);
+		rSize = eBase->eSt.rSize;
+		rLoc  = eBase->eSt.rLoc;
+		neuik_Element_RequestRedraw(te, rLoc, rSize);
 		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 		goto out;
 
@@ -1643,7 +1659,12 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 		}
 	}
 
-	if (doRedraw) neuik_Element_RequestRedraw((NEUIK_Element)te);
+	if (doRedraw)
+	{
+		rSize = eBase->eSt.rSize;
+		rLoc  = eBase->eSt.rLoc;
+		neuik_Element_RequestRedraw(te, rLoc, rSize);
+	}
 	evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 out:
 	if (eNum > 0)
