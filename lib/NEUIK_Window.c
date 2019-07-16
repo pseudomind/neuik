@@ -1939,7 +1939,7 @@ int NEUIK_Window_Redraw(
 		{
 			timeBeforeRedraw = SDL_GetTicks();
 		}
-		if (neuik_Element_Render(w->elem, &rSize, NULL, w->rend, NULL, FALSE))
+		if (neuik_Element_Render(w->elem, &rSize, NULL, w->rend, FALSE))
 		{
 			eNum = 3;
 			goto out;

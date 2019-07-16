@@ -93,7 +93,7 @@ typedef struct {
 	int (*GetMinSize) (NEUIK_Element, RenderSize *);
 
 	/* Render(): Redraw the element  element  */
-	int (*Render) (NEUIK_Element, RenderSize *, RenderLoc *, SDL_Renderer *, SDL_Surface *, int);
+	int (*Render) (NEUIK_Element, RenderSize *, RenderLoc *, SDL_Renderer *, int);
 
 	/* CaptureEvent(): Determine if this element caputures a given event */
 	neuik_EventState (*CaptureEvent) (NEUIK_Element, SDL_Event *);
@@ -176,7 +176,6 @@ int
 	 		RenderSize    * rSize, 
 	 		RenderLoc     * rlMod, 
 	 		SDL_Renderer  * xRend,
-	 		SDL_Surface   * xSurf,
 	 		int             mock);
 
 int 
@@ -185,14 +184,12 @@ int
 			RenderSize    * rSize, 
 			RenderLoc     * rlMod,
 			SDL_Renderer  * xRend,
-	 		SDL_Surface   * xSurf,
 	 		int             mock,
 			double          rotation);
 
 int
 	neuik_Element_RedrawBackground(
 			NEUIK_Element   elem,
-			SDL_Surface   * xSurf,
 			RenderLoc     * rlMod,
 			neuik_MaskMap * maskMap);
 

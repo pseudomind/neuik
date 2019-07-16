@@ -948,7 +948,6 @@ int neuik_Element_Render(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* The external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	NEUIK_ElementBase * eBase;
@@ -960,7 +959,7 @@ int neuik_Element_Render(
 	if (eBase->eFT == NULL) return 1;
 	if (eBase->eFT->Render == NULL) return 1;
 
-	return (eBase->eFT->Render)(elem, rSize, rlMod, xRend, xSurf, mock);
+	return (eBase->eFT->Render)(elem, rSize, rlMod, xRend, mock);
 }
 
 
@@ -969,7 +968,6 @@ int neuik_Element_RenderRotate(
 	RenderSize    * rSize,    /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod,    /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,    /* The external renderer to prepare the texture for */
-	SDL_Surface   * xSurf,    /* the external surface (used for transp. bg) */
 	int             mock,     /* If true; calculate sizes/locations but don't draw */
 	double          rotation)
 {
@@ -1036,7 +1034,7 @@ int neuik_Element_RenderRotate(
 
 	if (rotation == 0.0)
 	{
-		return neuik_Element_Render(elem, rSize, rlMod, xRend, xSurf, mock);
+		return neuik_Element_Render(elem, rSize, rlMod, xRend, mock);
 	}
 
 	rl = eBase->eSt.rLoc;
@@ -1073,7 +1071,7 @@ int neuik_Element_RenderRotate(
 	SDL_SetRenderDrawColor(cpRend, 255, 255, 255, 0);
 	SDL_RenderClear(cpRend);
 
-	if ((eBase->eFT->Render)(elem, rSize, rlMod, cpRend, cpSurf, mock))
+	if ((eBase->eFT->Render)(elem, rSize, rlMod, cpRend, mock))
 	{
 		eNum = 4;
 		goto out;
@@ -2765,7 +2763,6 @@ out:
  ******************************************************************************/
 int neuik_Element_RedrawBackground(
 	NEUIK_Element   elem,
-	SDL_Surface   * xSurf,   /* background surface from external object */
 	RenderLoc     * rlMod,   /* A relative location modifier (for rendering) */
 	neuik_MaskMap * maskMap) /* Identifies regions of background to not draw */
 {

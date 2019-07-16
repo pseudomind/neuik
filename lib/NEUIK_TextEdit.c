@@ -50,7 +50,7 @@ int neuik_Element_GetMinSize__TextEdit(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__TextEdit(
 	NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__TextEdit(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 void neuik_Element_Defocus__TextEdit(NEUIK_Element);
 
 /*----------------------------------------------------------------------------*/
@@ -929,7 +929,6 @@ int neuik_Element_Render__TextEdit(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	char                   tempChar;          /* a temporary character */
@@ -1074,7 +1073,7 @@ int neuik_Element_Render__TextEdit(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(te, xSurf, rlMod, maskMap))
+	if (neuik_Element_RedrawBackground(te, rlMod, maskMap))
 	{
 		eNum = 11;
 		goto out;

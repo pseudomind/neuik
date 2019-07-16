@@ -36,7 +36,7 @@ int neuik_Object_Free__HGroup(void * hgPtr);
 
 int neuik_Element_GetMinSize__HGroup(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__HGroup(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -583,7 +583,6 @@ int neuik_Element_Render__HGroup(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	RenderSize            rs;
@@ -654,7 +653,7 @@ int neuik_Element_Render__HGroup(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(hgElem, xSurf, rlMod, NULL))
+		if (neuik_Element_RedrawBackground(hgElem, rlMod, NULL))
 		{
 			eNum = 9;
 			goto out;
@@ -842,7 +841,7 @@ int neuik_Element_Render__HGroup(
 
 			if (neuik_Element_NeedsRedraw(elem))
 			{
-				if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
+				if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
 				{
 					eNum = 5;
 					goto out;

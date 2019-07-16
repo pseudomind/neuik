@@ -39,7 +39,7 @@ int neuik_Object_Free__Stack(void * stkPtr);
 int neuik_Element_CaptureEvent__Stack(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_GetMinSize__Stack(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Stack(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -428,7 +428,6 @@ int neuik_Element_Render__Stack(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                      ctr      = 0;
@@ -489,7 +488,7 @@ int neuik_Element_Render__Stack(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(stkElem, xSurf, rlMod, NULL))
+		if (neuik_Element_RedrawBackground(stkElem, rlMod, NULL))
 		{
 			eNum = 8;
 			goto out;
@@ -638,7 +637,7 @@ int neuik_Element_Render__Stack(
 	rlRel.y = rect.y;
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
+	if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
 	{
 		eNum = 5;
 		goto out;

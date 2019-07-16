@@ -40,7 +40,7 @@ neuik_EventState neuik_Element_CaptureEvent__GridLayout(
 	NEUIK_Element, SDL_Event*);
 int neuik_Element_GetMinSize__GridLayout(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__GridLayout(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 int neuik_Element_SetWindowPointer__GridLayout(NEUIK_Element, void*);
 int neuik_Element_IsShown__GridLayout(NEUIK_Element);
 
@@ -1587,7 +1587,6 @@ int neuik_Element_Render__GridLayout(
 	RenderSize    * rSize,    /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod,    /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,    /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf,    /* the external surface (used for transp. bg) */
 	int             mock)     /* If true; calculate sizes/locations but don't draw */
 {
 	int                    nAlloc        = 0;
@@ -1686,7 +1685,7 @@ int neuik_Element_Render__GridLayout(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(gridElem, xSurf, rlMod, NULL))
+		if (neuik_Element_RedrawBackground(gridElem, rlMod, NULL))
 		{
 			eNum = 9;
 			goto out;
@@ -2249,7 +2248,7 @@ int neuik_Element_Render__GridLayout(
 
 			if (neuik_Element_NeedsRedraw(elem))
 			{
-				if (neuik_Element_Render(elem, rs, rlMod, rend, xSurf, mock))
+				if (neuik_Element_Render(elem, rs, rlMod, rend, mock))
 				{
 					eNum = 2;
 					goto out;

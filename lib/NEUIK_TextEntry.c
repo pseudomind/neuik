@@ -896,7 +896,6 @@ int neuik_Element_Render__TextEntry(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	char                    tempChar;          /* a temporary character */
@@ -1179,7 +1178,7 @@ int neuik_Element_Render__TextEntry(
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_RedrawBackground(te, xSurf, rlMod, maskMap))
+	if (neuik_Element_RedrawBackground(te, rlMod, maskMap))
 	{
 		eNum = 8;
 		goto out;

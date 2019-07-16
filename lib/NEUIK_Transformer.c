@@ -40,7 +40,7 @@ int neuik_Element_GetMinSize__Transformer(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__Transformer(
 	NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__Transformer(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -761,7 +761,6 @@ int neuik_Element_Render__Transformer(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
@@ -841,7 +840,7 @@ int neuik_Element_Render__Transformer(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(tElem, surf, rlMod, NULL))
+		if (neuik_Element_RedrawBackground(tElem, rlMod, NULL))
 		{
 			eNum = 9;
 			goto out;
@@ -1068,7 +1067,7 @@ int neuik_Element_Render__Transformer(
 	}
 
 	if (neuik_Element_RenderRotate(
-			elem, &rsOrig, &rlModNext, rend, surf, mock, trans->rotation))
+			elem, &rsOrig, &rlModNext, rend, mock, trans->rotation))
 	{
 		eNum = 7;
 		goto out;

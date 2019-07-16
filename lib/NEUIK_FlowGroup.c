@@ -36,7 +36,7 @@ int neuik_Object_Free__FlowGroup(void * fgPtr);
 
 int neuik_Element_GetMinSize__FlowGroup(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__FlowGroup(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 
 /*----------------------------------------------------------------------------*/
@@ -339,7 +339,6 @@ int neuik_Element_Render__FlowGroup(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* The external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* The external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                    tempH;
@@ -443,7 +442,7 @@ int neuik_Element_Render__FlowGroup(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(fgElem, xSurf, rlMod, NULL))
+		if (neuik_Element_RedrawBackground(fgElem, rlMod, NULL))
 		{
 			eNum = 14;
 			goto out;
@@ -500,7 +499,7 @@ int neuik_Element_Render__FlowGroup(
 		rlRel.y = rect.y;
 		neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-		if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
+		if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
 		{
 			eNum = 5;
 			goto out;
@@ -653,7 +652,7 @@ int neuik_Element_Render__FlowGroup(
 				rlRel.y = rect.y;
 				neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-				if (neuik_Element_Render(elem, &rs, rlMod, rend, xSurf, mock))
+				if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
 				{
 					eNum = 5;
 					goto out;

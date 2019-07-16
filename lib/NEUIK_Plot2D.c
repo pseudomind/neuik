@@ -38,7 +38,7 @@ int neuik_Object_Free__Plot2D(void * vgPtr);
 
 int neuik_Element_GetMinSize__Plot2D(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Plot2D(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -384,7 +384,6 @@ int neuik_Element_Render__Plot2D(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
@@ -393,7 +392,6 @@ int neuik_Element_Render__Plot2D(
 	SDL_Rect              rect       = {0, 0, 0, 0};
 	RenderSize            rs         = {0, 0};
 	RenderSize            dwg_rs;
-	SDL_Surface         * surf       = NULL;
 	SDL_Renderer        * rend       = NULL;
 	NEUIK_Plot          * plot       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
@@ -447,7 +445,7 @@ int neuik_Element_Render__Plot2D(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(pltElem, xSurf, rlMod, NULL))
+		if (neuik_Element_RedrawBackground(pltElem, rlMod, NULL))
 		{
 			eNum = 9;
 			goto out;
@@ -534,7 +532,7 @@ int neuik_Element_Render__Plot2D(
 	/* The following render operation will result in a calculated size for    */
 	/* plot drawing area.                                                     */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_Render(elem, &rs, rlMod, rend, surf, TRUE))
+	if (neuik_Element_Render(elem, &rs, rlMod, rend, TRUE))
 	{
 		eNum = 5;
 		goto out;
@@ -597,7 +595,7 @@ int neuik_Element_Render__Plot2D(
 	/* Finally, have the entire visual redraw itself. It will only redraw the */
 	/* drawing portion and with the correct sizing.                           */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_Render(plot->visual, &rs, rlMod, rend, surf, mock))
+	if (neuik_Element_Render(plot->visual, &rs, rlMod, rend, mock))
 	{
 		eNum = 5;
 		goto out;

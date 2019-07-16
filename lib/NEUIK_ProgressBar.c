@@ -39,7 +39,7 @@ int neuik_Object_Free__ProgressBar(void * wPtr);
 int neuik_Element_GetMinSize__ProgressBar(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ProgressBar(NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__ProgressBar(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, SDL_Surface*, int);
+	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
@@ -553,7 +553,6 @@ int neuik_Element_Render__ProgressBar(
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	SDL_Surface   * xSurf, /* the external surface (used for transp. bg) */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	const NEUIK_Color       * fgClr  = NULL;
@@ -682,7 +681,7 @@ int neuik_Element_Render__ProgressBar(
 		/*--------------------------------------------------------------------*/
 		/* The progress bar is "in-progress"; draw in the background gradient */
 		/*--------------------------------------------------------------------*/
-		if (neuik_Element_RedrawBackground(elem, xSurf, rlMod, maskMap))
+		if (neuik_Element_RedrawBackground(elem, rlMod, maskMap))
 		{
 			eNum = 4;
 			goto out;
