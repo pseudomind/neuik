@@ -49,6 +49,14 @@ int
 			neuik_MaskMap * map);
 
 int 
+	neuik_MaskMap_PrintValues(
+			neuik_MaskMap * map);
+
+int 
+	neuik_MaskMap_InvertValues(
+			neuik_MaskMap * map);
+
+int 
 	neuik_MaskMap_SetSize(
 			neuik_MaskMap * map, 
 			int             width,
@@ -111,6 +119,13 @@ int
 			int             y,
 			int             w,
 			int             h);
+
+int 
+	neuik_MaskMap_FillFromLoc(
+			neuik_MaskMap * destMap, 
+			neuik_MaskMap * srcMap, 
+			int             x,
+			int             y);
 
 int 
 	neuik_MaskMap_GetUnmaskedRegionsOnHLine(

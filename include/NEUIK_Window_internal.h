@@ -47,4 +47,15 @@ int
 	neuik_Window_RequestFullRedraw(
 			NEUIK_Window  * w);
 
+int 
+	neuik_Window_FullRedrawInProgress(
+			NEUIK_Window  * w);
+
+int 
+	neuik_Window_FillTranspMaskFromLoc(
+			NEUIK_Window  * w,
+			neuik_MaskMap * map,
+			int             x,
+			int             y);
+
 #endif /* NEUIK_WINDOW_INTERNAL_H */

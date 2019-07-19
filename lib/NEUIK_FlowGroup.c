@@ -22,6 +22,7 @@
 #include "NEUIK_colors.h"
 #include "NEUIK_FlowGroup.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Container.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
@@ -366,15 +367,17 @@ int neuik_Element_Render__FlowGroup(
 	RenderLoc              rlRel      = {0, 0}; /* renderloc relative to parent */
 	RenderSize             rs;
 	RenderSize           * eSizes     = NULL;
+	neuik_MaskMap        * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle     bgStyle;
 	static char            funcName[] = "neuik_Element_Render__FlowGroup";
 	static char          * errMsgs[]  = {"",                               // [ 0] no error
 		"Argument `fgElem` is not of FlowGroup class.",                    // [ 1]
-		"", // [ 2]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [ 2]
 		"Element_GetConfig returned NULL.",                                // [ 3]
 		"Element_GetMinSize Failed.",                                      // [ 4]
 		"Failure in `neuik_Element_Render()`",                             // [ 5]
 		"Invalid specified `rSize` (negative values).",                    // [ 6]
-		"", // [ 7]
+		"Failure in `neuik_MakeMaskMap()`",                                // [ 7]
 		"Argument `fgElem` caused `neuik_Object_GetClassObject` to fail.", // [ 8]
 		"Vertical fill preference not specified.",                         // [ 9]
 		"Horizontal fill preference not specified.",                       // [10]
@@ -382,7 +385,9 @@ int neuik_Element_Render__FlowGroup(
 		"Failed to allocate memory"                                        // [12]
 		"Invalid (negative) number of contained elements.",                // [13]
 		"Failure in neuik_Element_RedrawBackground().",                    // [14]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",               // [15]
 	};
+
 
 	if (!neuik_Object_IsClass(fgElem, neuik__Class_FlowGroup))
 	{
@@ -442,10 +447,35 @@ int neuik_Element_Render__FlowGroup(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(fgElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(fgElem, &bgStyle))
 		{
-			eNum = 14;
+			eNum = 2;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 7;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 15;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(fgElem, rlMod, maskMap))
+			{
+				eNum = 14;
+				goto out;
+			}
 		}
 	}
 
@@ -671,9 +701,10 @@ out:
 	/*------------------------------------------------------------------------*/
 	/* Free any dynamically allocated memory                                  */
 	/*------------------------------------------------------------------------*/
-	if (eSizes != NULL) free(eSizes);
-	if (eShown != NULL) free(eShown);
-	if (eCfgs  != NULL) free(eCfgs);
+	if (eSizes  != NULL) free(eSizes);
+	if (eShown  != NULL) free(eShown);
+	if (eCfgs   != NULL) free(eCfgs);
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
 	{

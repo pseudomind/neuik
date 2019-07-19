@@ -24,6 +24,7 @@
 #include "NEUIK_colors.h"
 #include "NEUIK_GridLayout.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Container.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
@@ -1640,6 +1641,8 @@ int neuik_Element_Render__GridLayout(
 	NEUIK_Element          elem          = NULL;
 	NEUIK_ElementConfig  * eCfg          = NULL;
 	NEUIK_GridLayout     * grid          = NULL;
+	neuik_MaskMap        * maskMap       = NULL; /* FREE upon return */
+	enum neuik_bgstyle     bgStyle;
 	static char            funcName[]    = "neuik_Element_Render__GridLayout";
 	static char          * errMsgs[]     = {"", // [0] no error
 		"Argument `gridElem` is not of GridLayout class.",                   // [1]
@@ -1648,9 +1651,11 @@ int neuik_Element_Render__GridLayout(
 		"Element_GetMinSize Failed.",                                        // [4]
 		"Failure to allocate memory.",                                       // [5]
 		"Invalid specified `rSize` (negative values).",                      // [6]
-		"", // [7]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                   // [7]
 		"Argument `gridElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in neuik_Element_RedrawBackground().",                      // [9]
+		"Failure in `neuik_MakeMaskMap()`",                                  // [10]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",                 // [11]
 	};
 
 	if (!neuik_Object_IsClass(gridElem, neuik__Class_GridLayout))
@@ -1685,10 +1690,35 @@ int neuik_Element_Render__GridLayout(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(gridElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(gridElem, &bgStyle))
 		{
-			eNum = 9;
+			eNum = 7;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 10;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 11;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(gridElem, rlMod, maskMap))
+			{
+				eNum = 9;
+				goto out;
+			}
 		}
 	}
 	rl = eBase->eSt.rLoc;
@@ -2258,6 +2288,7 @@ int neuik_Element_Render__GridLayout(
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (elemsCfg   != NULL) free(elemsCfg);
 	if (elemsShown != NULL) free(elemsShown);

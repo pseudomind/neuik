@@ -23,6 +23,7 @@
 #include "NEUIK_Plot.h"
 #include "NEUIK_Plot2D.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Container.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
@@ -396,21 +397,23 @@ int neuik_Element_Render__Plot2D(
 	NEUIK_Plot          * plot       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_ElementBase   * dwg_eBase  = NULL;
-	NEUIK_Element         elem       = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
 	NEUIK_Plot2D        * plt        = NULL;
 	NEUIK_Canvas        * dwg;               /* pointer to active drawing (don't free) */
+	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle    bgStyle;
 	static char           funcName[] = "neuik_Element_Render__Plot2D";
 	static char         * errMsgs[]  = {"",                                 // [0] no error
 		"Argument `pltElem` is not of Plot2D class.",                       // [1]
-		"", // [2]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                  // [2]
 		"Element_GetConfig returned NULL.",                                 // [3]
 		"Element_GetMinSize Failed.",                                       // [4]
 		"Failure in `neuik_Element_Render()`",                              // [5]
 		"Invalid specified `rSize` (negative values).",                     // [6]
-		"", // [7]
+		"Failure in `neuik_MakeMaskMap()`",                                 // [7]
 		"Argument `pltElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in neuik_Element_RedrawBackground().",                     // [9]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",                // [10]
 	};
 
 	if (!neuik_Object_IsClass(pltElem, neuik__Class_Plot2D))
@@ -445,20 +448,43 @@ int neuik_Element_Render__Plot2D(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(pltElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(pltElem, &bgStyle))
 		{
-			eNum = 9;
+			eNum = 2;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 7;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 10;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(pltElem, rlMod, maskMap))
+			{
+				eNum = 9;
+				goto out;
+			}
 		}
 	}
 	rl = eBase->eSt.rLoc;
 
-	elem = plot->visual;
-
 	/*------------------------------------------------------------------------*/
 	/* Render and place the currently active stack element                    */
 	/*------------------------------------------------------------------------*/
-	eCfg = neuik_Element_GetConfig(elem);
+	eCfg = neuik_Element_GetConfig(plot->visual);
 	if (eCfg == NULL)
 	{
 		eNum = 3;
@@ -468,7 +494,7 @@ int neuik_Element_Render__Plot2D(
 	/*------------------------------------------------------------------------*/
 	/* Start with the default calculated element size                         */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_GetMinSize(elem, &rs))
+	if (neuik_Element_GetMinSize(plot->visual, &rs))
 	{
 		eNum = 4;
 		goto out;
@@ -527,12 +553,12 @@ int neuik_Element_Render__Plot2D(
 	rl.y = (eBase->eSt.rLoc).y + rect.y;
 	rlRel.x = rect.x;
 	rlRel.y = rect.y;
-	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
+	neuik_Element_StoreSizeAndLocation(plot->visual, rs, rl, rlRel);
 	/*------------------------------------------------------------------------*/
 	/* The following render operation will result in a calculated size for    */
 	/* plot drawing area.                                                     */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_Render(elem, &rs, rlMod, rend, TRUE))
+	if (neuik_Element_Render(plot->visual, &rs, rlMod, rend, TRUE))
 	{
 		eNum = 5;
 		goto out;
@@ -602,6 +628,7 @@ int neuik_Element_Render__Plot2D(
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
 	{

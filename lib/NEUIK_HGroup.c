@@ -23,6 +23,7 @@
 #include "NEUIK_HGroup.h"
 #include "NEUIK_Element_internal.h"
 #include "NEUIK_Container.h"
+#include "NEUIK_Window_internal.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
@@ -587,8 +588,8 @@ int neuik_Element_Render__HGroup(
 {
 	RenderSize            rs;
 	RenderLoc             rl;
-	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
-	SDL_Rect              rect;
+	RenderLoc             rlRel      = {0,0};  /* renderloc relative to parent */
+	SDL_Rect              rect       = {0,0,0,0};
 	int                   tempH;
 	int                   ctr        = 0;
 	int                   vctr       = 0;    /* valid counter; for elements shown */
@@ -606,18 +607,21 @@ int neuik_Element_Render__HGroup(
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_HGroup        * hg         = NULL;
 	SDL_Renderer        * rend       = NULL;
+	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle    bgStyle;
 	static RenderSize     rsZero     = {0, 0};
 	static char           funcName[] = "neuik_Element_Render__HGroup";
 	static char         * errMsgs[]  = {"",                                // [0] no error
 		"Argument `hgElem` is not of HGroup class.",                       // [1]
-		"", // [2]
+		"Failure in `neuik_MakeMaskMap()`",                                // [2]
 		"Element_GetConfig returned NULL.",                                // [3]
 		"Element_GetMinSize Failed.",                                      // [4]
 		"Failure in `neuik_Element_Render()`",                             // [5]
 		"Invalid specified `rSize` (negative values).",                    // [6]
-		"", // [7]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",               // [7]
 		"Argument `hgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in `neuik_Element_RedrawBackground()`.",                  // [9]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [10]
 	};
 
 	if (!neuik_Object_IsClass(hgElem, neuik__Class_HGroup))
@@ -653,10 +657,35 @@ int neuik_Element_Render__HGroup(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(hgElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(hgElem, &bgStyle))
 		{
-			eNum = 9;
+			eNum = 10;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 2;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 7;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(hgElem, rlMod, maskMap))
+			{
+				eNum = 9;
+				goto out;
+			}
 		}
 	}
 
@@ -858,6 +887,8 @@ int neuik_Element_Render__HGroup(
 out2:
 	if (!mock) eBase->eSt.doRedraw = 0;
 out:
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
+
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);

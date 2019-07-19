@@ -372,37 +372,40 @@ int neuik_Element_Render__ListGroup(
 	int                   offRight;
 	int                   offTop;
 	int                   offBottom;
-	int                   ctr     = 0;
-	int                   vctr    = 0; /* valid counter; for elements shown */
-	int                   xPos    = 0;
-	int                   yPos    = 0;
-	int                   elWidth = 0;
-	int                   eNum    = 0; /* which error to report (if any) */
-	float                 yFree   = 0.0; /* px of space free for vFill elems */
-	float                 tScale  = 0.0; /* total vFill scaling factors */
+	int                   ctr        = 0;
+	int                   vctr       = 0; /* valid counter; for elements shown */
+	int                   xPos       = 0;
+	int                   yPos       = 0;
+	int                   elWidth    = 0;
+	int                   eNum       = 0; /* which error to report (if any) */
+	float                 yFree      = 0.0; /* px of space free for vFill elems */
+	float                 tScale     = 0.0; /* total vFill scaling factors */
 	RenderLoc             rl;
-	RenderLoc             rlRel   = {0, 0}; /* renderloc relative to parent */
+	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect              rect;
 	RenderSize            rs;
-	static RenderSize     rsZero  = {0, 0};
-	const NEUIK_Color   * bClr    = NULL; /* border color */
-	SDL_Renderer        * rend    = NULL;
-	NEUIK_Container     * cont    = NULL;
-	NEUIK_ElementBase   * eBase   = NULL;
-	NEUIK_Element         elem    = NULL;
-	NEUIK_ElementConfig * eCfg    = NULL;
-	NEUIK_ListGroup     * lg      = NULL;
+	static RenderSize     rsZero     = {0, 0};
+	const NEUIK_Color   * bClr       = NULL; /* border color */
+	SDL_Renderer        * rend       = NULL;
+	NEUIK_Container     * cont       = NULL;
+	NEUIK_ElementBase   * eBase      = NULL;
+	NEUIK_Element         elem       = NULL;
+	NEUIK_ElementConfig * eCfg       = NULL;
+	NEUIK_ListGroup     * lg         = NULL;
+	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle    bgStyle;
 	static char           funcName[] = "neuik_Element_Render__ListGroup";
 	static char         * errMsgs[]  = {"",                                // [0] no error
 		"Argument `lgElem` is not of ListGroup class.",                    // [1]
-		"", // [2]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [2]
 		"Element_GetConfig returned NULL.",                                // [3]
 		"Element_GetMinSize Failed.",                                      // [4]
 		"Element_Render returned NULL.",                                   // [5]
 		"Invalid specified `rSize` (negative values).",                    // [6]
-		"", // [7]
+		"Failure in `neuik_MakeMaskMap()`",                                // [7]
 		"Argument `lgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in neuik_Element_RedrawBackground().",                    // [9]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",              // [10]
 	};
 
 	if (!neuik_Object_IsClass(lgElem, neuik__Class_ListGroup))
@@ -438,10 +441,35 @@ int neuik_Element_Render__ListGroup(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(lgElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(lgElem, &bgStyle))
 		{
-			eNum = 9;
+			eNum = 2;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 7;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 10;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(lgElem, rlMod, maskMap))
+			{
+				eNum = 9;
+				goto out;
+			}
 		}
 	}
 	rl = eBase->eSt.rLoc;
@@ -612,10 +640,13 @@ int neuik_Element_Render__ListGroup(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+			if (neuik_Element_NeedsRedraw(elem))
 			{
-				eNum = 5;
-				goto out;
+				if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+				{
+					eNum = 5;
+					goto out;
+				}
 			}
 
 			yPos += rs.h + (eCfg->PadTop + eCfg->PadBottom) ;
@@ -627,6 +658,7 @@ int neuik_Element_Render__ListGroup(
 	/*------------------------------------------------------------------------*/
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
 	{

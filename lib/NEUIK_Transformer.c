@@ -22,6 +22,7 @@
 #include "NEUIK_colors.h"
 #include "NEUIK_Transformer.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Container.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
@@ -778,6 +779,8 @@ int neuik_Element_Render__Transformer(
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
 	NEUIK_Transformer   * trans      = NULL;
+	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle    bgStyle;
 	static char           funcName[] = "neuik_Element_Render__Transformer";
 	static char         * errMsgs[]  = {"",                               // [0] no error
 		"Argument `tElem` is not of Transformer class.",                  // [1]
@@ -789,6 +792,9 @@ int neuik_Element_Render__Transformer(
 		"Failure in `neuik_Element_RenderRotate()`",                      // [7]
 		"Failure in `SDL_CreateTextureFromSurface()`.",                   // [8]
 		"Failure in `neuik_Element_RedrawBackground()`.",                 // [9]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                // [10]
+		"Failure in `neuik_MakeMaskMap()`",                               // [11]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",              // [12]
 	};
 
 	if (!neuik_Object_IsClass(tElem, neuik__Class_Transformer))
@@ -816,34 +822,41 @@ int neuik_Element_Render__Transformer(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Check to see if the requested draw size of the element has changed     */
-	/*------------------------------------------------------------------------*/
-	if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
-		eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This will create a new SDL_Surface & SDL_Renderer; also it will    */
-		/* free old ones if they are allocated.                               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_Resize(trans, *rSize) != 0)
-		{
-			eNum = 5;
-			goto out;
-		}
-	}
-	surf = eBase->eSt.surf;
-	rend = eBase->eSt.rend;
 
 	/*------------------------------------------------------------------------*/
 	/* Redraw the background surface before continuing.                       */
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(tElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(tElem, &bgStyle))
 		{
-			eNum = 9;
+			eNum = 10;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 11;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 12;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(tElem, rlMod, maskMap))
+			{
+				eNum = 9;
+				goto out;
+			}
 		}
 	}
 
@@ -855,7 +868,6 @@ int neuik_Element_Render__Transformer(
 
 	if (elem == NULL) goto out;
 
-	/* If this trans has a hidden element, just make it a small box */
 	if (!NEUIK_Element_IsShown(elem)) goto out;
 
 	/*------------------------------------------------------------------------*/
@@ -1066,34 +1078,57 @@ int neuik_Element_Render__Transformer(
 		rlModNext.y += rlMod->y;
 	}
 
-	if (neuik_Element_RenderRotate(
-			elem, &rsOrig, &rlModNext, rend, mock, trans->rotation))
+	if (neuik_Element_NeedsRedraw(elem))
 	{
-		eNum = 7;
-		goto out;
-	}
-	SDL_RenderPresent(rend);
+		/*--------------------------------------------------------------------*/
+		/* Check to see if the requested draw size of the element has changed */
+		/*--------------------------------------------------------------------*/
+		if (eBase->eSt.rSize.w != eBase->eSt.rSizeOld.w  ||
+			eBase->eSt.rSize.h != eBase->eSt.rSizeOld.h)
+		{
+			/*----------------------------------------------------------------*/
+			/* This will create a new SDL_Surface & SDL_Renderer; also it     */
+			/* will free old ones if they are allocated.                      */
+			/*----------------------------------------------------------------*/
+			if (neuik_Element_Resize(trans, *rSize) != 0)
+			{
+				eNum = 5;
+				goto out;
+			}
+		}
+		surf = eBase->eSt.surf;
+		rend = eBase->eSt.rend;
 
-	tex = SDL_CreateTextureFromSurface(xRend, surf);
-	if (tex == NULL)
-	{
-		eNum = 8;
-		goto out;
-	}
+		if (neuik_Element_RenderRotate(
+				elem, &rsOrig, &rlModNext, rend, mock, trans->rotation))
+		{
+			eNum = 7;
+			goto out;
+		}
+		SDL_RenderPresent(rend);
 
-	rl = eBase->eSt.rLoc;
+		tex = SDL_CreateTextureFromSurface(xRend, surf);
+		if (tex == NULL)
+		{
+			eNum = 8;
+			goto out;
+		}
 
-	destRect.x = rl.x;
-	destRect.y = rl.y;
-	destRect.w = eBase->eSt.rSize.w;
-	destRect.h = eBase->eSt.rSize.h;
+		rl = eBase->eSt.rLoc;
 
-	if (!mock)
-	{
-		SDL_RenderCopy(xRend, tex, NULL, &destRect);
+		destRect.x = rl.x;
+		destRect.y = rl.y;
+		destRect.w = eBase->eSt.rSize.w;
+		destRect.h = eBase->eSt.rSize.h;
+
+		if (!mock)
+		{
+			SDL_RenderCopy(xRend, tex, NULL, &destRect);
+		}
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	ConditionallyDestroyTexture(&tex);
 
@@ -1316,11 +1351,11 @@ neuik_EventState neuik_Element_CaptureEvent__Transformer(
 			eLoc = childEBase->eSt.rLoc;
 			eSz  = childEBase->eSt.rSize;
 
-			if (neuik__Report_Debug)
-			{
-				printf("childELoc = [%d, %d]\n", eLoc.x, eLoc.y);
-				printf("childESz = [%d, %d]\n", eSz.w, eSz.h);
-			}
+			// if (neuik__Report_Debug)
+			// {
+			// 	printf("childELoc = [%d, %d]\n", eLoc.x, eLoc.y);
+			// 	printf("childESz = [%d, %d]\n", eSz.w, eSz.h);
+			// }
 
 			evCaputred = neuik_Element_CaptureEvent(elem, evActive);
 			if (evCaputred == NEUIK_EVENTSTATE_OBJECT_FREED)

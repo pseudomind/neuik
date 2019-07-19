@@ -23,6 +23,7 @@
 #include "NEUIK_colors.h"
 #include "NEUIK_CelGroup.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Container.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
@@ -431,22 +432,27 @@ int neuik_Element_Render__CelGroup(
 	int                   ctr        = 0;
 	int                   eNum       = 0; /* which error to report (if any) */
 	RenderLoc             rl;
-	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
-	SDL_Rect              rect;
+	RenderLoc             rlRel      = {0,0}; /* renderloc relative to parent */
+	SDL_Rect              rect       = {0,0,0,0};
 	RenderSize            rs;
 	SDL_Renderer        * rend       = NULL;
 	NEUIK_Container     * cont       = NULL;
 	NEUIK_Element         elem       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
+	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle    bgStyle;
 	static char           funcName[] = "neuik_Element_Render__CelGroup";
 	static char         * errMsgs[]  = {"",                                // [0] no error
 		"Argument `cgElem` is not of CelGroup class.",                     // [1]
 		"Argument `cgElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"Call to Element_GetMinSize failed.",                              // [3]
 		"Invalid specified `rSize` (negative values).",                    // [4]
-		"Failure in neuik_Element_RedrawBackground().",                    // [5]
+		"Failure in `neuik_Element_RedrawBackground()`.",                  // [5]
 		"Element_GetConfig returned NULL.",                                // [6]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [7]
+		"Failure in `neuik_MakeMaskMap()`",                                // [8]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",               // [9]
 	};
 
 	if (!neuik_Object_IsClass(cgElem, neuik__Class_CelGroup))
@@ -481,10 +487,35 @@ int neuik_Element_Render__CelGroup(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(cgElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(cgElem, &bgStyle))
 		{
-			eNum = 5;
+			eNum = 7;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 8;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 9;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(cgElem, rlMod, maskMap))
+			{
+				eNum = 5;
+				goto out;
+			}
 		}
 	}
 	rl = eBase->eSt.rLoc;
@@ -613,6 +644,7 @@ int neuik_Element_Render__CelGroup(
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
 	{

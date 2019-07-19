@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "neuik_MaskMap.h"
@@ -361,6 +362,126 @@ out:
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_InvertValues
+ *
+ *  Description:   Switch the values used for all points (i.e., 0->1 and 1->0).
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_InvertValues(
+	neuik_MaskMap * map)
+{
+	int           ctr   = 0; /* iteration counter */
+	int           aSize = 0; /* allocation size */
+	int           eNum  = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_MaskMap_InvertValues";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `map` does not implement MaskMap class.", // [1]
+		"map->mapData is NULL; was the mask size set?",     // [2]
+	};
+
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (map->mapData == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* This is a proper rect (non-zero w & h).                                */
+	/*------------------------------------------------------------------------*/
+	aSize = map->sizeW*map->sizeH;
+	for (ctr = 0; ctr < aSize; ctr++)
+	{
+		if (map->mapData[ctr] == 0)
+		{
+			map->mapData[ctr] = 1;
+		}
+		else
+		{
+			map->mapData[ctr] = 0;
+		}
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_PrintValues
+ *
+ *  Description:   Print the values of the contained points to stdout.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_PrintValues(
+	neuik_MaskMap * map)
+{
+	int           xCtr  = 0; /* iteration counter */
+	int           yCtr  = 0; /* iteration counter */
+	int           eNum  = 0; /* which error to report (if any) */
+	int           pos   = 0; /* position of point within mapData */
+	static char   funcName[] = "neuik_MaskMap_PrintValues";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `map` does not implement MaskMap class.", // [1]
+		"map->mapData is NULL; was the mask size set?",     // [2]
+	};
+
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (map->mapData == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Print out the values line by line.                                     */
+	/*------------------------------------------------------------------------*/
+	for (yCtr = 0; yCtr < map->sizeH; yCtr++)
+	{
+		for (xCtr = 0; xCtr < map->sizeW; xCtr++)
+		{
+			pos = map->sizeW*yCtr + xCtr;
+			if (map->mapData[pos] == 0)
+			{
+				printf("0");
+			}
+			else
+			{
+				printf("1");
+			}
+		}
+		printf("\n");
+	}
+	printf("\n");
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 	}
 
 	return eNum;
@@ -1301,6 +1422,125 @@ int neuik_MaskMap_UnmaskRect(
 	if (neuik_MaskMap_SetMaskRect(map, 0, x, y, w, h))
 	{
 		eNum = 1;
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_FillFromLoc
+ *
+ *  Description:   Fill a mask with data from another mask at a specified 
+ *                 location. The location specified is the upper-left point of
+ *                 the region to be copied from the source mask.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_FillFromLoc(
+	neuik_MaskMap * destMap, 
+	neuik_MaskMap * srcMap, 
+	int             x,
+	int             y)
+{
+	int           rPos  = 0;   /* read position of point within src mapData */
+	int           wPos  = 0;   /* write position of point within dest mapData */
+	int           eNum  = 0;   /* which error to report (if any) */
+	int           xCtr  = 0;
+	int           yCtr  = 0;
+	int           xf    = 0;   /* final x-position for the rect */
+	int           yf    = 0;   /* final y-position for the rect */
+	static char   funcName[] = "neuik_MaskMap_FillFromLoc";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `destMap` does not implement MaskMap class.", // [1]
+		"Argument `srcMap` does not implement MaskMap class.",  // [2]
+		"Argument `x` invalid; value (<0) supplied.",           // [3]
+		"Argument `x` invalid; exceeds srcMap bounds.",         // [4]
+		"Argument `y` invalid; value (<0) supplied.",           // [5]
+		"Argument `y` invalid; exceeds srcMap bounds..",        // [6]
+		"x + destMapWidth; exceeds srcMap bounds.",             // [7]
+		"y + destMapHeight; exceeds srcMap bounds.",            // [8]
+	};
+
+	if (!neuik_Object_IsClass(destMap, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (!neuik_Object_IsClass(srcMap, neuik__Class_MaskMap))
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Check for coordinate argument input errors (invalid/out-of-bounds).    */
+	/*------------------------------------------------------------------------*/
+	/* Check the x,y values.                                                  */
+	/*------------------------------------------------------------------------*/
+	if (x < 0)
+	{
+		/* invalid x-value (<0) */
+		eNum = 3;
+		goto out;
+	}
+	else if (x >= srcMap->sizeW)
+	{
+		/* x-value beyond bounds */
+		eNum = 4;
+		goto out;
+	}
+	if (y < 0)
+	{
+		/* invalid y-value */
+		eNum = 5;
+		goto out;
+	}
+	else if (y >= srcMap->sizeH)
+	{
+		/* y-value beyond bounds */
+		eNum = 6;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Make sure that the source has enough data to fill the mask from the    */
+	/* specified location.                                                    */
+	/*------------------------------------------------------------------------*/
+	xf = x + destMap->sizeW;
+	if (xf > srcMap->sizeW)
+	{
+		/* final x-value beyond source bounds */
+		eNum = 7;
+		goto out;
+	}
+
+	yf = y + destMap->sizeH;
+	if (yf > srcMap->sizeH)
+	{
+		/* final y-value beyond source bounds */
+		eNum = 8;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Copy over the data...                                                  */
+	/*------------------------------------------------------------------------*/
+	for (yCtr = y; yCtr < yf; yCtr++)
+	{
+		for (xCtr = x; xCtr < xf; xCtr++)
+		{
+			rPos = srcMap->sizeW*yCtr + xCtr;
+			wPos = destMap->sizeW*(yCtr-y) + (xCtr-x);
+			destMap->mapData[wPos] = srcMap->mapData[rPos];
+		}
+	}
+out:
+	if (eNum > 0)
+	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 	}
 

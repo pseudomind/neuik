@@ -551,9 +551,9 @@ int NEUIK_Container_SetElement(
 
 	if (cBase->elems == NULL)
 	{
-		/*----------------------------------------------------------------*/
-		/* elems array currently unallocated; allocate now                */
-		/*----------------------------------------------------------------*/
+		/*--------------------------------------------------------------------*/
+		/* elems array currently unallocated; allocate now                    */
+		/*--------------------------------------------------------------------*/
 		cBase->elems = (NEUIK_Element*)malloc(2*sizeof(NEUIK_Element));
 		if (cBase->elems == NULL)
 		{

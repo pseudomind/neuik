@@ -179,7 +179,7 @@ int NEUIK_NewWindow(
 	w->redrawMask  = NULL;
 
 	/* set default values */
-	w->redrawAll   = 0;
+	w->redrawAll   = 1;
 	w->posX        = -1;
 	w->posY        = -1;
 	w->sizeW       = 320;
@@ -1456,7 +1456,6 @@ int neuik_Window_RedrawBackground(
 		"Argument `w` does not implement Window class.",                 // [3]
 		"Failure in `SDL_GetWindowSurface()`.",                          // [4]
 		"Failure in `SDL_RenderCopy()`.",                                // [5]
-		"Failure in `neuik_MaskMap_MaskAll()`.",                         // [6]
 	};
 
 	if (!neuik_Object_IsClass(w, neuik__Class_Window))
@@ -1537,16 +1536,6 @@ int neuik_Window_RedrawBackground(
 					rl.x + regionXf[maskCtr], rl.y + y);
 			}
 		}
-
-		/*--------------------------------------------------------------------*/
-		/* Mask off the entire window background so that unnecessary          */
-		/* redrawing won't happen on the next frame.                          */
-		/*--------------------------------------------------------------------*/
-		if (neuik_MaskMap_MaskAll(maskMap))
-		{
-			eNum = 6;
-			goto out;
-		}
 	}
 out:
 	if (eNum > 0)
@@ -1556,6 +1545,83 @@ out:
 	}
 
 	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Window_FillTranspMaskFromLoc
+ *
+ *  Description:   Fill a mask with transparency data from the window at the 
+ *                 specified. The location specified is the upper-left point of
+ *                 the region to be copied from the source mask.
+ *
+ *  Returns:       1 if there is an error, 0 otherwise
+ *
+ ******************************************************************************/
+int neuik_Window_FillTranspMaskFromLoc(
+	NEUIK_Window  * w,
+	neuik_MaskMap * map,
+	int             x,
+	int             y)
+{
+	int           eNum       = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_Window_FillTranspMaskFromLoc";
+	static char * errMsgs[]  = {"", // [ 0] no error
+		"Argument `w` does not implement Window class.",    // [1]
+		"Argument `map` does not implement MaskMap class.", // [2]
+		"Failure in `neuik_MaskMap_FillFromLoc()`",         // [3]
+	};
+
+	if (!neuik_Object_IsClass(w, neuik__Class_Window))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	if (neuik_MaskMap_FillFromLoc(map, w->redrawMask, x, y))
+	{
+		eNum = 3;
+		goto out;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Window_FullRedrawInProgress
+ *
+ *  Description:   Returns whether or not a full-window redraw is in progress.
+ *
+ *  Returns:       1 if a full-window redraw is in progress, 0 otherwise
+ *
+ ******************************************************************************/
+int neuik_Window_FullRedrawInProgress(
+	NEUIK_Window * w)
+{
+	if (!neuik_Object_IsClass_NoErr(w, neuik__Class_Window))
+	{
+		/*--------------------------------------------------------------------*/
+		/* Since this function might be called by elements before being       */
+		/* associated with a window, we don't want to error out on this.      */
+		/*--------------------------------------------------------------------*/
+		return FALSE;
+	}
+
+	return w->redrawAll;
 }
 
 
@@ -1621,19 +1687,19 @@ int NEUIK_Window_Redraw(
 {
 	int                   doResize   = 0;
 	int                   rv         = 0;
-	int                   eNum       = 0; /* which error to report (if any) */
-	int                   newW;           /* used when autoresizing the window */
-	int                   newH;           /* used when autoresizing the window */
-	int                   availW;         /* available element width */
-	int                   availH;         /* available element height */
-	int                   minW;           /* minimum element width */
-	int                   minH;           /* minimum element height */
-	int                   oldMinW;        /* old minimum element width */
-	int                   oldMinH;        /* old minimum element height */
-	int                   lastFrameW;     /* width of Texture from last frame */
-	int                   lastFrameH;     /* height of Texture from last frame */
-	unsigned int          timeBeforeRedraw; /* for calculating frame time */
-	unsigned int          frameTime;        /* time required to redraw elem */
+	int                   eNum       = 0;       /* which error to report (if any) */
+	int                   newW;                 /* used when autoresizing the window */
+	int                   newH;                 /* used when autoresizing the window */
+	int                   availW;               /* available element width */
+	int                   availH;               /* available element height */
+	int                   minW;                 /* minimum element width */
+	int                   minH;                 /* minimum element height */
+	int                   oldMinW;              /* old minimum element width */
+	int                   oldMinH;              /* old minimum element height */
+	int                   lastFrameW;           /* width of Texture from last frame */
+	int                   lastFrameH;           /* height of Texture from last frame */
+	unsigned int          timeBeforeRedraw = 0; /* for calculating frame time */
+	unsigned int          frameTime;            /* time required to redraw elem */
 	NEUIK_WindowConfig  * aCfg       = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
 	// NEUIK_PopUp         * popup      = NULL;
@@ -1663,6 +1729,7 @@ int NEUIK_Window_Redraw(
 		"Failure in `SDL_RenderCopy()`.",                 // [18]
 		"Failure in `neuik_Window_RequestFullRedraw()`.", // [19]
 		"Failure in `SDL_QueryTexture()`.",               // [20]
+		"Failure in `neuik_MaskMap_MaskAll()`.",          // [21]
 	};
 
 	if (!neuik_Object_IsClass(w, neuik__Class_Window))
@@ -1759,6 +1826,13 @@ int NEUIK_Window_Redraw(
 			/*----------------------------------------------------------------*/
 			w->doRedraw = 0;
 		}
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* If there is no data for the previous frame; redraw everything.     */
+		/*--------------------------------------------------------------------*/
+		w->redrawAll = 1;
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -2046,6 +2120,16 @@ int NEUIK_Window_Redraw(
 	// 		}
 	// 	}
 	// }
+
+	/*------------------------------------------------------------------------*/
+	/* Mask off the entire window background so that unnecessary redrawing    */
+	/* won't happen on the next frame.                                        */
+	/*------------------------------------------------------------------------*/
+	if (neuik_MaskMap_MaskAll(w->redrawMask))
+	{
+		eNum = 21;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Complete the rendering to the bgTex texture.                           */

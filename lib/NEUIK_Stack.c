@@ -23,6 +23,7 @@
 #include "NEUIK_colors.h"
 #include "NEUIK_Stack.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Container.h"
 #include "NEUIK_Container_internal.h"
 #include "neuik_internal.h"
@@ -430,21 +431,23 @@ int neuik_Element_Render__Stack(
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-	int                      ctr      = 0;
-	int                      eNum     = 0; /* which error to report (if any) */
-	int                      elemIncl;
-	RenderLoc                rl;
-	RenderLoc                rlRel      = {0, 0}; /* renderloc relative to parent */
-	SDL_Rect                 rect;
-	RenderSize               rs;
-	SDL_Renderer           * rend       = NULL;
-	NEUIK_Stack            * stk        = NULL;
-	NEUIK_Container        * cont       = NULL;
-	NEUIK_Element            elem       = NULL;
-	NEUIK_ElementBase      * eBase      = NULL;
-	NEUIK_ElementConfig    * eCfg       = NULL;
-	static char              funcName[] = "neuik_Element_Render__Stack";
-	static char            * errMsgs[]  = {"",                              // [0] no error
+	int                   ctr        = 0;
+	int                   eNum       = 0; /* which error to report (if any) */
+	int                   elemIncl;
+	RenderLoc             rl;
+	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
+	SDL_Rect              rect;
+	RenderSize            rs;
+	SDL_Renderer        * rend       = NULL;
+	NEUIK_Stack         * stk        = NULL;
+	NEUIK_Container     * cont       = NULL;
+	NEUIK_Element         elem       = NULL;
+	NEUIK_ElementBase   * eBase      = NULL;
+	NEUIK_ElementConfig * eCfg       = NULL;
+	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle    bgStyle;
+	static char           funcName[] = "neuik_Element_Render__Stack";
+	static char         * errMsgs[]  = {"",                              // [0] no error
 		"Argument `stkElem` is not of Stack class.",                        // [1]
 		"Argument `stkElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"Call to Element_GetMinSize failed.",                               // [3]
@@ -453,6 +456,9 @@ int neuik_Element_Render__Stack(
 		"Active element not contained by this stack.",                      // [6]
 		"Element_GetConfig returned NULL.",                                 // [7]
 		"Failure in neuik_Element_RedrawBackground().",                     // [8]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                  // [9]
+		"Failure in `neuik_MakeMaskMap()`",                                 // [10]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",                // [11]
 	};
 
 	if (!neuik_Object_IsClass(stkElem, neuik__Class_Stack))
@@ -488,10 +494,35 @@ int neuik_Element_Render__Stack(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(stkElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(stkElem, &bgStyle))
 		{
-			eNum = 8;
+			eNum = 9;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 10;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 11;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(stkElem, rlMod, maskMap))
+			{
+				eNum = 8;
+				goto out;
+			}
 		}
 	}
 	rl = eBase->eSt.rLoc;
@@ -637,13 +668,17 @@ int neuik_Element_Render__Stack(
 	rlRel.y = rect.y;
 	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+	if (neuik_Element_NeedsRedraw(elem))
 	{
-		eNum = 5;
-		goto out;
+		if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+		{
+			eNum = 5;
+			goto out;
+		}
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
 	{

@@ -22,6 +22,7 @@
 #include "NEUIK_colors.h"
 #include "NEUIK_VGroup.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Container.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
@@ -610,17 +611,20 @@ int neuik_Element_Render__VGroup(
 	NEUIK_Element         elem    = NULL;
 	NEUIK_ElementConfig * eCfg    = NULL;
 	NEUIK_VGroup        * vg      = NULL;
+	neuik_MaskMap       * maskMap = NULL; /* FREE upon return */
+	enum neuik_bgstyle    bgStyle;
 	static char           funcName[] = "neuik_Element_Render__VGroup";
 	static char         * errMsgs[]  = {"",                                // [0] no error
 		"Argument `vgElem` is not of VGroup class.",                       // [1]
-		"", // [2]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [2]
 		"Element_GetConfig returned NULL.",                                // [3]
 		"Element_GetMinSize Failed.",                                      // [4]
 		"Failure in `neuik_Element_Render()`",                             // [5]
 		"Invalid specified `rSize` (negative values).",                    // [6]
-		"", // [7]
+		"Failure in `neuik_MakeMaskMap()`",                                // [7]
 		"Argument `vgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in `neuik_Element_RedrawBackground()`.",                  // [9]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",               // [10]
 	};
 
 	if (!neuik_Object_IsClass(vgElem, neuik__Class_VGroup))
@@ -656,10 +660,35 @@ int neuik_Element_Render__VGroup(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(vgElem, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(vgElem, &bgStyle))
 		{
-			eNum = 9;
+			eNum = 2;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 7;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 10;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(vgElem, rlMod, maskMap))
+			{
+				eNum = 9;
+				goto out;
+			}
 		}
 	}
 
@@ -852,6 +881,7 @@ int neuik_Element_Render__VGroup(
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
 	{

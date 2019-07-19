@@ -22,10 +22,11 @@
 #include "NEUIK_colors.h"
 #include "NEUIK_ListRow.h"
 #include "NEUIK_Element_internal.h"
+#include "NEUIK_Window_internal.h"
 #include "NEUIK_Container.h"
+#include "NEUIK_Container_internal.h"
 #include "neuik_internal.h"
 #include "neuik_classes.h"
-#include "NEUIK_Window_internal.h"
 
 extern int neuik__isInitialized;
 
@@ -379,6 +380,7 @@ int NEUIK_ListRow_SetSelected(
 		goto out;
 	}
 	neuik_Element_RequestRedraw(row, rLoc, rSize);
+	neuik_Container_RequestFullRedraw(row);
 out:
 	if (eNum > 0)
 	{
@@ -670,18 +672,21 @@ int neuik_Element_Render__ListRow(
 	const NEUIK_Color   * bgClr      = NULL; /* background color */
 	SDL_Renderer        * rend       = NULL;
 	static RenderSize     rsZero     = {0, 0};
+	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle    bgStyle;
 	static char           funcName[] = "neuik_Element_Render__ListRow";
 	static char         * errMsgs[]  = {"",                           // [0] no error
 		"Argument `rowElem` is not of ListRow class.",                      // [1]
-		"", // [2]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                  // [2]
 		"Element_GetConfig returned NULL.",                                 // [3]
 		"Element_GetMinSize Failed.",                                       // [4]
 		"Element_Render returned NULL.",                                    // [5]
 		"Invalid specified `rSize` (negative values).",                     // [6]
-		"", // [7]
+		"Failure in `neuik_MakeMaskMap()`",                                 // [7]
 		"Argument `rowElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in `NEUIK_Element_SetBackgroundColorSolid`.",              // [9]
 		"Failure in `neuik_Element_RedrawBackground()`.",                   // [10]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",                // [11]
 	};
 
 	if (!neuik_Object_IsClass(rowElem, neuik__Class_ListRow))
@@ -748,10 +753,35 @@ int neuik_Element_Render__ListRow(
 	/*------------------------------------------------------------------------*/
 	if (!mock)
 	{
-		if (neuik_Element_RedrawBackground(row, rlMod, NULL))
+		if (neuik_Element_GetCurrentBGStyle(row, &bgStyle))
 		{
-			eNum = 10;
+			eNum = 2;
 			goto out;
+		}
+		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+		{
+			/*----------------------------------------------------------------*/
+			/* Create a MaskMap an mark off the trasnparent pixels.           */
+			/*----------------------------------------------------------------*/
+			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+			{
+				eNum = 7;
+				goto out;
+			}
+
+			rl = eBase->eSt.rLoc;
+			if (neuik_Window_FillTranspMaskFromLoc(
+					eBase->eSt.window, maskMap, rl.x, rl.y))
+			{
+				eNum = 11;
+				goto out;
+			}
+
+			if (neuik_Element_RedrawBackground(row, rlMod, maskMap))
+			{
+				eNum = 10;
+				goto out;
+			}
 		}
 	}
 	
@@ -904,10 +934,13 @@ int neuik_Element_Render__ListRow(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+			if (neuik_Element_NeedsRedraw(elem))
 			{
-				eNum = 5;
-				goto out;
+				if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+				{
+					eNum = 5;
+					goto out;
+				}
 			}
 
 			xPos += xSize + (eCfg->PadLeft + eCfg->PadRight) ;
@@ -915,6 +948,7 @@ int neuik_Element_Render__ListRow(
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
 	{
@@ -998,7 +1032,7 @@ neuik_EventState neuik_Element_CaptureEvent__ListRow(
 				}
 				row->clickOrigin   = 1;
 				row->selected      = 1;
-				row->wasSelected   = 1;
+				row->wasSelected   = 0;
 				row->timeLastClick = SDL_GetTicks();
 				neuik_Window_TakeFocus(eBase->eSt.window, row);
 
@@ -1025,6 +1059,7 @@ neuik_EventState neuik_Element_CaptureEvent__ListRow(
 				rSize = eBase->eSt.rSize;
 				rLoc  = eBase->eSt.rLoc;
 				neuik_Element_RequestRedraw(row, rLoc, rSize);
+				neuik_Container_RequestFullRedraw(row);
 				goto out;
 			}
 		}
@@ -1056,6 +1091,7 @@ neuik_EventState neuik_Element_CaptureEvent__ListRow(
 			rSize = eBase->eSt.rSize;
 			rLoc  = eBase->eSt.rLoc;
 			neuik_Element_RequestRedraw(row, rLoc, rSize);
+			neuik_Container_RequestFullRedraw(row);
 			goto out;
 		}
 		break;
@@ -1127,6 +1163,7 @@ void neuik_Element_Defocus__ListRow(
 		}
 
 		neuik_Element_RequestRedraw(row, rLoc, rSize);
+		neuik_Container_RequestFullRedraw(row);
 	}
 	else
 	{

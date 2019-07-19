@@ -146,6 +146,11 @@ NEUIK_ElementConfig *
 			NEUIK_Element elem);
 
 int 
+	neuik_Element_GetCurrentBGStyle(
+			NEUIK_Element        elem,
+			enum neuik_bgstyle * bgStyle);
+
+int 
 	neuik_Element_GetMinSize(
 			NEUIK_Element    elem, 
 			RenderSize     * rSize);

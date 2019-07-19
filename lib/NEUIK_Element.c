@@ -34,6 +34,7 @@
 #include "neuik_classes.h"
 
 extern int neuik__isInitialized;
+extern int neuik__Report_Debug;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -2407,6 +2408,11 @@ int neuik_Element_RequestRedraw(
 		{
 			if (win->redrawMask != NULL)
 			{
+				if (neuik__Report_Debug)
+				{
+					printf("RequestRedraw: umasking[x,y,w,h]: %d, %d, %d, %d\n",
+						rLoc.x, rLoc.y, rSize.w, rSize.h);
+				}
 				if (neuik_MaskMap_UnmaskRect(win->redrawMask, 
 					rLoc.x, rLoc.y, rSize.w, rSize.h))
 				{
@@ -2751,6 +2757,59 @@ out:
 	return eNum;
 }
 
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_GetCurrentBGStyle
+ *
+ *  Description:   Returns the current active background style for the element.
+ *
+ *  Returns:       Non-zero if error, 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Element_GetCurrentBGStyle(
+	NEUIK_Element        elem,
+	enum neuik_bgstyle * bgStyle) /* The current BGStyle is stored here */
+{
+	int                 eNum       = 0;    /* which error to report (if any) */
+	NEUIK_ElementBase * eBase      = NULL;
+	static char         funcName[] = "neuik_Element_GetCurrentBGStyle";
+	static char       * errMsgs[]  = {"", // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Ouput Argument `bgStyle` is NULL.",                             // [2]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (bgStyle == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	switch (eBase->eSt.focusstate)
+	{
+		case NEUIK_FOCUSSTATE_NORMAL:
+			*bgStyle = eBase->eBg.bgstyle_normal;
+			break;
+		case NEUIK_FOCUSSTATE_SELECTED:
+			*bgStyle = eBase->eBg.bgstyle_selected;
+			break;
+		case NEUIK_FOCUSSTATE_HOVERED:
+			*bgStyle = eBase->eBg.bgstyle_hover;
+			break;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
 
 /*******************************************************************************
  *
@@ -2787,6 +2846,7 @@ int neuik_Element_RedrawBackground(
 	static char          * errMsgs[]  = {"", // [0] no error
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
 		"Failure in `neuik_MaskMap_GetUnmaskedRegionsOnHLine`.",         // [2]
+		"Unhandled Element FOCUSSTATE.",                                 // [3]
 	};
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -2847,6 +2907,12 @@ int neuik_Element_RedrawBackground(
 					break;
 			}
 			break;
+		default:
+			/*----------------------------------------------------------------*/
+			/* Unhandled Element FOCUSSTATE.                                  */
+			/*----------------------------------------------------------------*/
+			eNum = 3;
+			goto out;
 	}
 
 	/*------------------------------------------------------------------------*/
