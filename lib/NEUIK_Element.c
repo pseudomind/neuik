@@ -2435,20 +2435,62 @@ out:
 }
 
 
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_ShouldRedrawAll
+ *
+ *  Description:   This function is used to indicate (to child elements) that
+ *                 a parent element requires a full redraw.
+ *
+ *  Returns:       TRUE (1) if a redraw is needed, FALSE (0) otherwise.
+ *
+ ******************************************************************************/
+int neuik_Element_ShouldRedrawAll(
+	NEUIK_Element elem)
+{
+	int (*funcImp) (NEUIK_Element);
+	NEUIK_Element     * parent = NULL;
+	NEUIK_ElementBase * eBase  = NULL;
+
+	funcImp = neuik_VirtualFunc_GetImplementation(
+		neuik_Element_vfunc_ShouldRedrawAll, elem);
+	if (funcImp != NULL)
+	{
+		/*--------------------------------------------------------------------*/
+		/* A virtual reimplementation is availible for this function          */
+		/*--------------------------------------------------------------------*/
+		if ((*funcImp)(elem))
+		{
+			return TRUE;
+		}
+	}
+
+	if (neuik_Object_GetClassObject_NoError(elem, 
+			neuik__Class_Element, (void**)&eBase))
+	{
+		return FALSE;
+	}
+	parent = eBase->eSt.parent;
+	if (parent == NULL)
+	{
+		return FALSE;
+	}
+	return neuik_Element_ShouldRedrawAll(parent);
+}
+
+
 int neuik_Element_NeedsRedraw(
 	NEUIK_Element elem)
 {
 	NEUIK_Window      * win;
 	NEUIK_ElementBase * nextEBase;
 	NEUIK_ElementBase * eBase;
-	NEUIK_ElementBase * pBase;
-	NEUIK_Container   * cont;
 	NEUIK_Element     * parent;
 
 	if (neuik_Object_GetClassObject_NoError(elem, 
 			neuik__Class_Element, (void**)&eBase))
 	{
-		return 0;
+		return FALSE;
 	}
 
 	if (eBase->eSt.window != NULL)
@@ -2459,37 +2501,25 @@ int neuik_Element_NeedsRedraw(
 		win = (NEUIK_Window*)(eBase->eSt.window);
 		if (win->redrawAll)
 		{
-			return 1;
+			return TRUE;
 		}
 
 		/*--------------------------------------------------------------------*/
 		/* Check if a parent container has requested a full redraw.           */
 		/*--------------------------------------------------------------------*/
 		nextEBase = eBase;
-		for (;;)
+		parent = nextEBase->eSt.parent;
+		/*----------------------------------------------------------------*/
+		/* The toplevel element within a window has no parent elem; break */
+		/*----------------------------------------------------------------*/
+		if (parent == NULL)
 		{
-			parent = nextEBase->eSt.parent;
-			/*----------------------------------------------------------------*/
-			/* The toplevel element within a window has no parent elem; break */
-			/*----------------------------------------------------------------*/
-			if (parent == NULL) break;
+			return FALSE;
+		}
 
-			if (neuik_Object_GetClassObject_NoError(parent, 
-					neuik__Class_Container, (void**)&cont))
-			{
-				break;
-			}
-			if (cont->redrawAll)
-			{
-				return 1;
-			}
-
-			if (neuik_Object_GetClassObject_NoError(parent, 
-					neuik__Class_Element, (void**)&pBase))
-			{
-				break;
-			}
-			nextEBase = pBase;
+		if (neuik_Element_ShouldRedrawAll(parent))
+		{
+			return TRUE;
 		}
 	}
 
@@ -3145,7 +3175,7 @@ int NEUIK_Element_IsShown(
 	if (funcImp != NULL)
 	{
 		/*--------------------------------------------------------------------*/
-		/* A virtual reimplementation is availible for this function          */
+		/* A virtual reimplementation is available for this function          */
 		/*--------------------------------------------------------------------*/
 		return (*funcImp)(elem);
 	}

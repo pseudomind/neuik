@@ -205,6 +205,10 @@ int
 			RenderSize    rSize);
 
 int 
+	neuik_Element_ShouldRedrawAll(
+			NEUIK_Element   elem);
+
+int 
 	neuik_Element_Resize(
 			NEUIK_Element elem, 
 			RenderSize    nSize);

@@ -42,6 +42,7 @@ int neuik_NewElement(NEUIK_Element ** elemPtr);
 neuik_EventState neuik_Element_CaptureEvent__Container(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_IsShown__Container(NEUIK_Element);
 int neuik_Element_SetWindowPointer__Container(NEUIK_Element, void*);
+int neuik_Element_ShouldRedrawAll__Container(NEUIK_Element);
 
 
 /*----------------------------------------------------------------------------*/
@@ -78,6 +79,7 @@ int neuik_RegisterClass_Container()
 		"Failed to register `Element_IsShown` virtual function.",          // [3]
 		"Failed to register `Element_CaptureEvent` virtual function.",     // [4]
 		"Failed to register `Element_SetWindowPointer` virtual function.", // [5]
+		"Failed to register `Element_ShouldRedrawAll` virtual function.",  // [6]
 	};
 
 	if (!neuik__isInitialized)
@@ -129,6 +131,15 @@ int neuik_RegisterClass_Container()
 		neuik_Element_SetWindowPointer__Container))
 	{
 		eNum = 5;
+		goto out;
+	}
+
+	if (neuik_VirtualFunc_RegisterImplementation(
+		&neuik_Element_vfunc_ShouldRedrawAll,
+		neuik__Class_Container,
+		neuik_Element_ShouldRedrawAll__Container))
+	{
+		eNum = 6;
 		goto out;
 	}
 out:
@@ -428,6 +439,50 @@ out:
 	}
 
 	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_ShouldRedrawAll__Container (redefined-vfunc)
+ *
+ *  Description:   This function is used to indicate (to child elements) that
+ *                 a parent element requires a full redraw.
+ *
+ *                 This operation is a virtual function redefinition.
+ *
+ *  Returns:       TRUE (1) if a redraw is needed, FALSE (0) otherwise.
+ *
+******************************************************************************/
+int neuik_Element_ShouldRedrawAll__Container (
+	NEUIK_Element   contPtr) /* [bool] output arg; if a redraw is needed*/
+{
+	NEUIK_Element     * parent = NULL;
+	NEUIK_ElementBase * eBase  = NULL;
+	NEUIK_Container   * cont   = NULL;
+
+	if (neuik_Object_GetClassObject_NoError(
+		contPtr, neuik__Class_Container, (void**)&cont))
+	{
+		return FALSE;
+	}
+
+	if (cont->redrawAll)
+	{
+		return TRUE;
+	}
+
+	if (neuik_Object_GetClassObject_NoError(contPtr, 
+			neuik__Class_Element, (void**)&eBase))
+	{
+		return FALSE;
+	}
+	parent = eBase->eSt.parent;
+	if (parent == NULL)
+	{
+		return FALSE;
+	}
+	return neuik_Element_ShouldRedrawAll(parent);
 }
 
 

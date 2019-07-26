@@ -1294,13 +1294,13 @@ int neuik_MaskMap_SetMaskRect(
 	/* Determine the actual final bounds of the rect.                         */
 	/*------------------------------------------------------------------------*/
 	xf = x + w;
-	if (xf > map->sizeW)
+	if (xf >= map->sizeW)
 	{
 		xf = map->sizeW - 1;
 	}
 
 	yf = y + h;
-	if (yf > map->sizeH)
+	if (yf >= map->sizeH)
 	{
 		yf = map->sizeH - 1;
 	}

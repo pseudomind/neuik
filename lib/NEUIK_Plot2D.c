@@ -4,7 +4,7 @@
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -15,7 +15,7 @@
  ******************************************************************************/
 #include <SDL.h>
 #include <stdlib.h>
- 
+
 #include "NEUIK_error.h"
 #include "NEUIK_render.h"
 #include "NEUIK_structs_basic.h"
@@ -171,8 +171,8 @@ int neuik_Object_New__Plot2D(
 	/* Successful allocation of Memory -- Create Base Class Object            */
 	/*------------------------------------------------------------------------*/
 	if (neuik_GetObjectBaseOfClass(
-			neuik__Set_NEUIK, 
-			neuik__Class_Plot2D, 
+			neuik__Set_NEUIK,
+			neuik__Class_Plot2D,
 			NULL,
 			&(plot2d->objBase)))
 	{
@@ -403,7 +403,7 @@ int neuik_Element_Render__Plot2D(
 	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
 	enum neuik_bgstyle    bgStyle;
 	static char           funcName[] = "neuik_Element_Render__Plot2D";
-	static char         * errMsgs[]  = {"",                                 // [0] no error
+	static char         * errMsgs[]  = {"", // [0] no error
 		"Argument `pltElem` is not of Plot2D class.",                       // [1]
 		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                  // [2]
 		"Element_GetConfig returned NULL.",                                 // [3]
@@ -596,7 +596,7 @@ int neuik_Element_Render__Plot2D(
 	NEUIK_Canvas_MoveTo(dwg, 2, 300);
 	NEUIK_Canvas_DrawText(dwg, "0.0");   /* draw text at location */
 
-	/* draw y-axis vert line */ 
+	/* draw y-axis vert line */
 	NEUIK_Canvas_MoveTo(dwg, 40, 5);
 	NEUIK_Canvas_DrawLine(dwg, 40, (dwg_rs.h-(1+5)));
 
@@ -621,10 +621,13 @@ int neuik_Element_Render__Plot2D(
 	/* Finally, have the entire visual redraw itself. It will only redraw the */
 	/* drawing portion and with the correct sizing.                           */
 	/*------------------------------------------------------------------------*/
-	if (neuik_Element_Render(plot->visual, &rs, rlMod, rend, mock))
+	if (neuik_Element_NeedsRedraw(plot->visual))
 	{
-		eNum = 5;
-		goto out;
+		if (neuik_Element_Render(plot->visual, &rs, rlMod, rend, mock))
+		{
+			eNum = 5;
+			goto out;
+		}
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;

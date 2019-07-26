@@ -580,7 +580,7 @@ int neuik_Element_Render__Stack(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Check for and apply if necessary Horizontal and Veritcal fill          */
+	/* Check for and apply if necessary Horizontal and Vertical fill          */
 	/*------------------------------------------------------------------------*/
 	if (eCfg->HFill)
 	{

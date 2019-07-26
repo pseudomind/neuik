@@ -69,3 +69,5 @@ neuik_VirtualFunc neuik_Element_vfunc_CaptureEvent     = NULL;
 neuik_VirtualFunc neuik_Element_vfunc_IsShown          = NULL;
 neuik_VirtualFunc neuik_Element_vfunc_SetWindowPointer = NULL;
 neuik_VirtualFunc neuik_Element_vfunc_RequestRedraw    = NULL;
+neuik_VirtualFunc neuik_Element_vfunc_ShouldRedrawAll  = NULL;
+

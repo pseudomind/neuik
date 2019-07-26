@@ -1451,9 +1451,16 @@ out:
 int NEUIK_ToggleButton_Activate(
 	NEUIK_ToggleButton * btn)
 {
+	RenderSize  rSize;
+	RenderLoc   rLoc;
 	int         eNum       = 0; /* which error to report (if any) */
 	static char funcName[] = "NEUIK_ToggleButton_Activate";
-	static char errMsg[]   = "Argument `btn` is not of ToggleButton class.";
+	static char *errMsgs[] = {"", // [0] no error
+		"Argument `btn` is not of ToggleButton class.",     // [1]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [2]
+		"Failure in `neuik_Element_RequestRedraw()`.",      // [3]
+	};
+
 
 	if (!neuik_Object_IsClass(btn, neuik__Class_ToggleButton))
 	{
@@ -1466,11 +1473,22 @@ int NEUIK_ToggleButton_Activate(
 	{
 		btn->activated = 1;
 		neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_ACTIVATED);
+
+		if (neuik_Element_GetSizeAndLocation(btn, &rSize, &rLoc))
+		{
+			eNum = 2;
+			goto out;
+		}
+		if (neuik_Element_RequestRedraw(btn, rLoc, rSize))
+		{
+			eNum = 3;
+			goto out;
+		}
 	}
 out:
 	if (eNum > 0)
 	{
-		NEUIK_RaiseError(funcName, errMsg);
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
 
@@ -1490,9 +1508,15 @@ out:
 int NEUIK_ToggleButton_Deactivate(
 	NEUIK_ToggleButton * btn)
 {
+	RenderSize  rSize;
+	RenderLoc   rLoc;
 	int         eNum       = 0; /* which error to report (if any) */
 	static char funcName[] = "NEUIK_ToggleButton_Deactivate";
-	static char errMsg[]   = "Argument `btn` is not of ToggleButton class.";
+	static char *errMsgs[] = {"", // [0] no error
+		"Argument `btn` is not of ToggleButton class.",     // [1]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [2]
+		"Failure in `neuik_Element_RequestRedraw()`.",      // [3]
+	};
 
 	if (!neuik_Object_IsClass(btn, neuik__Class_ToggleButton))
 	{
@@ -1505,11 +1529,22 @@ int NEUIK_ToggleButton_Deactivate(
 	{
 		btn->activated = 0;
 		neuik_Element_TriggerCallback(btn, NEUIK_CALLBACK_ON_DEACTIVATED);
+
+		if (neuik_Element_GetSizeAndLocation(btn, &rSize, &rLoc))
+		{
+			eNum = 2;
+			goto out;
+		}
+		if (neuik_Element_RequestRedraw(btn, rLoc, rSize))
+		{
+			eNum = 3;
+			goto out;
+		}
 	}
 out:
 	if (eNum > 0)
 	{
-		NEUIK_RaiseError(funcName, errMsg);
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}
 

@@ -70,6 +70,7 @@ extern neuik_VirtualFunc neuik_Element_vfunc_CaptureEvent;
 extern neuik_VirtualFunc neuik_Element_vfunc_IsShown;
 extern neuik_VirtualFunc neuik_Element_vfunc_SetWindowPointer;
 extern neuik_VirtualFunc neuik_Element_vfunc_RequestRedraw;
+extern neuik_VirtualFunc neuik_Element_vfunc_ShouldRedrawAll;
 
 /*----------------------------------------------------------------------------*/
 /* Registration functions for class implementations                           */

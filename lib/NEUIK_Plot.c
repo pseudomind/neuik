@@ -83,9 +83,7 @@ int neuik_RegisterClass_Plot()
 	static char * errMsgs[]  = {"",                                        // [0] no error
 		"NEUIK library must be initialized first.",                        // [1]
 		"Failed to register `Plot` object class.",                         // [2]
-		"Failed to register `Element_IsShown` virtual function.",          // [3]
-		"Failed to register `Element_CaptureEvent` virtual function.",     // [4]
-		"Failed to register `Element_SetWindowPointer` virtual function.", // [5]
+		"Failed to register `Element_SetWindowPointer` virtual function.", // [3]
 	};
 
 	if (!neuik__isInitialized)
@@ -113,30 +111,12 @@ int neuik_RegisterClass_Plot()
 	/*------------------------------------------------------------------------*/
 	/* Register virtual function implementations                              */
 	/*------------------------------------------------------------------------*/
-	// if (neuik_VirtualFunc_RegisterImplementation(
-	// 	&neuik_Element_vfunc_IsShown,
-	// 	neuik__Class_Plot,
-	// 	neuik_Element_IsShown__Plot))
-	// {
-	// 	eNum = 3;
-	// 	goto out;
-	// }
-
-	// if (neuik_VirtualFunc_RegisterImplementation(
-	// 	&neuik_Element_vfunc_CaptureEvent,
-	// 	neuik__Class_Plot,
-	// 	neuik_Element_CaptureEvent__Plot))
-	// {
-	// 	eNum = 4;
-	// 	goto out;
-	// }
-
 	if (neuik_VirtualFunc_RegisterImplementation(
 		&neuik_Element_vfunc_SetWindowPointer,
 		neuik__Class_Plot,
 		neuik_Element_SetWindowPointer__Plot))
 	{
-		eNum = 5;
+		eNum = 3;
 		goto out;
 	}
 out:
@@ -329,6 +309,7 @@ int neuik_Object_New__Plot(
 		eNum = 5;
 		goto out;
 	}
+	neuik_Element_SetParentPointer(plot->visual, plot);
 out:
 	if (eNum > 0)
 	{
