@@ -799,6 +799,7 @@ int NEUIK_Label_Configure(
 	int                  boolVal   = 0;
 	int                  typeMixup;
 	int                  fontSize;
+	int                  fontEmWidth;
 	char                 buf[4096];
 	RenderSize           rSize;
 	RenderLoc            rLoc;
@@ -823,7 +824,8 @@ int NEUIK_Label_Configure(
 	/* if a supported nameValue type was mistakenly used instead.             */
 	/*------------------------------------------------------------------------*/
 	static char          * valueNames[] = {
-		"FontSize"
+		"FontEmWidth",
+		"FontSize",
 		"FontColor",
 		NULL,
 	};
@@ -839,7 +841,7 @@ int NEUIK_Label_Configure(
 		"FontColor value invalid; should be comma separated RGBA.",       // [ 8]
 		"FontColor value invalid; RGBA value range is 0-255.",            // [ 9]
 		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [10]
-		"",                                                               // [11]
+		"FontEmWidth value is invalid; must be int.",                     // [11]
 		"FontSize value is invalid; must be int.",                        // [12]
 		"BoolType name used as ValueType, skipping.",                     // [13]
 		"NamedSet.name type unknown, skipping.",                          // [14]
@@ -1042,8 +1044,6 @@ int NEUIK_Label_Configure(
 			}
 			else if (!strcmp("FontSize", name))
 			{
-				/* Set autoResize parameters for both width and height */
-
 				ns = sscanf(value, "%d", &fontSize);
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
@@ -1061,6 +1061,27 @@ int NEUIK_Label_Configure(
 
 				/* else: The previous setting was changed */
 				cfg->fontSize = fontSize;
+				doRedraw = 1;
+			}
+			else if (!strcmp("FontEmWidth", name))
+			{
+				ns = sscanf(value, "%d", &fontEmWidth);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 1)
+			#else
+				if (ns < 1)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[11]);
+					continue;
+				}
+				if (cfg->fontEmWidth == fontEmWidth) continue;
+
+				/* else: The previous setting was changed */
+				cfg->fontEmWidth = fontEmWidth;
 				doRedraw = 1;
 			}
 			else
