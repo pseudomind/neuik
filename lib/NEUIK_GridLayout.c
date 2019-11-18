@@ -2186,6 +2186,8 @@ int neuik_Element_Render__GridLayout(
 			if (!elemsShown[offset]) continue; /* this elem isn't shown */
 
 			elem = cont->elems[offset];
+			if (!neuik_Element_NeedsRedraw(elem)) continue;
+
 			eCfg = elemsCfg[offset];
 			rs   = &elemsMinSz[offset];
 
@@ -2276,13 +2278,10 @@ int neuik_Element_Render__GridLayout(
 			rlRel.y = rect.y;
 			neuik_Element_StoreSizeAndLocation(elem, *rs, rl, rlRel);
 
-			if (neuik_Element_NeedsRedraw(elem))
+			if (neuik_Element_Render(elem, rs, rlMod, rend, mock))
 			{
-				if (neuik_Element_Render(elem, rs, rlMod, rend, mock))
-				{
-					eNum = 2;
-					goto out;
-				}
+				eNum = 2;
+				goto out;
 			}
 		}
 	}

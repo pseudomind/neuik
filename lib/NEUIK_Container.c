@@ -522,7 +522,7 @@ int neuik_Container_RequestFullRedraw(
 		goto out;
 	}
 
-	cBase->redrawAll  = 1;
+	cBase->redrawAll = 1;
 	/*------------------------------------------------------------------------*/
 	/* Make sure the window redraws the background for the entire size of the */
 	/* current container.                                                     */

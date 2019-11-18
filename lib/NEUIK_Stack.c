@@ -678,6 +678,7 @@ int neuik_Element_Render__Stack(
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
+	if (!mock) cont->redrawAll = 0;
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
