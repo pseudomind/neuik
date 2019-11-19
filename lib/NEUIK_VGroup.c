@@ -589,42 +589,58 @@ int neuik_Element_Render__VGroup(
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-	int                   tempW   = 0;
-	int                   ctr     = 0;
-	int                   vctr    = 0; /* valid counter; for elements shown */
-	int                   xPos    = 0;
-	int                   yPos    = 0;
-	int                   elWidth = 0;
-	int                   ySize   = 0;
-	int                   eNum    = 0; /* which error to report (if any) */
-	float                 vFillPx = 0.0;
-	float                 yFree   = 0.0; /* px of space free for vFill elems */
-	float                 tScale  = 0.0; /* total vFill scaling factors */
-	RenderLoc             rl      = {0, 0};
-	RenderLoc             rlRel   = {0, 0}; /* renderloc relative to parent */
-	SDL_Rect              rect    = {0, 0, 0, 0};
-	RenderSize            rs      = {0, 0};
-	static RenderSize     rsZero  = {0, 0};
-	SDL_Renderer        * rend    = NULL;
-	NEUIK_Container     * cont    = NULL;
-	NEUIK_ElementBase   * eBase   = NULL;
-	NEUIK_Element         elem    = NULL;
-	NEUIK_ElementConfig * eCfg    = NULL;
-	NEUIK_VGroup        * vg      = NULL;
-	neuik_MaskMap       * maskMap = NULL; /* FREE upon return */
-	enum neuik_bgstyle    bgStyle;
-	static char           funcName[] = "neuik_Element_Render__VGroup";
-	static char         * errMsgs[]  = {"",                                // [0] no error
+	int                    nAlloc        = 0;
+	int                    tempH         = 0;
+	int                    tempW         = 0;
+	int                    ctr           = 0;
+	int                    yPos          = 0;
+	int                    yFree         = 0; // px of space free for vFill elems
+	int                    dH            = 0; // Change in height [px]
+	int                    eNum          = 0; // which error to report (if any)
+	int                    nVFill        = 0; // number of rows which can VFill
+	int                    reqResizeH    = 0; // required resize height
+	int                    vfillRowsMinH = 0; // min height for all vFill rows
+	int                    vfillMaxMinH  = 0; // largest minimum row height 
+	                                          // among vertically filling rows.
+	int                  * allHFill      = NULL; // Free upon returning; 
+	                                             // Cols fills vertically? (per col)
+	int                  * allVFill      = NULL; // Free upon returning; 
+	                                             // Row fills vertically? (per row)
+	int                  * allMaxMinH    = NULL; // Free upon returning; 
+	                                             // The max min width (per row)
+	int                    maxMinW       = 0;    // The max min width
+	int                  * rendRowH      = NULL; // Free upon returning; 
+	                                             // Rendered row height (per row)
+	int                  * elemsShown    = NULL; // Free upon returning.
+	RenderSize           * elemsMinSz    = NULL; // Free upon returning.
+	NEUIK_ElementConfig ** elemsCfg      = NULL; // Free upon returning.
+	RenderLoc              rl            = {0, 0};
+	RenderLoc              rlRel         = {0, 0}; /* renderloc relative to parent */
+	SDL_Rect               rect          = {0, 0, 0, 0};
+	static RenderSize      rsZero        = {0, 0};
+	RenderSize             rsMin         = {0, 0};
+	RenderSize           * rs            = NULL;
+	SDL_Renderer         * rend          = NULL;
+	NEUIK_Container      * cont          = NULL;
+	NEUIK_ElementBase    * eBase         = NULL;
+	NEUIK_Element          elem          = NULL;
+	NEUIK_ElementConfig  * eCfg          = NULL;
+	NEUIK_VGroup         * vg      = NULL;
+	neuik_MaskMap        * maskMap       = NULL; /* FREE upon return */
+	enum neuik_bgstyle     bgStyle;
+	static char            funcName[]    = "neuik_Element_Render__VGroup";
+	static char          * errMsgs[]     = {"", // [0] no error
 		"Argument `vgElem` is not of VGroup class.",                       // [1]
-		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [2]
-		"Element_GetConfig returned NULL.",                                // [3]
-		"Element_GetMinSize Failed.",                                      // [4]
-		"Failure in `neuik_Element_Render()`",                             // [5]
-		"Invalid specified `rSize` (negative values).",                    // [6]
-		"Failure in `neuik_MakeMaskMap()`",                                // [7]
-		"Argument `vgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
-		"Failure in `neuik_Element_RedrawBackground()`.",                  // [9]
-		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",               // [10]
+		"Argument `vgElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
+		"Invalid specified `rSize` (negative values).",                    // [3]
+		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [4]
+		"Failure in `neuik_MakeMaskMap()`",                                // [5]
+		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",               // [6]
+		"Failure in neuik_Element_RedrawBackground().",                    // [7]
+		"Failure to allocate memory.",                                     // [8]
+		"Element_GetConfig returned NULL.",                                // [9]
+		"Element_GetMinSize Failed.",                                      // [10]
+		"Failure in `neuik_Element_Render()`",                             // [11]
 	};
 
 	if (!neuik_Object_IsClass(vgElem, neuik__Class_VGroup))
@@ -636,21 +652,22 @@ int neuik_Element_Render__VGroup(
 
 	if (neuik_Object_GetClassObject(vgElem, neuik__Class_Element, (void**)&eBase))
 	{
-		eNum = 8;
+		eNum = 2;
 		goto out;
 	}
 	if (neuik_Object_GetClassObject(vgElem, neuik__Class_Container, (void**)&cont))
 	{
-		eNum = 8;
+		eNum = 2;
 		goto out;
 	}
 
 	if (rSize->w < 0 || rSize->h < 0)
 	{
-		eNum = 6;
+		eNum = 3;
 		goto out;
 	}
-	yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
+	yFree = (float)(rSize->h); 
+	/* ^^^ free Y-px: start with the full ht. and deduct as used */
 
 	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
@@ -662,7 +679,7 @@ int neuik_Element_Render__VGroup(
 	{
 		if (neuik_Element_GetCurrentBGStyle(vgElem, &bgStyle))
 		{
-			eNum = 2;
+			eNum = 4;
 			goto out;
 		}
 		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
@@ -672,7 +689,7 @@ int neuik_Element_Render__VGroup(
 			/*----------------------------------------------------------------*/
 			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
 			{
-				eNum = 7;
+				eNum = 5;
 				goto out;
 			}
 
@@ -680,208 +697,402 @@ int neuik_Element_Render__VGroup(
 			if (neuik_Window_FillTranspMaskFromLoc(
 					eBase->eSt.window, maskMap, rl.x, rl.y))
 			{
-				eNum = 10;
+				eNum = 6;
 				goto out;
 			}
 
 			if (neuik_Element_RedrawBackground(vgElem, rlMod, maskMap))
 			{
-				eNum = 9;
+				eNum = 7;
 				goto out;
 			}
 		}
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Draw the UI elements into the VGroup                                   */
-	/*------------------------------------------------------------------------*/
-	if (cont->elems != NULL)
+	if (cont->elems == NULL)
 	{
-		/*------------------------------------------------------*/
-		/* Determine the (maximum) width of any of the elements */
-		/*------------------------------------------------------*/
-		vctr    = 0;
-		elWidth = rSize->w;
-		for (ctr = 0;; ctr++)
+		/* No elements are contained; don't do any more work here. */
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory for the calculated maximum minimum values, the         */
+	/* VFill/HFill flags, and for the rendered row/column heights/widths.     */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0;; ctr++)
+	{
+		elem = (NEUIK_Element)cont->elems[ctr];
+		if (elem == NULL) break;
+	}
+	nAlloc = ctr;
+
+	allMaxMinH = malloc(nAlloc*sizeof(int));
+	if (allMaxMinH == NULL)
+	{
+		eNum = 8;
+		goto out;
+	}
+	allHFill = malloc(nAlloc*sizeof(int));
+	if (allHFill == NULL)
+	{
+		eNum = 8;
+		goto out;
+	}
+	allVFill = malloc(nAlloc*sizeof(int));
+	if (allVFill == NULL)
+	{
+		eNum = 8;
+		goto out;
+	}
+	rendRowH = malloc(nAlloc*sizeof(int));
+	if (rendRowH == NULL)
+	{
+		eNum = 8;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Zero out the initial maximum minimum values and HFill/VFill flags.     */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		maxMinW         = 0;
+		allHFill[ctr]   = 0;
+		allMaxMinH[ctr] = 0;
+		allVFill[ctr]   = 0;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory for lists of contained element properties.             */
+	/*------------------------------------------------------------------------*/
+	elemsCfg = malloc(nAlloc*sizeof(NEUIK_ElementConfig*));
+	if (elemsCfg == NULL)
+	{
+		eNum = 8;
+		goto out;
+	}
+	elemsShown = malloc(nAlloc*sizeof(int));
+	if (elemsShown == NULL)
+	{
+		eNum = 8;
+		goto out;
+	}
+	elemsMinSz = malloc(nAlloc*sizeof(RenderSize));
+	if (elemsMinSz == NULL)
+	{
+		eNum = 8;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Store the current properties for the contained elements.               */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0;; ctr++)
+	{
+		elem = (NEUIK_Element)cont->elems[ctr];
+		if (elem == NULL) break;
+
+		elemsShown[ctr] = NEUIK_Element_IsShown(elem);
+		if (!elemsShown[ctr]) continue;
+
+		elemsCfg[ctr] = neuik_Element_GetConfig(elem);
+		if (elemsCfg[ctr] == NULL)
 		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
-
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
-			{
-				eNum = 3;
-				goto out;
-			}
-
-			if (!NEUIK_Element_IsShown(elem)) continue;
-			vctr++;
-
-			if (vctr > 0)
-			{
-				/* subsequent UI element is valid, deduct Vertical Spacing */
-				yFree -= vg->VSpacing;
-			}
-
-			if (neuik_Element_GetMinSize(elem, &rs))
-			{
-				eNum = 4;
-				goto out;
-			}
-
-			tempW = rs.w + eCfg->PadLeft + eCfg->PadRight;
-			if (tempW > elWidth)
-			{
-				elWidth = tempW;
-			}
-			yFree -= rs.h + eCfg->PadTop + eCfg->PadBottom;
-		}
-
-		if (vctr == 0)
-		{
+			eNum = 9;
 			goto out;
 		}
 
-		/*-----------------------------------------------------------*/
-		/* Check if there are any elements which can fill vertically */
-		/*-----------------------------------------------------------*/
-		for (ctr = 0;; ctr++)
+		elemsMinSz[ctr] = rsZero;
+		if (neuik_Element_GetMinSize(elem, &elemsMinSz[ctr]))
 		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
+			eNum = 10;
+			goto out;
+		}
+	}
 
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
+	/*------------------------------------------------------------------------*/
+	/* Calculate the maximum minimum widths required for all of the columns.  */
+	/* (i.e., for each column of elements, determine the maximum value of the */
+	/* minimum widths required (among elements in the column)).               */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0;; ctr++)
+	{
+		elem = (NEUIK_Element)cont->elems[ctr];
+		if (elem == NULL) break;
+
+		if (!elemsShown[ctr]) continue; /* this elem isn't shown */
+
+		eCfg = elemsCfg[ctr];
+		rs   = &elemsMinSz[ctr];
+
+		tempW = rs->w + (eCfg->PadLeft + eCfg->PadRight);
+		if (tempW > maxMinW)
+		{
+			maxMinW = tempW;
+		}
+
+		allMaxMinH[ctr] = rs->h + (eCfg->PadTop + eCfg->PadBottom);
+
+		/*--------------------------------------------------------------------*/
+		/* Check if the element can fill horizontally and if so, mark the     */
+		/* whole vgroup as one that can fill horizontally.                    */
+		/*--------------------------------------------------------------------*/
+		if (eCfg->HFill)
+		{
+			allHFill[ctr] = 1;
+		}
+		/*--------------------------------------------------------------------*/
+		/* Check if the element can fill vertically and if so, mark the whole */
+		/* vgroup as one that can fill vertically.                            */
+		/*--------------------------------------------------------------------*/
+		if (eCfg->VFill)
+		{
+			allVFill[ctr] = 1;
+		}
+	}
+
+	/*========================================================================*/
+	/* Calculation of rendered row heights (accounts for VFill).              */
+	/*========================================================================*/
+	/* Determine the required minimum height and the total number of rows     */
+	/* which can fill vertically.                                             */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		rsMin.h += allMaxMinH[ctr];
+		nVFill += allVFill[ctr];
+	}
+	if (nAlloc > 1)
+	{
+		rsMin.h += vg->VSpacing*(nAlloc - 1);
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the space occupied by all VFill rows and determine the value */
+	/* of the largest minimum row height among vertically filling rows.       */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		if (allVFill[ctr])
+		{
+			vfillRowsMinH += allMaxMinH[ctr];
+			if (vfillMaxMinH < allMaxMinH[ctr])
 			{
-				eNum = 3;
-				goto out;
+				vfillMaxMinH = allMaxMinH[ctr];
 			}
+		}
+	}
 
-			if (!NEUIK_Element_IsShown(elem)) continue;
+	/*------------------------------------------------------------------------*/
+	/* Calculate the amount of currently unused vertical space (beyond min).  */
+	/*------------------------------------------------------------------------*/
+	yFree = rSize->h - rsMin.h;
 
-			if (eCfg->VFill)
+	/*------------------------------------------------------------------------*/
+	/* Check if there is enough unused vertical space to bring all VFill rows */
+	/* to the same height.                                                    */
+	/*------------------------------------------------------------------------*/
+	reqResizeH = nVFill*vfillMaxMinH - vfillRowsMinH; // required resize height
+	if (yFree >= reqResizeH)
+	{
+		/*--------------------------------------------------------------------*/
+		/* There is enough space; get all VFill rows to the same size first.  */
+		/*--------------------------------------------------------------------*/
+		for (ctr = 0; ctr < nAlloc; ctr++)
+		{
+			rendRowH[ctr] = allMaxMinH[ctr];
+			if (allVFill[ctr])
 			{
-				/* This element is fills space vertically */
-				tScale += eCfg->VScale;
-				rs = rsZero; /* (0,0); use default calculated size */
-				if (neuik_Element_GetMinSize(elem, &rs))
-				{
-					eNum = 4;
-					goto out;
-				}
-				yFree += rs.h;
+				rendRowH[ctr] = vfillMaxMinH;
 			}
 		}
 
-		/* calculate the number of vertical px per 1.0 of VScaling */
-		vFillPx = (float)((int)(yFree/tScale));
+		/*--------------------------------------------------------------------*/
+		/* Evenly divide the remaining vSpace between the vFill rows.         */
+		/*--------------------------------------------------------------------*/
+		yFree -= reqResizeH;
 
-		/*--------------------------------------------------------------------*/
-		/* Render and place the child elements                                */
-		/*--------------------------------------------------------------------*/
-		vctr = 0;
-		for (ctr = 0;; ctr++)
+		dH = (int)(floor( (float)(yFree)/(float)(nVFill) ));
+		if (dH > 0)
 		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
-
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
-			{
-				eNum = 3;
-				goto out;
-			}
-
-			if (!NEUIK_Element_IsShown(elem)) continue;
-			vctr++;
-
-			if (vctr > 0)
-			{
-				/* add vertical spacing between subsequent elements */
-				yPos += vg->VSpacing;
-			}
-
 			/*----------------------------------------------------------------*/
-			/* Start with the default calculated element size                 */
+			/* Increase the height of vFill rows all by the same quantity.    */
 			/*----------------------------------------------------------------*/
-			if (neuik_Element_GetMinSize(elem, &rs))
+			for (ctr = 0; ctr < nAlloc; ctr++)
 			{
-				eNum = 4;
-				goto out;
-			}
-
-			/*----------------------------------------------------------------*/
-			/* Check for and apply if necessary Horizontal and Veritcal fill  */
-			/*----------------------------------------------------------------*/
-			if (eCfg->HFill)
-			{
-				/* This element is configured to fill space horizontally */
-				rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
-			}
-			if (eCfg->VFill)
-			{
-				/* This element is configured to fill space vertically */
-				ySize = (int)(vFillPx * (eCfg->VScale)) - (eCfg->PadTop + eCfg->PadBottom);
-				rs.h  = ySize;
-			}
-
-			/*----------------------------------------------------------------*/
-			/* Update the stored location before rendering the element. This  */
-			/* is necessary as the location of this object will propagate to  */
-			/* its child objects.                                             */
-			/*----------------------------------------------------------------*/
-			switch (eCfg->HJustify)
-			{
-				case NEUIK_HJUSTIFY_DEFAULT:
-					switch (cont->HJustify)
-					{
-						case NEUIK_HJUSTIFY_LEFT:
-							rect.x = xPos + eCfg->PadLeft;
-							break;
-						case NEUIK_HJUSTIFY_CENTER:
-						case NEUIK_HJUSTIFY_DEFAULT:
-							rect.x = rSize->w/2 - (rs.w/2);
-							break;
-						case NEUIK_HJUSTIFY_RIGHT:
-							rect.x = rSize->w - (rs.w + eCfg->PadRight);
-							break;
-					}
-					break;
-				case NEUIK_HJUSTIFY_LEFT:
-					rect.x = xPos + eCfg->PadLeft;
-					break;
-				case NEUIK_HJUSTIFY_CENTER:
-					rect.x = rSize->w/2 - (rs.w/2);
-					break;
-				case NEUIK_HJUSTIFY_RIGHT:
-					rect.x = rSize->w - (rs.w + eCfg->PadRight);
-					break;
-			}
-
-			rect.y = yPos + eCfg->PadTop;
-			rect.w = rs.w;
-			rect.h = rs.h;
-			rl.x = (eBase->eSt.rLoc).x + rect.x;
-			rl.y = (eBase->eSt.rLoc).y + rect.y;
-			rlRel.x = rect.x;
-			rlRel.y = rect.y;
-			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
-
-			if (neuik_Element_NeedsRedraw(elem))
-			{
-				if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+				if (allVFill[ctr])
 				{
-					eNum = 5;
-					goto out;
+					rendRowH[ctr] += dH;
+					yFree -= dH;
 				}
 			}
+		}
 
-			yPos += rs.h + (eCfg->PadTop + eCfg->PadBottom);
+		if (yFree > 0)
+		{
+			/*----------------------------------------------------------------*/
+			/* Distribute the remaining vSpace to the vFill one pixel at a    */
+			/* time (starting from the top row and moving down).              */
+			/*----------------------------------------------------------------*/
+			for (ctr = 0; ctr < nAlloc; ctr++)
+			{
+				if (allVFill[ctr])
+				{
+					rendRowH[ctr] += 1;
+					yFree -= 1;
+					if (yFree == 0)
+					{
+						break;
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* Evenly divide the remaining vSpace between the vFill rows.         */
+		/*--------------------------------------------------------------------*/
+		while (yFree > 0)
+		{
+			/*----------------------------------------------------------------*/
+			/* Distribute the remaining vSpace to the vFill one pixel at a    */
+			/* time (starting from the top row and moving down).              */
+			/*----------------------------------------------------------------*/
+			for (ctr = 0; ctr < nAlloc; ctr++)
+			{
+				if (allVFill[ctr] && rendRowH[ctr] < vfillMaxMinH)
+				{
+					rendRowH[ctr] += 1;
+					yFree -= 1;
+					if (yFree == 0)
+					{
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	/*========================================================================*/
+	/* Render and place the child elements                                    */
+	/*========================================================================*/
+	yPos = 0;
+	for (ctr = 0; ctr < nAlloc; ctr++)
+	{
+		if (ctr > 0)
+		{
+			yPos += rendRowH[ctr-1] + vg->VSpacing;
+		}
+		if (!elemsShown[ctr]) continue; /* this elem isn't shown */
+
+		elem = cont->elems[ctr];
+		if (!neuik_Element_NeedsRedraw(elem)) continue;
+
+		eCfg = elemsCfg[ctr];
+		rs   = &elemsMinSz[ctr];
+
+		tempH = rendRowH[ctr];
+
+		/*--------------------------------------------------------------------*/
+		/* Check for and apply if necessary Horizontal and Vertical fill.     */
+		/*--------------------------------------------------------------------*/
+		if (allHFill[ctr])
+		{
+			rs->w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
+		}
+		if (allVFill[ctr])
+		{
+			rs->h = tempH - (eCfg->PadTop + eCfg->PadBottom);
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Update the stored location before rendering the element. This is   */
+		/* necessary as the location of this object will propagate to its     */
+		/* child objects.                                                     */
+		/*--------------------------------------------------------------------*/
+		switch (eCfg->HJustify)
+		{
+			case NEUIK_HJUSTIFY_DEFAULT:
+				switch (cont->HJustify)
+				{
+					case NEUIK_HJUSTIFY_LEFT:
+						rect.x = eCfg->PadLeft;
+						break;
+					case NEUIK_HJUSTIFY_CENTER:
+					case NEUIK_HJUSTIFY_DEFAULT:
+						rect.x = (rSize->w/2) - (rs->w/2);
+						break;
+					case NEUIK_HJUSTIFY_RIGHT:
+						rect.x = rSize->w - (rs->w + eCfg->PadRight);
+						break;
+				}
+				break;
+			case NEUIK_HJUSTIFY_LEFT:
+				rect.x = eCfg->PadLeft;
+				break;
+			case NEUIK_HJUSTIFY_CENTER:
+				rect.x = (rSize->w/2) - (rs->w/2);
+				break;
+			case NEUIK_HJUSTIFY_RIGHT:
+				rect.x = rSize->w - (rs->w + eCfg->PadRight);
+				break;
+		}
+		switch (eCfg->VJustify)
+		{
+			case NEUIK_VJUSTIFY_DEFAULT:
+				switch (cont->VJustify)
+				{
+					case NEUIK_VJUSTIFY_TOP:
+						rect.y = yPos + eCfg->PadTop;
+						break;
+					case NEUIK_VJUSTIFY_CENTER:
+					case NEUIK_VJUSTIFY_DEFAULT:
+						rect.y = (yPos + rendRowH[ctr]/2) - (tempH/2);
+						break;
+					case NEUIK_VJUSTIFY_BOTTOM:
+						rect.y = (yPos + rendRowH[ctr]) - 
+							(rs->h + eCfg->PadBottom);
+						break;
+				}
+				break;
+			case NEUIK_VJUSTIFY_TOP:
+				rect.y = yPos + eCfg->PadTop;
+				break;
+			case NEUIK_VJUSTIFY_CENTER:
+				rect.y = (yPos + rendRowH[ctr]/2) - (tempH/2);
+				break;
+			case NEUIK_VJUSTIFY_BOTTOM:
+				rect.y = (yPos + rendRowH[ctr]) - 
+					(rs->h + eCfg->PadBottom);
+				break;
+		}
+
+		rect.w = rs->w;
+		rect.h = rendRowH[ctr];
+		rl.x = (eBase->eSt.rLoc).x + rect.x;
+		rl.y = (eBase->eSt.rLoc).y + rect.y;
+		rlRel.x = rect.x;
+		rlRel.y = rect.y;
+		neuik_Element_StoreSizeAndLocation(elem, *rs, rl, rlRel);
+
+		if (neuik_Element_Render(elem, rs, rlMod, rend, mock))
+		{
+			eNum = 11;
+			goto out;
 		}
 	}
 out:
 	if (!mock) eBase->eSt.doRedraw = 0;
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
+
+	if (elemsCfg   != NULL) free(elemsCfg);
+	if (elemsShown != NULL) free(elemsShown);
+	if (elemsMinSz != NULL) free(elemsMinSz);
+	if (allMaxMinH != NULL) free(allMaxMinH);
+	if (rendRowH   != NULL) free(rendRowH);
+	if (allHFill   != NULL) free(allHFill);
+	if (allVFill   != NULL) free(allVFill);
 
 	if (eNum > 0)
 	{
@@ -891,4 +1102,3 @@ out:
 
 	return eNum;
 }
-
