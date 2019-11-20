@@ -1599,6 +1599,8 @@ int neuik_Element_Render__GridLayout(
 	int                    ctr           = 0;
 	int                    xPos          = 0;
 	int                    yPos          = 0;
+	int                    squarePadH    = 0; // px of height lost to keep aspect
+	int                    squarePadW    = 0; // px of width lost to keep aspect
 	int                    xFree         = 0; // px of space free for hFill elems
 	int                    yFree         = 0; // px of space free for vFill elems
 	int                    dH            = 0; // Change in height [px]
@@ -1613,6 +1615,7 @@ int neuik_Element_Render__GridLayout(
 	int                    vfillRowsMinH = 0; // min height for all vFill rows
 	int                    vfillMaxMinH  = 0; // largest minimum row height 
 	                                          // among vertically filling rows.
+	int                    maxSideLen    = 0; // Maximum side length (square-elems)
 	int                  * allHFill      = NULL; // Free upon returning; 
 	                                             // Cols fills vertically? (per col)
 	int                  * allVFill      = NULL; // Free upon returning; 
@@ -1914,6 +1917,44 @@ int neuik_Element_Render__GridLayout(
 		}
 	}
 
+	/*------------------------------------------------------------------------*/
+	/* If there is a requirement to keep all element sizes squared, then make */
+	/* an adjustment to the maximum-minimum widths/heights.                   */
+	/*------------------------------------------------------------------------*/
+	if (grid->squareElems)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Determine the maximum-minimum side length.                         */
+		/*--------------------------------------------------------------------*/
+		for (colCtr = 0; colCtr < grid->xDim; colCtr++)
+		{
+			if (allMaxMinW[colCtr] > maxSideLen)
+			{
+				maxSideLen = allMaxMinW[colCtr];
+			}
+		}
+		for (rowCtr = 0; rowCtr < grid->yDim; rowCtr++)
+		{
+			if (allMaxMinH[rowCtr] > maxSideLen)
+			{
+				maxSideLen = allMaxMinH[rowCtr];
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Set all of the MaxMinH/MaxMinW values to this value.               */
+		/*--------------------------------------------------------------------*/
+		for (colCtr = 0; colCtr < grid->xDim; colCtr++)
+		{
+			allMaxMinW[colCtr] = maxSideLen;
+		}
+
+		for (rowCtr = 0; rowCtr < grid->yDim; rowCtr++)
+		{
+			allMaxMinH[rowCtr] = maxSideLen;
+		}
+	}
+
 	/*========================================================================*/
 	/* Calculation of rendered column widths (accounts for HFill).            */
 	/*========================================================================*/
@@ -1951,6 +1992,63 @@ int neuik_Element_Render__GridLayout(
 	/* Calculate the amount of currently unused horizontal space (beyond min) */
 	/*------------------------------------------------------------------------*/
 	xFree = rSize->w - rsMin.w;
+
+	/*========================================================================*/
+	/* Calculation of rendered row heights (accounts for VFill).              */
+	/*========================================================================*/
+	/* Determine the required minimum height and the total number of rows     */
+	/* which can fill vertically.                                             */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < grid->yDim; ctr++)
+	{
+		rsMin.h += allMaxMinH[ctr];
+		nVFill += allVFill[ctr];
+	}
+	if (grid->yDim > 1)
+	{
+		rsMin.h += grid->VSpacing*(grid->yDim - 1);
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the space occupied by all VFill rows and determine the value */
+	/* of the largest minimum row height among vertically filling rows.       */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < grid->yDim; ctr++)
+	{
+		if (allVFill[ctr])
+		{
+			vfillRowsMinH += allMaxMinH[ctr];
+			if (vfillMaxMinH < allMaxMinH[ctr])
+			{
+				vfillMaxMinH = allMaxMinH[ctr];
+			}
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the amount of currently unused vertical space (beyond min).  */
+	/*------------------------------------------------------------------------*/
+	yFree = rSize->h - rsMin.h;
+
+
+	/*------------------------------------------------------------------------*/
+	/* If there is a requirement to keep all element sizes squared, then the  */
+	/* dimensional free space must be used for both dimensions.               */
+	/*------------------------------------------------------------------------*/
+	if (grid->squareElems)
+	{
+		if (yFree < xFree)
+		{
+			squarePadW = xFree - yFree;
+			xFree = yFree;
+		}
+		else if (xFree < yFree)
+		{
+			squarePadH = yFree - xFree;
+			yFree = xFree;
+		}
+	}
+
 
 	/*------------------------------------------------------------------------*/
 	/* Check if there is enough unused horizontal space to bring all HFill    */
@@ -2037,43 +2135,6 @@ int neuik_Element_Render__GridLayout(
 			}
 		}
 	}
-
-	/*========================================================================*/
-	/* Calculation of rendered row heights (accounts for VFill).              */
-	/*========================================================================*/
-	/* Determine the required minimum height and the total number of rows     */
-	/* which can fill vertically.                                             */
-	/*------------------------------------------------------------------------*/
-	for (ctr = 0; ctr < grid->yDim; ctr++)
-	{
-		rsMin.h += allMaxMinH[ctr];
-		nVFill += allVFill[ctr];
-	}
-	if (grid->yDim > 1)
-	{
-		rsMin.h += grid->VSpacing*(grid->yDim - 1);
-	}
-
-	/*------------------------------------------------------------------------*/
-	/* Calculate the space occupied by all VFill rows and determine the value */
-	/* of the largest minimum row height among vertically filling rows.       */
-	/*------------------------------------------------------------------------*/
-	for (ctr = 0; ctr < grid->yDim; ctr++)
-	{
-		if (allVFill[ctr])
-		{
-			vfillRowsMinH += allMaxMinH[ctr];
-			if (vfillMaxMinH < allMaxMinH[ctr])
-			{
-				vfillMaxMinH = allMaxMinH[ctr];
-			}
-		}
-	}
-
-	/*------------------------------------------------------------------------*/
-	/* Calculate the amount of currently unused vertical space (beyond min).  */
-	/*------------------------------------------------------------------------*/
-	yFree = rSize->h - rsMin.h;
 
 	/*------------------------------------------------------------------------*/
 	/* Check if there is enough unused vertical space to bring all VFill rows */
@@ -2221,10 +2282,11 @@ int neuik_Element_Render__GridLayout(
 							break;
 						case NEUIK_HJUSTIFY_CENTER:
 						case NEUIK_HJUSTIFY_DEFAULT:
-							rect.x = (xPos + rendColW[colCtr]/2) - (tempW/2);
+							rect.x = (xPos + squarePadW/2 + rendColW[colCtr]/2) 
+								- (tempW/2);
 							break;
 						case NEUIK_HJUSTIFY_RIGHT:
-							rect.x = (xPos + rendColW[colCtr]) - 
+							rect.x = (xPos + squarePadW + rendColW[colCtr]) - 
 								(rs->w + eCfg->PadRight);
 							break;
 					}
@@ -2233,10 +2295,11 @@ int neuik_Element_Render__GridLayout(
 					rect.x = xPos + eCfg->PadLeft;
 					break;
 				case NEUIK_HJUSTIFY_CENTER:
-					rect.x = (xPos + rendColW[colCtr]/2) - (tempW/2);
+					rect.x = (xPos + squarePadW/2 + rendColW[colCtr]/2) 
+						- (tempW/2);
 					break;
 				case NEUIK_HJUSTIFY_RIGHT:
-					rect.x = (xPos + rendColW[colCtr]) - 
+					rect.x = (xPos + squarePadW + rendColW[colCtr]) - 
 						(rs->w + eCfg->PadRight);
 					break;
 			}
@@ -2250,10 +2313,11 @@ int neuik_Element_Render__GridLayout(
 							break;
 						case NEUIK_VJUSTIFY_CENTER:
 						case NEUIK_VJUSTIFY_DEFAULT:
-							rect.y = (yPos + rendRowH[rowCtr]/2) - (tempH/2);
+							rect.y = (yPos + squarePadH/2 + rendRowH[rowCtr]/2)
+								- (tempH/2);
 							break;
 						case NEUIK_VJUSTIFY_BOTTOM:
-							rect.y = (yPos + rendRowH[rowCtr]) - 
+							rect.y = (yPos + squarePadH + rendRowH[rowCtr]) - 
 								(rs->h + eCfg->PadBottom);
 							break;
 					}
@@ -2262,10 +2326,11 @@ int neuik_Element_Render__GridLayout(
 					rect.y = yPos + eCfg->PadTop;
 					break;
 				case NEUIK_VJUSTIFY_CENTER:
-					rect.y = (yPos + rendRowH[rowCtr]/2) - (tempH/2);
+					rect.y = (yPos + squarePadH/2 + rendRowH[rowCtr]/2) 
+						- (tempH/2);
 					break;
 				case NEUIK_VJUSTIFY_BOTTOM:
-					rect.y = (yPos + rendRowH[rowCtr]) - 
+					rect.y = (yPos + squarePadH + rendRowH[rowCtr]) - 
 						(rs->h + eCfg->PadBottom);
 					break;
 			}
