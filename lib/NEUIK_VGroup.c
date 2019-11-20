@@ -577,9 +577,9 @@ out:
  *
  *  Name:          neuik_Element_Render__VGroup
  *
- *  Description:   Renders a single button as an SDL_Texture*.
+ *  Description:   Renders a vertical group of elements.
  *
- *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
+ *  Returns:       0 if there were no issues; otherwise 1.
  *
  ******************************************************************************/
 int neuik_Element_Render__VGroup(
@@ -625,7 +625,7 @@ int neuik_Element_Render__VGroup(
 	NEUIK_ElementBase    * eBase         = NULL;
 	NEUIK_Element          elem          = NULL;
 	NEUIK_ElementConfig  * eCfg          = NULL;
-	NEUIK_VGroup         * vg      = NULL;
+	NEUIK_VGroup         * vg            = NULL;
 	neuik_MaskMap        * maskMap       = NULL; /* FREE upon return */
 	enum neuik_bgstyle     bgStyle;
 	static char            funcName[]    = "neuik_Element_Render__VGroup";
@@ -754,9 +754,9 @@ int neuik_Element_Render__VGroup(
 	/*------------------------------------------------------------------------*/
 	/* Zero out the initial maximum minimum values and HFill/VFill flags.     */
 	/*------------------------------------------------------------------------*/
+	maxMinW = 0;
 	for (ctr = 0; ctr < nAlloc; ctr++)
 	{
-		maxMinW         = 0;
 		allHFill[ctr]   = 0;
 		allMaxMinH[ctr] = 0;
 		allVFill[ctr]   = 0;
@@ -859,6 +859,10 @@ int neuik_Element_Render__VGroup(
 	/*------------------------------------------------------------------------*/
 	for (ctr = 0; ctr < nAlloc; ctr++)
 	{
+		rs    = &elemsMinSz[ctr];
+		tempH = rs->h + (eCfg->PadTop + eCfg->PadBottom);
+		allMaxMinH[ctr] = tempH;
+
 		rsMin.h += allMaxMinH[ctr];
 		nVFill += allVFill[ctr];
 	}
