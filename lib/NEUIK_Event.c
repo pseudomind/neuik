@@ -78,6 +78,7 @@ int neuik_FreeAllWindows()
 				eNum = 1;
 				goto out;
 			}
+			neuik_windows.windows[ctr] = NULL;
 		}
 	}
 out:

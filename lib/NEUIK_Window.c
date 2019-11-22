@@ -809,6 +809,14 @@ int NEUIK_Window_Free(
 	{
 		neuik_Object_Free(&w->redrawMask);
 	}
+	if (w->icon != NULL)
+	{
+		neuik_Object_Free(&w->icon);
+	}
+	if (w->cfg != NULL)
+	{
+		neuik_Object_Free(&w->cfg);
+	}
 
 	free(w);
 out:
