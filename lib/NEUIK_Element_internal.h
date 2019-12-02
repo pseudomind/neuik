@@ -4,7 +4,7 @@
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -19,6 +19,8 @@
 
 #include "NEUIK_Element.h"
 #include "neuik_MaskMap.h"
+
+#define NEUIK_INVALID_SIZE (-1)
 
 /*----------------------------------------------------------------------------*/
 /* Typedef(s)                                                                 */
@@ -54,6 +56,13 @@ enum neuik_focusstate {
 	NEUIK_FOCUSSTATE_HOVERED,
 };
 
+enum neuik_minsize {
+	NEUIK_MINSIZE_NOCHANGE,
+	NEUIK_MINSIZE_INCREASE,
+	NEUIK_MINSIZE_DECREASE,
+	NEUIK_MINSIZE_INDETERMINATE,
+};
+
 
 typedef struct {
 	enum neuik_bgstyle    bgstyle_normal;    /* style to use when element is unselected */
@@ -85,6 +94,10 @@ typedef struct {
 	RenderSize              rSizeOld;   /* Old size of the rendered texture */
 	RenderLoc               rLoc;       /* Location of the rendered texture */
 	RenderLoc               rRelLoc;    /* Location of the rendered texture; relative to parent */
+	RenderSize              minSize;    /* Minimum size of the element */
+	RenderSize              minSizeOld; /* Minimum size of the element (previous frame) */
+    enum neuik_minsize      wDelta;     /* How min elem width changed (rel. to previous frame) */
+    enum neuik_minsize      hDelta;     /* How min elem height changed (rel. to previous frame) */
 } NEUIK_ElementState;
 
 
@@ -97,10 +110,10 @@ typedef struct {
 
 	/* CaptureEvent(): Determine if this element caputures a given event */
 	neuik_EventState (*CaptureEvent) (NEUIK_Element, SDL_Event *);
-	
+
 	/* Defocus(): This function will be called when an element looses focus */
 	void (*Defocus) (NEUIK_Element);
-	
+
 	/* RequestRedraw(): This function will be called when redraw is requested */
 	int (*RequestRedraw) (NEUIK_Element, RenderLoc, RenderSize);
 
@@ -118,75 +131,79 @@ typedef struct {
 
 
 
-NEUIK_ElementConfig 
+NEUIK_ElementConfig
 	neuik_GetDefaultElementConfig();
 
-NEUIK_ElementState  
+NEUIK_ElementState
 	neuik_GetDefaultElementState();
 
-void 
+void
 	neuik_SetDefaultElementConfig(
 			NEUIK_ElementConfig eCfg);
 
 neuik_EventState
 	neuik_Element_CaptureEvent(
-			NEUIK_Element   elem, 
+			NEUIK_Element   elem,
 			SDL_Event     * ev);
 
-void 
+void
 	neuik_Element_Defocus(
 			NEUIK_Element elem);
 
-int 
+int
 	neuik_Element_ForceRedraw(
 			NEUIK_Element elem);
 
-NEUIK_ElementConfig * 
+NEUIK_ElementConfig *
 	neuik_Element_GetConfig(
 			NEUIK_Element elem);
 
-int 
+int
 	neuik_Element_GetCurrentBGStyle(
 			NEUIK_Element        elem,
 			enum neuik_bgstyle * bgStyle);
 
-int 
+int
 	neuik_Element_GetMinSize(
-			NEUIK_Element    elem, 
+			NEUIK_Element    elem,
 			RenderSize     * rSize);
 
-int 
+int
 	neuik_Element_GetLocation(
-			NEUIK_Element   elem, 
+			NEUIK_Element   elem,
 			RenderLoc     * rLoc);
 
-int 
+int
 	neuik_Element_GetSize(
-			NEUIK_Element   elem, 
+			NEUIK_Element   elem,
 			RenderSize    * rSize);
 
-int 
+int
 	neuik_Element_GetSizeAndLocation(
-			NEUIK_Element   elem, 
+			NEUIK_Element   elem,
 			RenderSize    * rSize,
 			RenderLoc     * rLoc);
 
-int 
+int
 	neuik_Element_NeedsRedraw(
+			NEUIK_Element elem);
+
+int 
+	neuik_Element_PropagateIndeterminateMinSizeDelta(
 			NEUIK_Element elem);
 
 int
 	neuik_Element_Render(
-	 		NEUIK_Element   elem, 
-	 		RenderSize    * rSize, 
-	 		RenderLoc     * rlMod, 
+	 		NEUIK_Element   elem,
+	 		RenderSize    * rSize,
+	 		RenderLoc     * rlMod,
 	 		SDL_Renderer  * xRend,
 	 		int             mock);
 
-int 
+int
 	neuik_Element_RenderRotate(
-			NEUIK_Element   elem, 
-			RenderSize    * rSize, 
+			NEUIK_Element   elem,
+			RenderSize    * rSize,
 			RenderLoc     * rlMod,
 			SDL_Renderer  * xRend,
 	 		int             mock,
@@ -198,27 +215,32 @@ int
 			RenderLoc     * rlMod,
 			neuik_MaskMap * maskMap);
 
-int 
+int
 	neuik_Element_RequestRedraw(
 			NEUIK_Element elem,
 			RenderLoc     rLoc,
 			RenderSize    rSize);
 
-int 
+int
 	neuik_Element_ShouldRedrawAll(
 			NEUIK_Element   elem);
 
-int 
+int
 	neuik_Element_Resize(
-			NEUIK_Element elem, 
+			NEUIK_Element elem,
 			RenderSize    nSize);
 
-int 
+int
 	neuik_Element_ResizeTransparent(
-			NEUIK_Element elem, 
+			NEUIK_Element elem,
 			RenderSize    nSize);
 
-int 
+int
+	neuik_Element_StoreFrameMinSize(
+			NEUIK_Element   elem,
+			RenderSize    * rSize);
+
+int
 	NEUIK_Element_SetBackgroundColorSolid_noRedraw(
 			NEUIK_Element   elem,
 			const char    * styleName,
@@ -227,49 +249,53 @@ int
 			unsigned char   b,
 			unsigned char   a);
 
-void 
+void
 	neuik_Element_SetParentPointer(
-			NEUIK_Element   elem, 
+			NEUIK_Element   elem,
 			void          * parent);
 
 int
 	neuik_Element_SetChildPopup(
-			NEUIK_Element  parent, 
+			NEUIK_Element  parent,
 			NEUIK_Element  pu);
 
-int 
+int
 	neuik_Element_SetWindowPointer(
-			NEUIK_Element   elem, 
+			NEUIK_Element   elem,
 			void          * win);
 
-void 
+void
 	neuik_Element_StoreSizeAndLocation(
-			NEUIK_Element elem, 
-			RenderSize    rSize, 
+			NEUIK_Element elem,
+			RenderSize    rSize,
 			RenderLoc     rLoc,
 			RenderLoc     rRelLoc);
 
-int 
+int
 	neuik_Element_TriggerCallback(
-			NEUIK_Element      elem, 
+			NEUIK_Element      elem,
 			neuik_CallbackEnum cbType);
 
-int 
+int
 	neuik_Element_SetFuncTable(
-			NEUIK_Element             elem, 
+			NEUIK_Element             elem,
 			NEUIK_Element_FuncTable * eFT);
 
-int 
+int
 	neuik_NewElement(
 			NEUIK_Element ** elemPtr);
 
-void 
+void
 	neuik_Element_SetActive(
 			NEUIK_Element elem,
 			int           isActive);
 
-int 
+int
 	neuik_Element_IsActive(
+			NEUIK_Element elem);
+
+int
+	neuik_Element_UpdateMinSizeDeltas(
 			NEUIK_Element elem);
 
 #endif /* NEUIK_ELEMENT_INTERNAL_H */

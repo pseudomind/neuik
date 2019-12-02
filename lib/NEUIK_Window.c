@@ -304,7 +304,7 @@ int NEUIK_Window_Configure(
 		"BoolType name unknown, skipping.",                       // [18]
 		"BoolType name used as ValueType, skipping.",             // [19]
 		"BGColor value invalid; should be comma separated RGBA.", // [20]
-		"BGColor value invalid; RGBA value range is 0-255."       // [21]
+		"BGColor value invalid; RGBA value range is 0-255.",      // [21]
 		"Failure in `neuik_Window_RequestFullRedraw()`.",         // [22]
 	};
 

@@ -4,7 +4,7 @@
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -91,22 +91,26 @@ NEUIK_ElementConfig neuik_default_ElementConfig = {
 };
 
 NEUIK_ElementState neuik_default_ElementState = {
-	1,                       /* Element needs to be redrawn */
-	0,                       /* Element does not have Window focus */
-	0,                       /* Element does not require an alpha blending */
-	0,                       /* Element is not active by default */
-	NEUIK_FOCUSSTATE_NORMAL, /* Element is unselected */
-	NULL,                    /* (NEUIK_Window *) containing window */
-	NULL,                    /* (NEUIK_Element)  parent element */
-	NULL,                    /* (NEUIK_Element)  popup element */
-	NULL,                    /* (SDL_Texture *)  rendered texture */
-	NULL,                    /* (SDL_Surface *)  surface for this element */
-	NULL,                    /* (SDL_Renderer *) renderer for this surface */
-	NULL,                    /* (SDL_Renderer *) last used extRenderer */
-	{0, 0},                  /* render size */
-	{-1, -1},                /* old render size */
-	{0, 0},                  /* render loc  */
-	{0, 0},                  /* render loc, relative to parent  */
+	1,                                        /* Element needs to be redrawn */
+	0,                                        /* Element does not have Window focus */
+	0,                                        /* Element does not require an alpha blending */
+	0,                                        /* Element is not active by default */
+	NEUIK_FOCUSSTATE_NORMAL,                  /* Element is unselected */
+	NULL,                                     /* (NEUIK_Window *) containing window */
+	NULL,                                     /* (NEUIK_Element)  parent element */
+	NULL,                                     /* (NEUIK_Element)  popup element */
+	NULL,                                     /* (SDL_Texture *)  rendered texture */
+	NULL,                                     /* (SDL_Surface *)  surface for this element */
+	NULL,                                     /* (SDL_Renderer *) renderer for this surface */
+	NULL,                                     /* (SDL_Renderer *) last used extRenderer */
+	{0, 0},                                   /* render size */
+	{NEUIK_INVALID_SIZE, NEUIK_INVALID_SIZE}, /* old render size */
+	{0, 0},                                   /* render loc  */
+	{0, 0},                                   /* render loc, relative to parent  */
+	{NEUIK_INVALID_SIZE, NEUIK_INVALID_SIZE}, /* Minimum size of the element */
+	{NEUIK_INVALID_SIZE, NEUIK_INVALID_SIZE}, /* Minimum size of the element (previous frame) */
+	NEUIK_MINSIZE_NOCHANGE,                   /* How min elem width changed */
+	NEUIK_MINSIZE_NOCHANGE,                   /* How min elem height changed */
 };
 
 
@@ -200,8 +204,8 @@ int neuik_Object_New__Element(
 	/* Allocation successful; set default values.                             */
 	/*------------------------------------------------------------------------*/
 	if (neuik_GetObjectBaseOfClass(
-			neuik__Set_NEUIK, 
-			neuik__Class_Element, 
+			neuik__Set_NEUIK,
+			neuik__Class_Element,
 			NULL,
 			&(elem->objBase)))
 	{
@@ -209,7 +213,7 @@ int neuik_Object_New__Element(
 		goto out;
 	}
 
-	elem->eFT  = NULL; 
+	elem->eFT  = NULL;
 	elem->eCfg = neuik_default_ElementConfig;
 	elem->eSt  = neuik_default_ElementState;
 	elem->eBg  = neuik_default_ElementBackground;
@@ -226,11 +230,11 @@ out:
 
 
 int neuik_Element_SetFuncTable(
-	NEUIK_Element             elem, 
+	NEUIK_Element             elem,
 	NEUIK_Element_FuncTable * eFT)
 {
 	int                 eNum       = 0;
-	NEUIK_ElementBase * eBase      = NULL; 
+	NEUIK_ElementBase * eBase      = NULL;
 	static char         funcName[] = "neuik_Element_SetFuncTable";
 	static char       * errMsgs[]  = {"",                                // [0] no error
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
@@ -275,7 +279,7 @@ int neuik_Object_Free__Element(
 	void * elemPtr)
 {
 	int                 eNum       = 0;
-	NEUIK_ElementBase * eBase      = NULL; 
+	NEUIK_ElementBase * eBase      = NULL;
 	static char         funcName[] = "neuik_Element_Free";
 	static char       * errMsgs[]  = {"",                                   // [0] no error
 		"Argument `elemPtr` is NULL.",                                      // [1]
@@ -327,7 +331,7 @@ void neuik_Element_Configure_capture_segv(
 	int sig_num)
 {
 	static char funcName[] = "NEUIK_Element_Configure";
-	static char errMsg[] = 
+	static char errMsg[] =
 		"SIGSEGV (segmentation fault) captured; is call `NULL` terminated?";
 
 	NEUIK_RaiseError(funcName, errMsg);
@@ -398,20 +402,21 @@ int NEUIK_Element_Configure(
 		NULL,
 	};
 	static char           funcName[] = "NEUIK_Element_Configure";
-	static char         * errMsgs[] = {"",                               // [ 0] no error
-		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [ 1]
-		"NamedSet.name is NULL, skipping.",                              // [ 2]
-		"NamedSet.name is blank, skipping.",                             // [ 3]
-		"NamedSet.name type unknown, skipping.",                         // [ 4]
-		"`name=value` string is too long.",                              // [ 5]
-		"Set string is empty.",                                          // [ 6]
-		"HJustify value is invalid.",                                    // [ 7]
-		"VJustify value is invalid.",                                    // [ 8]
-		"BoolType name unknown, skipping.",                              // [ 9]
-		"Invalid `name=value` string.",                                  // [10]
-		"ValueType name used as BoolType, skipping.",                    // [11]
-		"BoolType name used as ValueType, skipping.",                    // [12]
-		"Failure in `neuik_Window_RequestFullRedraw()`.",                // [13]
+	static char         * errMsgs[] = {"", // [ 0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.",   // [ 1]
+		"NamedSet.name is NULL, skipping.",                                // [ 2]
+		"NamedSet.name is blank, skipping.",                               // [ 3]
+		"NamedSet.name type unknown, skipping.",                           // [ 4]
+		"`name=value` string is too long.",                                // [ 5]
+		"Set string is empty.",                                            // [ 6]
+		"HJustify value is invalid.",                                      // [ 7]
+		"VJustify value is invalid.",                                      // [ 8]
+		"BoolType name unknown, skipping.",                                // [ 9]
+		"Invalid `name=value` string.",                                    // [10]
+		"ValueType name used as BoolType, skipping.",                      // [11]
+		"BoolType name used as ValueType, skipping.",                      // [12]
+		"Failure in `neuik_Window_RequestFullRedraw()`.",                  // [13]
+		"Failure in `neuik_Element_PropagateIndeterminateMinSizeDelta()`", // [14]
 	};
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -611,7 +616,7 @@ int NEUIK_Element_Configure(
 						doRedraw = 1;
 					}
 				}
-				else 
+				else
 				{
 					NEUIK_RaiseError(funcName, errMsgs[7]);
 				}
@@ -650,7 +655,7 @@ int NEUIK_Element_Configure(
 						doRedraw = 1;
 					}
 				}
-				else 
+				else
 				{
 					NEUIK_RaiseError(funcName, errMsgs[8]);
 				}
@@ -743,6 +748,11 @@ int NEUIK_Element_Configure(
 	{
 		if (fullRedraw)
 		{
+			if (neuik_Element_PropagateIndeterminateMinSizeDelta(elem))
+			{
+				NEUIK_RaiseError(funcName, errMsgs[14]);
+			}
+
 			if (neuik_Window_RequestFullRedraw((NEUIK_Window*)eBase->eSt.window))
 			{
 				NEUIK_RaiseError(funcName, errMsgs[13]);
@@ -769,8 +779,8 @@ void neuik_SetDefaultElementConfig(NEUIK_ElementConfig eCfg)
 
 
 int neuik_Element_GetMinSize(
-	NEUIK_Element    elem, 
-	RenderSize     * rSize)
+	NEUIK_Element   elem,
+	RenderSize    * rSize)
 {
 	int                  eNum       = 0;
 	NEUIK_ElementBase  * eBase      = NULL;
@@ -780,6 +790,7 @@ int neuik_Element_GetMinSize(
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
 		"Element Function Table is NULL (missing or not set).",          // [2]
 		"Failure in implementation of function `GetMinSize`.",           // [3]
+		"Failure in `neuik_Element_StoreFrameMinSize()`",                // [4]
 	};
 
 	nRecurse++;
@@ -805,15 +816,60 @@ int neuik_Element_GetMinSize(
 		goto out;
 	}
 
-	if ((eBase->eFT->GetMinSize)(elem, rSize))
+	if ((eBase->eSt.minSize.w == NEUIK_INVALID_SIZE) && 
+		(eBase->eSt.minSize.h == NEUIK_INVALID_SIZE))
 	{
-		if (neuik_HasFatalError())
+		/*--------------------------------------------------------------------*/
+		/* These values should only be invalid if this is the first frame to  */
+		/* be drawn. The minSize will need to be calculated.                  */
+		/*--------------------------------------------------------------------*/
+		if ((eBase->eFT->GetMinSize)(elem, rSize))
 		{
-			eNum = 1;
-			goto out2;
+			if (neuik_HasFatalError())
+			{
+				eNum = 1;
+				goto out2;
+			}
+			eNum = 3;
+			goto out;
 		}
-		eNum = 3;
-		goto out;
+
+		if (neuik_Element_StoreFrameMinSize(elem, rSize))
+		{
+			eNum = 4;
+			goto out;
+		}
+	}
+	else if ((eBase->eSt.wDelta == NEUIK_MINSIZE_NOCHANGE) &&
+		     (eBase->eSt.hDelta == NEUIK_MINSIZE_NOCHANGE))
+	{
+		/*--------------------------------------------------------------------*/
+		/* No change to the minimum size of this element. Use old value.      */
+		/*--------------------------------------------------------------------*/
+		*rSize = eBase->eSt.minSize;
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* There is a change to the minimum size of this element. The minSize */
+		/* will need to be recalculated.                                      */
+		/*--------------------------------------------------------------------*/
+		if ((eBase->eFT->GetMinSize)(elem, rSize))
+		{
+			if (neuik_HasFatalError())
+			{
+				eNum = 1;
+				goto out2;
+			}
+			eNum = 3;
+			goto out;
+		}
+
+		if (neuik_Element_StoreFrameMinSize(elem, rSize))
+		{
+			eNum = 4;
+			goto out;
+		}
 	}
 out:
 	if (eNum > 0)
@@ -828,7 +884,7 @@ out2:
 }
 
 int neuik_Element_GetLocation(
-	NEUIK_Element   elem, 
+	NEUIK_Element   elem,
 	RenderLoc     * rLoc)
 {
 	int                  eNum      = 0;
@@ -862,14 +918,76 @@ out:
 }
 
 
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_UpdateMinSizeDeltas
+ *
+ *  Description:   Compare the current frame minimum element size to the minimum
+ *                 element size from the previous frame and set the [w/h]Delta
+ *                 indicators.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Element_UpdateMinSizeDeltas(
+	NEUIK_Element   elem)
+{
+	int                 eNum       = 0;
+	NEUIK_ElementBase * eBase      = NULL;
+	static char         funcName[] = "neuik_Element_UpdateMinSizeDeltas";
+	static char       * errMsgs[]  = {"", // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+    /*------------------------------------------------------------------------*/
+    /* Update the Delta Indicator for the element Width.                      */
+    /*------------------------------------------------------------------------*/
+    eBase->eSt.wDelta = NEUIK_MINSIZE_NOCHANGE;
+    if (eBase->eSt.minSize.w > eBase->eSt.minSizeOld.w)
+    {
+        eBase->eSt.wDelta = NEUIK_MINSIZE_INCREASE;
+    }
+    else if (eBase->eSt.minSize.w < eBase->eSt.minSizeOld.w)
+    {
+        eBase->eSt.wDelta = NEUIK_MINSIZE_DECREASE;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Update the Delta Indicator for the element Height.                     */
+    /*------------------------------------------------------------------------*/
+    eBase->eSt.hDelta = NEUIK_MINSIZE_NOCHANGE;
+    if (eBase->eSt.minSize.h > eBase->eSt.minSizeOld.h)
+    {
+        eBase->eSt.hDelta = NEUIK_MINSIZE_INCREASE;
+    }
+    else if (eBase->eSt.minSize.h < eBase->eSt.minSizeOld.h)
+    {
+        eBase->eSt.hDelta = NEUIK_MINSIZE_DECREASE;
+    }
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
 int neuik_Element_GetSize(
-	NEUIK_Element   elem, 
+	NEUIK_Element   elem,
 	RenderSize    * rSize)
 {
-	int                  eNum      = 0;
-	NEUIK_ElementBase  * eBase     = NULL;
-	static char          funcName[] = "neuik_Element_GetSize";
-	static char        * errMsgs[] = {"",                                // [0] no error
+	int                 eNum       = 0;
+	NEUIK_ElementBase * eBase      = NULL;
+	static char         funcName[] = "neuik_Element_GetSize";
+	static char       * errMsgs[]  = {"", // [0] no error
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
 		"Output argument `rSize` is NULL.",                              // [2]
 	};
@@ -898,7 +1016,7 @@ out:
 
 
 int neuik_Element_GetSizeAndLocation(
-	NEUIK_Element   elem, 
+	NEUIK_Element   elem,
 	RenderSize    * rSize,
 	RenderLoc     * rLoc)
 {
@@ -940,17 +1058,18 @@ out:
 }
 
 
-int 
+int
 	NEUIK_Element_SetSize(NEUIK_Element elem, RenderSize * rSize);
 
 
 int neuik_Element_Render(
-	NEUIK_Element   elem, 
+	NEUIK_Element   elem,
 	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend, /* The external renderer to prepare the texture for */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
+	int                 result;
 	NEUIK_ElementBase * eBase;
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -960,12 +1079,22 @@ int neuik_Element_Render(
 	if (eBase->eFT == NULL) return 1;
 	if (eBase->eFT->Render == NULL) return 1;
 
-	return (eBase->eFT->Render)(elem, rSize, rlMod, xRend, mock);
+	result = (eBase->eFT->Render)(elem, rSize, rlMod, xRend, mock);
+	if (result)
+	{
+		return result;
+	}
+	if (!mock)
+	{
+		eBase->eSt.hDelta = NEUIK_MINSIZE_NOCHANGE;
+		eBase->eSt.wDelta = NEUIK_MINSIZE_NOCHANGE;
+	}
+	return result;
 }
 
 
 int neuik_Element_RenderRotate(
-	NEUIK_Element   elem, 
+	NEUIK_Element   elem,
 	RenderSize    * rSize,    /* in/out the size the tex occupies when complete */
 	RenderLoc     * rlMod,    /* A relative location modifier (for rendering) */
 	SDL_Renderer  * xRend,    /* The external renderer to prepare the texture for */
@@ -1050,7 +1179,7 @@ int neuik_Element_RenderRotate(
 	/*------------------------------------------------------------------------*/
 	/* Create a new surface which is the size of the source texture.          */
 	/*------------------------------------------------------------------------*/
-	cpSurf = SDL_CreateRGBSurface(0, 
+	cpSurf = SDL_CreateRGBSurface(0,
 		rSize->w, rSize->h, 32, rmask, gmask, bmask, amask);
 	if (cpSurf == NULL)
 	{
@@ -1094,7 +1223,7 @@ int neuik_Element_RenderRotate(
 		/*--------------------------------------------------------------------*/
 		/* Create a new surface which is the size of the rotated texture.     */
 		/*--------------------------------------------------------------------*/
-		imSurf = SDL_CreateRGBSurface(0, 
+		imSurf = SDL_CreateRGBSurface(0,
 			rSize->h, rSize->w, 32, rmask, gmask, bmask, amask);
 		if (imSurf == NULL)
 		{
@@ -1135,7 +1264,7 @@ int neuik_Element_RenderRotate(
 		/*--------------------------------------------------------------------*/
 		/* Create a new surface which is the size of the rotated texture.     */
 		/*--------------------------------------------------------------------*/
-		imSurf = SDL_CreateRGBSurface(0, 
+		imSurf = SDL_CreateRGBSurface(0,
 			rSize->w, rSize->h, 32, rmask, gmask, bmask, amask);
 		if (imSurf == NULL)
 		{
@@ -1171,7 +1300,7 @@ int neuik_Element_RenderRotate(
 		/*--------------------------------------------------------------------*/
 		/* Create a new surface which is the size of the rotated texture.     */
 		/*--------------------------------------------------------------------*/
-		imSurf = SDL_CreateRGBSurface(0, 
+		imSurf = SDL_CreateRGBSurface(0,
 			rSize->h, rSize->w, 32, rmask, gmask, bmask, amask);
 		if (imSurf == NULL)
 		{
@@ -1242,14 +1371,14 @@ out:
  *
  *  Description:   Pass an SDL_Event to an object and see if it was captured.
  *
- *                 This operation of this function may be redefined by a 
+ *                 This operation of this function may be redefined by a
  *                 Element subclass.
  *
  *  Returns:       1 if the event was captured, 0 otherwise.
  *
  ******************************************************************************/
 neuik_EventState neuik_Element_CaptureEvent(
-	NEUIK_Element   elem, 
+	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
 	neuik_EventState     captured = 0;
@@ -1302,8 +1431,8 @@ out:
 
 
 void neuik_Element_StoreSizeAndLocation(
-	NEUIK_Element elem, 
-	RenderSize    rSize, 
+	NEUIK_Element elem,
+	RenderSize    rSize,
 	RenderLoc     rLoc,
 	RenderLoc     rRelLoc)
 {
@@ -1567,6 +1696,52 @@ out:
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_StoreFrameMinSize
+ *
+ *  Description:   Store a new frame minimum element size and preserve the 
+ *                 previous minimum element size.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Element_StoreFrameMinSize(
+	NEUIK_Element   elem,
+	RenderSize    * size)
+{
+	int                 eNum       = 0;
+	NEUIK_ElementBase * eBase      = NULL;
+	static char         funcName[] = "neuik_Element_StoreFrameMinSize";
+	static char       * errMsgs[]  = {"", // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Argument `size` is NULL.",                                      // [2]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (size == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	eBase->eSt.minSizeOld = eBase->eSt.minSize;
+	eBase->eSt.minSize    = *size;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
 	}
 
 	return eNum;
@@ -1953,12 +2128,12 @@ out:
  *
  *  Name:          NEUIK_Element_SetBindingCallback
  *
- *  Description:   Set the bindID to be sent when the specified callback is 
+ *  Description:   Set the bindID to be sent when the specified callback is
  *                 triggered.
  *
- *                 This alternative callback procedure should only be used if 
+ *                 This alternative callback procedure should only be used if
  *                 the standard `NEUIK_Element_SetCallback` function can not be
- *                 used, like for instance in a binding with another language. 
+ *                 used, like for instance in a binding with another language.
  *
  *  Returns:       Non-zero if error, 0 otherwise.
  *
@@ -2090,98 +2265,98 @@ int  neuik_Element_TriggerCallback(
 	switch (cbType)
 	{
 		case NEUIK_CALLBACK_ON_CLICK:
-			if (eBase->eCT.OnClick) 
+			if (eBase->eCT.OnClick)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnClick, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_CLICKED:
-			if (eBase->eCT.OnClicked) 
+			if (eBase->eCT.OnClicked)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnClicked, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_CREATED:
-			if (eBase->eCT.OnCreated) 
+			if (eBase->eCT.OnCreated)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnCreated, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_HOVER:
-			if (eBase->eCT.OnHover) 
+			if (eBase->eCT.OnHover)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnHover, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_MOUSE_ENTER:
-			if (eBase->eCT.OnMouseEnter) 
+			if (eBase->eCT.OnMouseEnter)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnMouseEnter, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_MOUSE_LEAVE:
-			if (eBase->eCT.OnMouseLeave) 
+			if (eBase->eCT.OnMouseLeave)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnMouseLeave, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_MOUSE_OVER:
-			if (eBase->eCT.OnMouseOver) 
+			if (eBase->eCT.OnMouseOver)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnMouseOver, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_SELECTED:
-			if (eBase->eCT.OnSelected) 
+			if (eBase->eCT.OnSelected)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnSelected, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_DESELECTED:
-			if (eBase->eCT.OnDeselected) 
+			if (eBase->eCT.OnDeselected)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnDeselected, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_ACTIVATED:
-			if (eBase->eCT.OnActivated) 
+			if (eBase->eCT.OnActivated)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnActivated, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_DEACTIVATED:
-			if (eBase->eCT.OnDeactivated) 
+			if (eBase->eCT.OnDeactivated)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnDeactivated, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_TEXT_CHANGED:
-			if (eBase->eCT.OnTextChanged) 
+			if (eBase->eCT.OnTextChanged)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnTextChanged, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_EXPANDED:
-			if (eBase->eCT.OnExpanded) 
+			if (eBase->eCT.OnExpanded)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnExpanded, eBase->eSt.window);
 			}
 			break;
 
 		case NEUIK_CALLBACK_ON_COLLAPSED:
-			if (eBase->eCT.OnCollapsed) 
+			if (eBase->eCT.OnCollapsed)
 			{
 				NEUIK_Callback_Trigger(eBase->eCT.OnCollapsed, eBase->eSt.window);
 			}
@@ -2210,7 +2385,7 @@ out:
  *
  *  Description:   Set the Window Pointer for an object.
  *
- *                 This operation of this function may be redefined by a 
+ *                 This operation of this function may be redefined by a
  *                 Element subclass.
  *
  *  Returns:       1 if there is an error; 0 otherwise.
@@ -2280,7 +2455,7 @@ out:
 
 
 void neuik_Element_SetParentPointer(
-	NEUIK_Element    elem, 
+	NEUIK_Element    elem,
 	void           * parent)
 {
 	NEUIK_ElementBase * eBase;
@@ -2298,13 +2473,13 @@ void neuik_Element_SetParentPointer(
  *
  *  Name:          neuik_Element_ForceRedraw
  *
- *  Description:   This function marks the element as one which needs to be 
+ *  Description:   This function marks the element as one which needs to be
  *                 redrawn.  This message will propagate upwards through its
  *                 parent elements until it has reached the top. Finally, the
  *                 parent window is also marked as needing a redraw.
  *
  *                 This function unsets the internal old element size, causing
- *                 the element to resize and redraw itself. Only use this 
+ *                 the element to resize and redraw itself. Only use this
  *                 function if neuik_Element_RequestRedraw is failing to cause
  *                 a redraw of the element.
  *
@@ -2317,7 +2492,7 @@ int neuik_Element_ForceRedraw(
 	NEUIK_ElementBase  * eBase;
 	static RenderSize    redrawSz = {-1, -1};
 	static char          funcName[] = "neuik_Element_ForceRedraw";
-	static char          errMsg[] = 
+	static char          errMsg[] =
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.";
 
 	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -2352,7 +2527,7 @@ int neuik_Element_ForceRedraw(
  *
  *  Name:          neuik_Element_RequestRedraw
  *
- *  Description:   This function marks the element as one which needs to be 
+ *  Description:   This function marks the element as one which needs to be
  *                 redrawn.  This message will propagate upwards through its
  *                 parent elements until it has reached the top. Finally, the
  *                 parent window is also marked as needing a redraw.
@@ -2413,7 +2588,7 @@ int neuik_Element_RequestRedraw(
 					printf("RequestRedraw: umasking[x,y,w,h]: %d, %d, %d, %d\n",
 						rLoc.x, rLoc.y, rSize.w, rSize.h);
 				}
-				if (neuik_MaskMap_UnmaskRect(win->redrawMask, 
+				if (neuik_MaskMap_UnmaskRect(win->redrawMask,
 					rLoc.x, rLoc.y, rSize.w, rSize.h))
 				{
 					eNum = 2;
@@ -2424,6 +2599,52 @@ int neuik_Element_RequestRedraw(
 		}
 	}
 
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_PropagateIndeterminateMinSizeDelta
+ *
+ *  Description:   This function marks the element as one which has an 
+ *                 indeterminate minimum size delta.  This message will 
+ *                 propagate upwards through its parent elements until it has 
+ *                 reached the top.
+ *
+ *  Returns:       Non-zero if error, 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Element_PropagateIndeterminateMinSizeDelta(
+	NEUIK_Element elem)
+{
+	NEUIK_ElementBase  * eBase;
+	int            eNum       = 0; /* which error to report (if any) */
+	static char    funcName[] = 
+		"neuik_Element_PropagateIndeterminateMinSizeDelta";
+	static char  * errMsgs[]  = {"" // [0] no error
+		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
+	};
+
+	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	eBase->eSt.hDelta = NEUIK_MINSIZE_INDETERMINATE;
+	eBase->eSt.wDelta = NEUIK_MINSIZE_INDETERMINATE;
+	if (eBase->eSt.parent != NULL)
+	{
+		neuik_Element_PropagateIndeterminateMinSizeDelta(eBase->eSt.parent);
+	}
 out:
 	if (eNum > 0)
 	{
@@ -2465,7 +2686,7 @@ int neuik_Element_ShouldRedrawAll(
 		}
 	}
 
-	if (neuik_Object_GetClassObject_NoError(elem, 
+	if (neuik_Object_GetClassObject_NoError(elem,
 			neuik__Class_Element, (void**)&eBase))
 	{
 		return FALSE;
@@ -2487,7 +2708,7 @@ int neuik_Element_NeedsRedraw(
 	NEUIK_ElementBase * eBase;
 	NEUIK_Element     * parent;
 
-	if (neuik_Object_GetClassObject_NoError(elem, 
+	if (neuik_Object_GetClassObject_NoError(elem,
 			neuik__Class_Element, (void**)&eBase))
 	{
 		return FALSE;
@@ -2753,8 +2974,8 @@ int neuik_Element_RedrawBackgroundGradient(
 
 				for (maskCtr = 0; maskCtr < maskRegions; maskCtr++)
 				{
-					SDL_RenderDrawLine(rend, 
-						rl.x + regionX0[maskCtr], rl.y + gCtr, 
+					SDL_RenderDrawLine(rend,
+						rl.x + regionX0[maskCtr], rl.y + gCtr,
 						rl.x + regionXf[maskCtr], rl.y + gCtr);
 				}
 			}
@@ -2763,8 +2984,8 @@ int neuik_Element_RedrawBackgroundGradient(
 				/*------------------------------------------------------------*/
 				/* There are no masked off (transparent areas) draw full line */
 				/*------------------------------------------------------------*/
-				SDL_RenderDrawLine(rend, 
-					rl.x,                 rl.y + gCtr, 
+				SDL_RenderDrawLine(rend,
+					rl.x,                 rl.y + gCtr,
 					rl.x + (rSize.w - 1), rl.y + gCtr);
 			}
 		}
@@ -2975,8 +3196,8 @@ int neuik_Element_RedrawBackground(
 
 					for (maskCtr = 0; maskCtr < maskRegions; maskCtr++)
 					{
-						SDL_RenderDrawLine(rend, 
-							rl.x + regionX0[maskCtr], rl.y + y, 
+						SDL_RenderDrawLine(rend,
+							rl.x + regionX0[maskCtr], rl.y + y,
 							rl.x + regionXf[maskCtr], rl.y + y);
 					}
 				}
@@ -3020,7 +3241,7 @@ out:
 
 
 int neuik_Element_Resize(
-	NEUIK_Element elem, 
+	NEUIK_Element elem,
 	RenderSize    rSize)
 {
 	int                 eNum = 0; /* which error to report (if any) */
@@ -3057,7 +3278,7 @@ int neuik_Element_Resize(
 	if (eBase->eSt.surf != NULL) SDL_FreeSurface(eBase->eSt.surf);
 	if (eBase->eSt.rend != NULL) SDL_DestroyRenderer(eBase->eSt.rend);
 
-	eBase->eSt.surf = SDL_CreateRGBSurface(0, 
+	eBase->eSt.surf = SDL_CreateRGBSurface(0,
 		rSize.w, rSize.h, 32, rmask, gmask, bmask, amask);
 	if (eBase->eSt.surf == NULL)
 	{
@@ -3082,7 +3303,7 @@ out:
 
 
 int neuik_Element_SetChildPopup(
-	NEUIK_Element  parent, 
+	NEUIK_Element  parent,
 	NEUIK_Element  pu)
 {
 	int                  eNum       = 0; /* which error to report (if any) */
@@ -3158,7 +3379,7 @@ void neuik_Element_Defocus(
  *  Description:   This function reports whether or not an element is currently
  *                 being shown.
  *
- *                 This operation of this function may be redefined by a 
+ *                 This operation of this function may be redefined by a
  *                 Element subclass.
  *
  *  Returns:       1 if element is shown, 0 otherwise.
