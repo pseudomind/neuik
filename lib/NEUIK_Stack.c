@@ -594,7 +594,6 @@ int neuik_Element_Render__Stack(
 	}
 
 
-
 	/*------------------------------------------------------------------------*/
 	/* Update the stored location before rendering the element. This is       */
 	/* necessary as the location of this object will propagate to its         */
@@ -643,8 +642,15 @@ int neuik_Element_Render__Stack(
 					break;
 				case NEUIK_VJUSTIFY_CENTER:
 				case NEUIK_VJUSTIFY_DEFAULT:
-					rect.y += (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 -
-						(rs.h/2);
+					if (eCfg->VFill)
+					{
+						rect.y += eCfg->PadTop;
+					}
+					else
+					{
+						rect.y += (rSize->h
+							- (eCfg->PadTop + eCfg->PadBottom))/2 - (rs.h/2);
+					}
 					break;
 				case NEUIK_VJUSTIFY_BOTTOM:
 					rect.y += rSize->h - (rs.h + eCfg->PadBottom);
@@ -655,7 +661,15 @@ int neuik_Element_Render__Stack(
 			rect.y += eCfg->PadTop;
 			break;
 		case NEUIK_VJUSTIFY_CENTER:
-			rect.y += (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 - (rs.h/2);
+			if (eCfg->VFill)
+			{
+				rect.y += eCfg->PadTop;
+			}
+			else
+			{
+				rect.y += (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 
+					- (rs.h/2);
+			}
 			break;
 		case NEUIK_VJUSTIFY_BOTTOM:
 			rect.y += rSize->h - (rs.h + eCfg->PadBottom);

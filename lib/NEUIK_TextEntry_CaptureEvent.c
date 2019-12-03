@@ -28,8 +28,8 @@
 extern int neuik__Report_Debug;
 
 static char * errMsgs[]  = {"",                                      // [0] no error
-	"FontSet_GetFont returned NULL."                                 // [1]
-	"Failed to get text from clipboard."                             // [2]
+	"FontSet_GetFont returned NULL.",                                // [1]
+	"Failed to get text from clipboard.",                            // [2]
 	"Argument `elem` is not of TextEntry class.",                    // [3]
 	"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [4]
 };
@@ -1034,6 +1034,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 	size_t              ctr;
 	char                aChar;
 	char              * clipText     = NULL;
+	char              * srcPos       = NULL;
+	char              * destPos      = NULL;
 	SDL_Keymod          keyMod;
 	SDL_KeyboardEvent * keyEv;
 	NEUIK_TextEntry   * te         = NULL;
@@ -1179,7 +1181,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 				/*--------------------------------------------------------*/
 				if (te->cursorPos > 0)
 				{
-					strcpy(te->text + (te->cursorPos - 1), te->text + (te->cursorPos));
+					srcPos  = te->text + te->cursorPos;
+					for (;; srcPos++)
+					{
+						destPos = srcPos - 1;
+						*destPos = *srcPos;
+						if (*srcPos == 0) break;
+					}
 					te->textLen   -= 1;
 					te->cursorPos -= 1;
 					doRedraw = 1;
@@ -1258,7 +1266,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 				/*--------------------------------------------------------*/
 				if (te->cursorPos < te->textLen)
 				{
-					strcpy(te->text + te->cursorPos, te->text + (te->cursorPos + 1));
+					srcPos  = te->text + (te->cursorPos + 1);
+					for (;; srcPos++)
+					{
+						destPos = srcPos - 1;
+						*destPos = *srcPos;
+						if (*srcPos == 0) break;
+					}
 					te->textLen -= 1;
 					doRedraw     = 1;
 				}
