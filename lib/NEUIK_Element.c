@@ -748,9 +748,13 @@ int NEUIK_Element_Configure(
 	{
 		if (fullRedraw)
 		{
-			if (neuik_Element_PropagateIndeterminateMinSizeDelta(elem))
+			if (eBase->eSt.parent != NULL)
 			{
-				NEUIK_RaiseError(funcName, errMsgs[14]);
+				if (neuik_Element_PropagateIndeterminateMinSizeDelta(
+					eBase->eSt.parent))
+				{
+					NEUIK_RaiseError(funcName, errMsgs[14]);
+				}
 			}
 
 			if (neuik_Window_RequestFullRedraw((NEUIK_Window*)eBase->eSt.window))
@@ -1348,6 +1352,9 @@ int neuik_Element_RenderRotate(
 	destRect.w = imSurf->w;
 	destRect.h = imSurf->h;
 	SDL_RenderCopy(xRend, imTex, NULL, &destRect);
+
+	eBase->eSt.hDelta = NEUIK_MINSIZE_NOCHANGE;
+	eBase->eSt.wDelta = NEUIK_MINSIZE_NOCHANGE;
 out:
 	if (imTex  != NULL) SDL_DestroyTexture(imTex);
 	if (cpTex  != NULL) SDL_DestroyTexture(cpTex);
