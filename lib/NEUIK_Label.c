@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -794,9 +794,9 @@ int NEUIK_Label_Configure(
 	int                  ctr;
 	int                  nCtr;
 	int                  eNum      = 0; /* which error to report (if any) */
-	int                  doRedraw  = 0;
-	int                  isBool;
-	int                  boolVal   = 0;
+	int                  doRedraw  = FALSE;
+	int                  isBool    = FALSE;
+	int                  boolVal   = FALSE;
 	int                  typeMixup;
 	int                  fontSize;
 	int                  fontEmWidth;
@@ -873,7 +873,7 @@ int NEUIK_Label_Configure(
 			set = va_arg(args, const char *);
 		}
 
-		isBool = 0;
+		isBool = FALSE;
 		name   = NULL;
 		value  = NULL;
 
@@ -910,12 +910,12 @@ int NEUIK_Label_Configure(
 					NEUIK_RaiseError(funcName, errMsgs[3]);
 				}
 
-				isBool  = 1;
-				boolVal = 1;
+				isBool  = TRUE;
+				boolVal = TRUE;
 				name    = buf;
 				if (buf[0] == '!')
 				{
-					boolVal = 0;
+					boolVal = FALSE;
 					name    = buf + 1;
 				}
 			}
@@ -946,7 +946,7 @@ int NEUIK_Label_Configure(
 
 				/* else: The previous setting was changed */
 				cfg->fontBold = boolVal;
-				doRedraw = 1;
+				doRedraw = TRUE;
 			}
 			else if (!strcmp("FontItalic", name))
 			{
@@ -954,7 +954,7 @@ int NEUIK_Label_Configure(
 
 				/* else: The previous setting was changed */
 				cfg->fontItalic = boolVal;
-				doRedraw = 1;
+				doRedraw = TRUE;
 			}
 			else 
 			{
@@ -1040,7 +1040,7 @@ int NEUIK_Label_Configure(
 
 				/* else: The previous setting was changed */
 				cfg->fgColor = clr;
-				doRedraw = 1;
+				doRedraw = TRUE;
 			}
 			else if (!strcmp("FontSize", name))
 			{
@@ -1061,7 +1061,7 @@ int NEUIK_Label_Configure(
 
 				/* else: The previous setting was changed */
 				cfg->fontSize = fontSize;
-				doRedraw = 1;
+				doRedraw = TRUE;
 			}
 			else if (!strcmp("FontEmWidth", name))
 			{
@@ -1082,7 +1082,7 @@ int NEUIK_Label_Configure(
 
 				/* else: The previous setting was changed */
 				cfg->fontEmWidth = fontEmWidth;
-				doRedraw = 1;
+				doRedraw = TRUE;
 			}
 			else
 			{

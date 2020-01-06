@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -108,18 +108,22 @@ out:
  ******************************************************************************/
 NEUIK_TextEditConfig * NEUIK_GetDefaultTextEditConfig()
 {
-	int                            eNum           = 0;
-	static int                     isInitialized  = 0;
-	static char                  * dFontName      = NULL;
-	NEUIK_TextEditConfig        * rvCfg          = NULL;
+	int                    eNum           = 0;
+	static int             isInitialized  = 0;
+	static char          * dFontName      = NULL;
+	static char          * dFontNameMS    = NULL;
+	NEUIK_TextEditConfig * rvCfg          = NULL;
 	/* default TextEditConfig */
 	static NEUIK_TextEditConfig   dCfg = {
 		{0, 0, NULL, NULL, NULL}, // neuik_Object objBase
 		NULL,                     // NEUIK_FontSet * fontSet
+		NULL,                     // NEUIK_FontSet * fontSetMS
 		11,                       // int             fontSize
-		0,                        // int             fontBold
-		0,                        // int             fontItalic
+		FALSE,                    // int             fontBold
+		FALSE,                    // int             fontItalic
+		FALSE,                    // int             fontMono
 		NULL,                     // char          * fontName
+		NULL,                     // char          * fontNameMS
 		COLOR_WHITE,              // SDL_Color       bgColor
 		COLOR_LBLACK,             // SDL_Color       fgColor
 		COLOR_LBLUE,              // SDL_Color       bgColorHl
@@ -151,6 +155,9 @@ NEUIK_TextEditConfig * NEUIK_GetDefaultTextEditConfig()
 			NULL,
 			&(dCfg.objBase));
 
+		/*--------------------------------------------------------------------*/
+		/* Load the default standard font.                                    */
+		/*--------------------------------------------------------------------*/
 		/* Look for the first default font that is supported */
 		dCfg.fontSet = NEUIK_GetDefaultFontSet(&dFontName);
 		if (dCfg.fontSet == NULL)
@@ -168,6 +175,32 @@ NEUIK_TextEditConfig * NEUIK_GetDefaultTextEditConfig()
 
 		/* Finally attempt to load the font */
 		if (NEUIK_FontSet_GetFont(dCfg.fontSet, dCfg.fontSize,
+			dCfg.fontBold, dCfg.fontItalic) == NULL)
+		{
+			eNum = 2;
+			goto out;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Load the default monospaced font.                                  */
+		/*--------------------------------------------------------------------*/
+		/* Look for the first default monospaced font that is supported */
+		dCfg.fontSetMS = NEUIK_GetDefaultMSFontSet(&dFontNameMS);
+		if (dCfg.fontSetMS == NULL)
+		{
+			eNum = 1;
+			goto out;
+		}
+
+		String_Duplicate(&(dCfg.fontNameMS), dFontNameMS);
+		if (dCfg.fontNameMS == NULL)
+		{
+			eNum = 3;
+			goto out;
+		}
+
+		/* Finally attempt to load the font */
+		if (NEUIK_FontSet_GetFont(dCfg.fontSetMS, dCfg.fontSize,
 			dCfg.fontBold, dCfg.fontItalic) == NULL)
 		{
 			eNum = 2;
@@ -328,6 +361,12 @@ int NEUIK_TextEditConfig_Copy(
 		eNum = 4;
 		goto out;
 	}
+	String_Duplicate(&(dst->fontNameMS), src->fontNameMS);
+	if (dst->fontName == NULL)
+	{
+		eNum = 4;
+		goto out;
+	}
 
 	if (src->restrict_str != NULL)
 	{
@@ -344,9 +383,11 @@ int NEUIK_TextEditConfig_Copy(
 	}
 
 	dst->fontSet         = src->fontSet;
+	dst->fontSetMS       = src->fontSetMS;
 	dst->fontSize        = src->fontSize;
 	dst->fontBold        = src->fontBold;
 	dst->fontItalic      = src->fontItalic;
+	dst->fontMono        = src->fontMono;
 	dst->bgColor         = src->bgColor;
 	dst->fgColor         = src->fgColor;
 	dst->bgColorHl       = src->bgColorHl;

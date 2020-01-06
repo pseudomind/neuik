@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,10 +24,13 @@
 typedef struct {
 		neuik_Object    objBase;         /* this structure is requied to be an neuik object */
 		NEUIK_FontSet * fontSet;         /* NEUIK_FontSet */
+		NEUIK_FontSet * fontSetMS;       /* NEUIK_FontSet (monospaced) */
 		int             fontSize;        /* point size to use for the TTF_Font */
 		int             fontBold;        /* (bool) use bold style */
 		int             fontItalic;      /* (bool) use italic style */
+		int             fontMono;        /* (bool) use monospaced FontSet */
 		char          * fontName;        /* font name for the TTF_Font */
+		char          * fontNameMS;      /* font name for the TTF_Font (monospaced) */
 		NEUIK_Color     bgColor;         /* background color used when not selected */
 		NEUIK_Color     fgColor;         /* foreground color used when not selected */
 		NEUIK_Color     bgColorHl;       /* background color used when highlighted */

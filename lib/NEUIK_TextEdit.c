@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -731,30 +731,68 @@ void neuik_TextEdit_Configure_capture_segv(
  *
  ******************************************************************************/
 int NEUIK_TextEdit_Configure(
-	NEUIK_TextEdit  * te,
-	const char       * set0,
+	NEUIK_TextEdit * te,
+	const char     * set0,
 	...)
 {
+	int                    ns; /* number of items from sscanf */
 	int                    ctr;
+	int                    nCtr;
 	int                    eNum       = 0; /* which error to report (if any) */
+	int                    doRedraw   = FALSE;
 	int                    vaStarted  = 0;
+	int                    isBool     = FALSE;
+	int                    boolVal    = FALSE;
+	int                    typeMixup  = FALSE;
+	int                    fontSize;
 	va_list                args;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
 	char                   buf[4096];
 	char                 * strPtr     = NULL;
 	char                 * name       = NULL;
 	char                 * value      = NULL;
 	const char           * set        = NULL;
+	NEUIK_Color            clr;
 	NEUIK_TextEditConfig * aCfg       = NULL; /* the active button config */
+	/*------------------------------------------------------------------------*/
+	/* If a `name=value` string with an unsupported name is found, check to   */
+	/* see if a boolName was mistakenly used instead.                         */
+	/*------------------------------------------------------------------------*/
+	static char          * boolNames[] = {
+		"FontBold",
+		"FontItalic",
+		"FontMono",
+		NULL,
+	};
+	/*------------------------------------------------------------------------*/
+	/* If a boolName string with an unsupported name is found, check to see   */
+	/* if a supported nameValue type was mistakenly used instead.             */
+	/*------------------------------------------------------------------------*/
+	static char          * valueNames[] = {
+		"HJustify",
+		"VJustify",
+		"FontColor",
+		"FontSize",
+		"FontColor",
+		NULL,
+	};
 	static char            funcName[] = "NEUIK_TextEdit_Configure";
-	static char          * errMsgs[]  = {"",       // [0] no error
-		"Argument `te` is not of TextEdit class.", // [1]
-		"NamedSet.name is NULL, skipping..",        // [2]
-		"NamedSet.name is blank, skipping..",       // [3]
-		"NamedSet.name type unknown, skipping.",    // [4]
-		"`name=value` string is too long.",         // [5]
-		"Invalid `name=value` string.",             // [6]
-		"HJustify value is invalid.",               // [7]
-		"VJustify value is invalid.",               // [7]
+	static char          * errMsgs[]  = {"", // [0] no error
+		"Argument `te` is not of TextEdit class.",                  // [1]
+		"NamedSet.name is NULL, skipping..",                        // [2]
+		"NamedSet.name is blank, skipping..",                       // [3]
+		"Invalid `bool` string.",                                   // [4]
+		"`name=value` string is too long.",                         // [5]
+		"Invalid `name=value` string.",                             // [6]
+		"HJustify value is invalid.",                               // [7]
+		"VJustify value is invalid.",                               // [8]
+		"BoolType name used as ValueType, skipping.",               // [9]
+		"NamedSet.name type unknown, skipping.",                    // [10]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",         // [11]
+		"FontColor value invalid; should be comma separated RGBA.", // [12]
+		"FontColor value invalid; RGBA value range is 0-255.",      // [13]
+		"FontSize value is invalid; must be int.",                  // [14]
 	};
 
 	if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
@@ -803,96 +841,238 @@ int NEUIK_TextEdit_Configure(
 			strPtr = strchr(buf, '=');
 			if (strPtr == NULL)
 			{
-				/* `name=value` string is missing the '=' char */
-				NEUIK_RaiseError(funcName, errMsgs[6]);
-				set = va_arg(args, const char *);
-				continue;
+				/*------------------------------------------------------------*/
+				/* Bool type configuration (or a mistake)                     */
+				/*------------------------------------------------------------*/
+				if (buf[0] == 0)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[4]);
+				}
+
+				isBool  = 1;
+				boolVal = 1;
+				name    = buf;
+				if (buf[0] == '!')
+				{
+					boolVal = 0;
+					name    = buf + 1;
+				}
 			}
-			*strPtr = 0;
-			strPtr++;
-			if (*strPtr == 0)
+			else
 			{
-				/* `name=value` string is missing a value */
-				NEUIK_RaiseError(funcName, errMsgs[6]);
-				set = va_arg(args, const char *);
-				continue;
+				*strPtr = 0;
+				strPtr++;
+				if (*strPtr == 0)
+				{
+					/* `name=value` string is missing a value */
+					NEUIK_RaiseError(funcName, errMsgs[6]);
+					set = va_arg(args, const char *);
+					continue;
+				}
+				name  = buf;
+				value = strPtr;
 			}
-			name  = buf;
-			value = strPtr;
 		}
 
-		if (name == NULL)
+		if (isBool)
 		{
-			NEUIK_RaiseError(funcName, errMsgs[2]);
-		}
-		else if (name[0] == 0)
-		{
-			NEUIK_RaiseError(funcName, errMsgs[3]);
-		}
-		else if (!strcmp("HJustify", name))
-		{
-			if (!strcmp("left", value))
+			/*----------------------------------------------------------------*/
+			/* Check for boolean parameter setting.                           */
+			/*----------------------------------------------------------------*/
+			if (!strcmp("FontBold", name))
 			{
-				aCfg->textHJustify = NEUIK_HJUSTIFY_LEFT;
+				if (aCfg->fontBold == boolVal) continue;
+
+				/* else: The previous setting was changed */
+				aCfg->fontBold = boolVal;
+				doRedraw = 1;
 			}
-			else if (!strcmp("center", value))
+			else if (!strcmp("FontItalic", name))
 			{
-				aCfg->textHJustify = NEUIK_HJUSTIFY_CENTER;
+				if (aCfg->fontItalic == boolVal) continue;
+
+				/* else: The previous setting was changed */
+				aCfg->fontItalic = boolVal;
+				doRedraw = 1;
 			}
-			else if (!strcmp("right", value))
+			else if (!strcmp("FontMono", name))
 			{
-				aCfg->textHJustify = NEUIK_HJUSTIFY_RIGHT;
+				if (aCfg->fontMono == boolVal) continue;
+
+				/* else: The previous setting was changed */
+				aCfg->fontMono = boolVal;
+				doRedraw = 1;
 			}
 			else 
 			{
-				NEUIK_RaiseError(funcName, errMsgs[7]);
+				/*------------------------------------------------------------*/
+				/* Bool parameter not found; may be mixup or mistake .        */
+				/*------------------------------------------------------------*/
+				typeMixup = FALSE;
+				for (nCtr = 0;; nCtr++)
+				{
+					if (valueNames[nCtr] == NULL) break;
+
+					if (!strcmp(valueNames[nCtr], name))
+					{
+						typeMixup = TRUE;
+						break;
+					}
+				}
+
+				if (typeMixup)
+				{
+					/* A value type was mistakenly used as a bool type */
+					NEUIK_RaiseError(funcName, errMsgs[4]);
+				}
+				else
+				{
+					/* An unsupported name was used as a bool type */
+					NEUIK_RaiseError(funcName, errMsgs[5]);
+				}
 			}
 		}
-		else if (!strcmp("VJustify", name))
-		{
-			if (!strcmp("top", value))
-			{
-				aCfg->textVJustify = NEUIK_VJUSTIFY_TOP;
-			}
-			else if (!strcmp("center", value))
-			{
-				aCfg->textVJustify = NEUIK_VJUSTIFY_CENTER;
-			}
-			else if (!strcmp("bottom", value))
-			{
-				aCfg->textVJustify = NEUIK_VJUSTIFY_BOTTOM;
-			}
-			else 
-			{
-				NEUIK_RaiseError(funcName, errMsgs[7]);
-			}
-		}
-		// else if (!strcmp("PadLeft", name))
-		// {
-		// 	aCfg->PadLeft = atoi(value);
-		// }
-		// else if (!strcmp("PadRight", name))
-		// {
-		// 	aCfg->PadRight = atoi(value);
-		// }
-		// else if (!strcmp("PadTop", name))
-		// {
-		// 	aCfg->PadTop = atoi(value);
-		// }
-		// else if (!strcmp("PadBottom", name))
-		// {
-		// 	aCfg->PadBottom = atoi(value);
-		// }
-		// else if (!strcmp("PadAll", name))
-		// {
-		// 	aCfg->PadLeft   = atoi(value);
-		// 	aCfg->PadRight  = aCfg->PadLeft;
-		// 	aCfg->PadTop    = aCfg->PadLeft;
-		// 	aCfg->PadBottom = aCfg->PadLeft;
-		// }
 		else
 		{
-			NEUIK_RaiseError(funcName, errMsgs[4]);
+			if (name == NULL)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[2]);
+			}
+			else if (name[0] == 0)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[3]);
+			}
+			else if (!strcmp("HJustify", name))
+			{
+				if (!strcmp("left", value))
+				{
+					aCfg->textHJustify = NEUIK_HJUSTIFY_LEFT;
+				}
+				else if (!strcmp("center", value))
+				{
+					aCfg->textHJustify = NEUIK_HJUSTIFY_CENTER;
+				}
+				else if (!strcmp("right", value))
+				{
+					aCfg->textHJustify = NEUIK_HJUSTIFY_RIGHT;
+				}
+				else 
+				{
+					NEUIK_RaiseError(funcName, errMsgs[7]);
+				}
+			}
+			else if (!strcmp("VJustify", name))
+			{
+				if (!strcmp("top", value))
+				{
+					aCfg->textVJustify = NEUIK_VJUSTIFY_TOP;
+				}
+				else if (!strcmp("center", value))
+				{
+					aCfg->textVJustify = NEUIK_VJUSTIFY_CENTER;
+				}
+				else if (!strcmp("bottom", value))
+				{
+					aCfg->textVJustify = NEUIK_VJUSTIFY_BOTTOM;
+				}
+				else 
+				{
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+				}
+			}
+			else if (!strcmp("FontColor", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[12]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[12]);
+					continue;
+				}
+
+				ns = sscanf(value, "%d,%d,%d,%d", &clr.r, &clr.g, &clr.b, &clr.a);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 4)
+			#else
+				if (ns < 4)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[12]);
+					continue;
+				}
+
+				if (clr.r < 0 || clr.r > 255 ||
+					clr.g < 0 || clr.g > 255 ||
+					clr.b < 0 || clr.b > 255 ||
+					clr.a < 0 || clr.a > 255)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[13]);
+					continue;
+				}
+				if (aCfg->fgColor.r == clr.r &&
+					aCfg->fgColor.g == clr.g &&
+					aCfg->fgColor.b == clr.b &&
+					aCfg->fgColor.a == clr.a) continue;
+
+				/* else: The previous setting was changed */
+				aCfg->fgColor = clr;
+				doRedraw = 1;
+			}
+			else if (!strcmp("FontSize", name))
+			{
+				ns = sscanf(value, "%d", &fontSize);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 1)
+			#else
+				if (ns < 1)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[14]);
+					continue;
+				}
+				if (aCfg->fontSize == fontSize) continue;
+
+				/* else: The previous setting was changed */
+				aCfg->fontSize = fontSize;
+				doRedraw = 1;
+			}
+			else
+			{
+				typeMixup = FALSE;
+				for (nCtr = 0;; nCtr++)
+				{
+					if (boolNames[nCtr] == NULL) break;
+
+					if (!strcmp(boolNames[nCtr], name))
+					{
+						typeMixup = TRUE;
+						break;
+					}
+				}
+
+				if (typeMixup)
+				{
+					/* A bool type was mistakenly used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[9]);
+				}
+				else
+				{
+					/* An unsupported name was used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[10]);
+				}
+			}
 		}
 
 		/* before starting */
@@ -905,6 +1085,19 @@ out:
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
+	}
+	if (doRedraw)
+	{
+		if (neuik_Element_GetSizeAndLocation(te, &rSize, &rLoc))
+		{
+			eNum = 11;
+			NEUIK_RaiseError(funcName, errMsgs[eNum]);
+			eNum = 1;
+		}
+		else
+		{
+			neuik_Element_RequestRedraw(te, rLoc, rSize);
+		}
 	}
 
 	return eNum;
@@ -1017,8 +1210,16 @@ int neuik_Element_Render__TextEdit(
 	/* Get the pointer to the currently active font (if text is present)      */
 	/*------------------------------------------------------------------------*/
 	/* Determine the full size of the rendered text content */
-	font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-		aCfg->fontBold, aCfg->fontItalic);
+	if (aCfg->fontMono)
+	{
+		font = NEUIK_FontSet_GetFont(aCfg->fontSetMS, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+	}
+	else
+	{
+		font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+	}
 	if (font == NULL) 
 	{
 		eNum = 6;

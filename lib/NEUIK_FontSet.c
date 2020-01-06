@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,38 +37,16 @@ static char * defaultFontBaseNames[] = {
 	NULL,
 };
 
-/*******************************************************************************
- *
- *  Name:          NEUIK_NewFontFileSet
- *
- *  Description:   Allocate memory for a fontset and perform initialization.
- *
- *  Returns:       NULL if ther is an error; otherwise a valid pointer.
- *
- ******************************************************************************/
-// NEUIK_FontSet * NEUIK_NewFontFileSet(
-// 	const char * fName) /* font filename */
-// {
-// 	NEUIK_FontSet * fs = NULL;
-
-// 	fs = (NEUIK_FontSet *)malloc(sizeof(NEUIK_FontSet));
-// 	if (fs == NULL) return fs;
-
-// 	String_Duplicate(&(fs->FontName), fName);
-// 	if (fs->FontName == NULL)
-// 	{
-// 		/* Error copying fontName */
-// 		free(fs);
-// 		return NULL;
-// 	}
-
-// 	fs->Available = 0;
-// 	fs->MaxSize   = 0;
-// 	fs->NRef      = NULL;
-// 	fs->Fonts     = NULL;
-
-// 	return fs;
-// }
+/*----------------------------------------------------------------------------*/
+/* The following is the list of default monospace fonts that NEUIK will check */
+/* for on the system.  Fonts higher up in the list are preferred to those     */
+/* lower in the list.                                                         */
+/*----------------------------------------------------------------------------*/
+static char * defaultMSFontBaseNames[] = {
+	"Hack",           /* Linux   */
+	"LiberationMono", /* Linux   */
+	NULL,
+};
 
 /*******************************************************************************
  *
@@ -169,109 +147,6 @@ out:
 
 	return fs;
 }
-
-/*******************************************************************************
- *
- *  Name:          NEUIK_GetFontSet
- *
- *  Description:   Returns a pointer to a FontSet.  If it is the first time 
- *                 being called for a particular FontSet, a FontSet will be 
- *                 created.
- *
- *  Returns:       NULL if ther is an error; otherwise a valid pointer.
- *
- ******************************************************************************/
-// NEUIK_FontSet * NEUIK_GetFontSet(
-// 	const char * fNameBase) /* base font family name */
-// {
-// 	int                     len       = 0;
-// 	int                     ctr       = 0;
-// 	int                     eNum      = 0; /* which error to report (if any) */
-// 	NEUIK_FontSet         * fs       = NULL;
-// 	static NEUIK_FontSet ** fontSets = NULL; /* array of all font sets */
-// 	static char             funcName[] = "NEUIK_GetFontSet";
-// 	static char           * errMsgs[] = {"",      // [0] no error
-// 		"fontName is NULL.",            // [1]
-// 		"Failed to allocate memory.",   // [2]
-// 		"NEUIK_NewFontSet failed.",     // [3]
-// 		"fontName is empty.",           // [4]
-// 		"Failed to reallocate memory.", // [5]
-// 	};
-
-// 	if (fName == NULL)
-// 	{
-// 		eNum = 1;
-// 		goto out;
-// 	}
-// 	else if (fName[0] == '\0')
-// 	{
-// 		eNum = 4;
-// 		goto out;
-// 	}
-
-// 	if (fontSets == NULL)
-// 	{
-// 		/*----------------------------------------------------------------*/
-// 		/* This is the first FontSet to be added, allocate initial memory */
-// 		/* This pointer array will be null terminated.                    */
-// 		----------------------------------------------------------------
-// 		fontSets = (NEUIK_FontSet **)malloc(2*sizeof(NEUIK_FontSet *));
-// 		if (fontSets == NULL)
-// 		{
-// 			eNum = 2;
-// 			goto out;
-// 		}
-
-// 		/* set the font name */
-// 		fs = NEUIK_NewFontSet(fName);
-// 		if (fs->FontName == NULL)
-// 		{
-// 			eNum = 3;
-// 			goto out;
-// 		}
-// 		fontSets[1] = NULL;
-// 	}
-// 	else
-// 	{
-// 		/*--------------------------------------------------------------------*/
-// 		/* This is subsequent FontSet, reallocate memory                      */
-// 		/* This pointer array will be null terminated.                        */
-// 		/*--------------------------------------------------------------------*/
-		
-// 		/* determine the current length */
-// 		for (ctr = 0;;ctr++)
-// 		{
-// 			if (fontSets[ctr] == NULL)
-// 			{
-// 				len = 2 + ctr;
-// 				break;
-// 			}
-// 		}
-
-// 		fontSets = (NEUIK_FontSet **)realloc(fontSets, len*sizeof(NEUIK_FontSet *));
-// 		if (fontSets == NULL)
-// 		{
-// 			eNum = 5;
-// 			goto out;
-// 		}
-
-// 		/* set the font name */
-// 		fs = NEUIK_NewFontSet(fName);
-// 		if (fs->FontName == NULL)
-// 		{
-// 			eNum = 3;
-// 			goto out;
-// 		}
-// 		fontSets[ctr+1] = NULL;
-// 	}
-// out:
-// 	if (eNum > 0)
-// 	{
-// 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-// 	}
-
-// 	return fs;
-// }
 
 /*******************************************************************************
  *
@@ -432,6 +307,186 @@ NEUIK_FontSet * NEUIK_GetDefaultFontSet(
 
 		/* set the font name */
 		fs = NEUIK_NewFontSet(defaultFontBaseNames[ctr],
+			dFontName, dFontBoldName, dFontItalicName, dFontBoldItalicName);
+		if (fs == NULL)
+		{
+			eNum = 2;
+			goto out;
+		}
+		fontSets[ctr+1] = NULL;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+	else
+	{
+		*baseName = dFontName;
+	}
+
+	return fs;
+}
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_GetDefaultMSFontSet
+ *
+ *  Description:   Returns a pointer to the first supported system default 
+ *                 Monospaced FontSet.  If it is the first time being called for
+ *                 a particular FontSet, a FontSet will be created.
+ *
+ *  Returns:       NULL if there is an error; otherwise a valid pointer.
+ *
+ ******************************************************************************/
+NEUIK_FontSet * NEUIK_GetDefaultMSFontSet(
+	char ** baseName)      
+{
+	int                     len                 = 0;
+	int                     ctr                 = 0;
+	int                     eNum                = 0; /* which error to report (if any) */
+	static int              isInitialized       = 0;
+	static char           * dFontName           = NULL;
+	static char           * dFontBoldName       = NULL;
+	static char           * dFontItalicName     = NULL;
+	static char           * dFontBoldItalicName = NULL;
+	static NEUIK_FontSet ** fontSets            = NULL; /* array of all font sets */
+	NEUIK_FontSet         * fs                  = NULL;
+	static char             funcName[]          = "NEUIK_GetDefaultMSFontSet";
+	static char           * errMsgs[]           = {"", // [0] no error
+		"Failed to allocate memory.",                  // [1]
+		"NEUIK_NewFontSet failed.",                    // [2]
+		"Failed to reallocate memory.",                // [3]
+		"Unable to locate any of the default fonts.",  // [4]
+		"Failure in GetTTFLocation().",                // [5]
+		"Failure in GetBoldTTFLocation().",            // [6]
+		"Failure in GetItalicTTFLocation().",          // [7]
+		"Failure in GetBoldItalicTTFLocation().",      // [8]
+	};
+
+
+	if (!isInitialized)
+	{
+		/* Look for the first default font that is supported */
+		isInitialized = 1;
+
+		for (ctr = 0 ;; ctr++)
+		{
+			if (defaultMSFontBaseNames[ctr] == NULL) break;
+
+			if (NEUIK_GetTTFLocation(
+				defaultMSFontBaseNames[ctr], &dFontName))
+			{
+				eNum = 5;
+				goto out;
+			}
+			if (NEUIK_GetBoldTTFLocation(
+				defaultMSFontBaseNames[ctr], &dFontBoldName))
+			{
+				eNum = 6;
+				goto out;
+			}
+			if (NEUIK_GetItalicTTFLocation(
+				defaultMSFontBaseNames[ctr], &dFontItalicName))
+			{
+				eNum = 7;
+				goto out;
+			}
+			if (NEUIK_GetBoldItalicTTFLocation(
+				defaultMSFontBaseNames[ctr], &dFontBoldItalicName))
+			{
+				eNum = 8;
+				goto out;
+			}
+
+			if (dFontName != NULL && dFontBoldName != NULL && 
+				dFontItalicName != NULL && dFontBoldItalicName != NULL) 
+			{
+				break;
+			}
+			else 
+			{
+				if (dFontName != NULL)
+				{
+					free(dFontName);
+					dFontName = NULL;
+				}
+				if (dFontBoldName != NULL)
+				{
+					free(dFontBoldName);
+					dFontBoldName = NULL;
+				}
+				if (dFontItalicName != NULL)
+				{
+					free(dFontItalicName);
+					dFontItalicName = NULL;
+				}
+				if (dFontBoldItalicName != NULL)
+				{
+					free(dFontBoldItalicName);
+					dFontBoldItalicName = NULL;
+				}
+			}
+		}
+	}
+	if (dFontName == NULL)
+	{
+		/* None of the default fonts could be located */
+		eNum = 4;
+		goto out;
+	}
+
+	if (fontSets == NULL)
+	{
+		/*--------------------------------------------------------------------*/
+		/* This is the first FontSet to be added, allocate initial memory     */
+		/* This pointer array will be null terminated.                        */
+		/*--------------------------------------------------------------------*/
+		fontSets = (NEUIK_FontSet **)malloc(2*sizeof(NEUIK_FontSet *));
+		if (fontSets == NULL)
+		{
+			eNum = 1;
+			goto out;
+		}
+
+		/* set the font name */
+		fs = NEUIK_NewFontSet(defaultMSFontBaseNames[ctr],
+			dFontName, dFontBoldName, dFontItalicName, dFontBoldItalicName);
+		if (fs == NULL)
+		{
+			eNum = 2;
+			goto out;
+		}
+		fontSets[0] = fs;
+		fontSets[1] = NULL;
+	}
+	else
+	{
+		fs = fontSets[0];
+		/*--------------------------------------------------------------------*/
+		/* This is subsequent menu item, reallocate memory                    */
+		/* This pointer array will be null terminated.                        */
+		/*--------------------------------------------------------------------*/
+		
+		/* determine the current length */
+		for (ctr = 0;;ctr++)
+		{
+			if (fontSets[ctr] == NULL)
+			{
+				len = 2 + ctr;
+				break;
+			}
+		}
+
+		fontSets = (NEUIK_FontSet **)realloc(fontSets, len*sizeof(NEUIK_FontSet *));
+		if (fontSets == NULL)
+		{
+			eNum = 3;
+			goto out;
+		}
+
+		/* set the font name */
+		fs = NEUIK_NewFontSet(defaultMSFontBaseNames[ctr],
 			dFontName, dFontBoldName, dFontItalicName, dFontBoldItalicName);
 		if (fs == NULL)
 		{
