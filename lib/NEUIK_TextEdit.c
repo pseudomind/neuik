@@ -1126,6 +1126,8 @@ int neuik_Element_Render__TextEdit(
 {
 	char                   tempChar;          /* a temporary character */
 	int                    yPos       = 0;
+	int                    blankH     = 0;
+	int                    blankW     = 0;
 	int                    textW      = 0;
 	int                    textH      = 0;
 	int                    textWFull  = 0;
@@ -1314,6 +1316,10 @@ int neuik_Element_Render__TextEdit(
 	/*------------------------------------------------------------------------*/
 	if (!hasText) goto draw_border;
 
+	TTF_SizeText(font, " ", &textW, &textH);
+	blankW = (int)(0.65*(float)(textW));
+	blankH = (int)(1.1*textH);
+
 	/*------------------------------------------------------------------------*/
 	/* There appears to be one or more lines of valid text in the Block.      */
 	/* Place the lines one-at-a-time where they should go.                    */
@@ -1326,7 +1332,6 @@ int neuik_Element_Render__TextEdit(
 			eNum = 9;
 			goto out;
 		}
-		// printf("[TB.GL] `%s`\n", lineBytes);
 
 		if (lineBytes[0] != '\0')
 		{
@@ -1339,7 +1344,7 @@ int neuik_Element_Render__TextEdit(
 			/*----------------------------------------------------------------*/
 			textHFull = (int)(1.1*textH);
 			te->textSurf = SDL_CreateRGBSurface(
-				0, textW+1, textHFull, 32, 0, 0, 0, 0);
+				0, textW+blankW, textHFull, 32, 0, 0, 0, 0);
 			if (te->textSurf == NULL)
 			{
 				eNum = 8;
@@ -1374,91 +1379,89 @@ int neuik_Element_Render__TextEdit(
 			/*----------------------------------------------------------------*/
 			/* Check for and fill in highlight text selection background.     */
 			/*----------------------------------------------------------------*/
-			if (eBase->eSt.hasFocus && te->highlightIsSet)
+			if ( (eBase->eSt.hasFocus && te->highlightIsSet) &&
+					(lineCtr >= te->highlightStartLine && 
+					 lineCtr <= te->highlightEndLine))
 			{
-				if (lineCtr >= te->highlightStartLine &&
-					lineCtr <= te->highlightEndLine)
+				rect.x = 0;
+				rect.y = 0;
+				rect.w = textW + 1;
+				rect.h = textHFull;
+
+				textW = 0;
+				textH = 0;
+				/* determine the point of the start of the bgkd highlight */
+				if (lineCtr > te->highlightStartLine)
 				{
-					rect.x = 0;
-					rect.y = 0;
-					rect.w = textW + 1;
-					rect.h = textHFull;
-
-					textW = 0;
-					textH = 0;
-					/* determine the point of the start of the bgkd highlight */
-					if (lineCtr > te->highlightStartLine)
+					/*--------------------------------------------------------*/
+					/* The start of the line will be highlighted.             */
+					/*--------------------------------------------------------*/
+					if (lineCtr < te->highlightEndLine)
 					{
 						/*----------------------------------------------------*/
-						/* The start of the line will be highlighted.         */
+						/* highlight the entire line.                         */
 						/*----------------------------------------------------*/
-						if (lineCtr < te->highlightEndLine)
-						{
-							/*------------------------------------------------*/
-							/* highlight the entire line.                     */
-							/*------------------------------------------------*/
-							TTF_SizeText(font, lineBytes, &textW, &textH);
-						}
-						else if (te->highlightEndPos != 0)
-						{
-							tempChar = lineBytes[te->highlightEndPos];
-							lineBytes[te->highlightEndPos] = '\0';
-							TTF_SizeText(font, lineBytes, &textW, &textH);
-							lineBytes[te->highlightEndPos] = tempChar;
-						}
-						else
-						{
-							/*------------------------------------------------*/
-							/* The highlight ends at the start of line.       */
-							/*------------------------------------------------*/
-							TTF_SizeText(font, " ", &textW, &textH);
-						}
+						TTF_SizeText(font, lineBytes, &textW, &textH);
+						textW += blankW;
 					}
-					else if (lineCtr == te->highlightStartLine)
+					else if (te->highlightEndPos != 0)
 					{
 						/*----------------------------------------------------*/
-						/* The highlighted block starts on this line.         */
+						/* The highlight ends within this line.               */
 						/*----------------------------------------------------*/
-						if (te->highlightStartPos != 0)
-						{
-							tempChar = lineBytes[te->highlightStartPos];
-							lineBytes[te->highlightStartPos] = '\0';
-							TTF_SizeText(font, lineBytes, &textW, &textH);
-							lineBytes[te->highlightStartPos] = tempChar;
-						}
-						rect.x += textW;
-
-						/*----------------------------------------------------*/
-						/* determine the point of the start of the bgkd       */
-						/* highlight                                          */
-						/*----------------------------------------------------*/
-						lineLen = strlen(lineBytes);
-
-						if (te->highlightEndLine > lineCtr)
-						{
-							TTF_SizeText(font, 
-								lineBytes + te->highlightStartPos, 
-								&textW, &textH);
-						}
-						else
-						{
-							tempChar = lineBytes[te->highlightEndPos];
-							lineBytes[te->highlightEndPos] = '\0';
-							TTF_SizeText(font, 
-								lineBytes + te->highlightStartPos, 
-								&textW, &textH);
-							lineBytes[te->highlightEndPos] = tempChar;
-						}
+						tempChar = lineBytes[te->highlightEndPos];
+						lineBytes[te->highlightEndPos] = '\0';
+						TTF_SizeText(font, lineBytes, &textW, &textH);
+						lineBytes[te->highlightEndPos] = tempChar;
 					}
-					hlWidth = textW;
-					rect.w = hlWidth;
-
-					bgClr = &(aCfg->bgColorHl);
-					SDL_SetRenderDrawColor(
-						te->textRend, bgClr->r, bgClr->g, bgClr->b, 255);
-					SDL_RenderFillRect(te->textRend, &rect);
-					bgClr = &(aCfg->bgColor);
 				}
+				else if (lineCtr == te->highlightStartLine)
+				{
+					/*--------------------------------------------------------*/
+					/* The highlighted block starts on this line.             */
+					/*--------------------------------------------------------*/
+					if (te->highlightStartPos != 0)
+					{
+						tempChar = lineBytes[te->highlightStartPos];
+						lineBytes[te->highlightStartPos] = '\0';
+						TTF_SizeText(font, lineBytes, &textW, &textH);
+						lineBytes[te->highlightStartPos] = tempChar;
+					}
+					rect.x += textW;
+
+					/*--------------------------------------------------------*/
+					/* Determine the point of the start of the bgkd highlight */
+					/*--------------------------------------------------------*/
+					lineLen = strlen(lineBytes);
+
+					if (te->highlightEndLine > lineCtr)
+					{
+						/*----------------------------------------------------*/
+						/* highlight the rest of the line.                    */
+						/*----------------------------------------------------*/
+						TTF_SizeText(font, 
+							lineBytes + te->highlightStartPos, 
+							&textW, &textH);
+						textW += blankW;
+					}
+					else
+					{
+						tempChar = lineBytes[te->highlightEndPos];
+						lineBytes[te->highlightEndPos] = '\0';
+						TTF_SizeText(font, 
+							lineBytes + te->highlightStartPos, 
+							&textW, &textH);
+						lineBytes[te->highlightEndPos] = tempChar;
+					}
+				}
+				hlWidth = textW;
+				rect.w = hlWidth;
+
+				bgClr = &(aCfg->bgColorHl);
+				SDL_SetRenderDrawColor(
+					te->textRend, bgClr->r, bgClr->g, bgClr->b, 255);
+				SDL_RenderFillRect(te->textRend, &rect);
+				bgClr = &(aCfg->bgColor);
 			}
 
 			/*----------------------------------------------------------------*/
@@ -1512,7 +1515,7 @@ int neuik_Element_Render__TextEdit(
 
 			rect.x = rl.x + 6;
 			rect.y = rl.y + yPos;
-			rect.w = textWFull + 1;
+			rect.w = textWFull + blankW;
 			rect.h = textHFull;
 
 			SDL_RenderCopy(rend, te->textTex, NULL, &rect);
@@ -1520,6 +1523,30 @@ int neuik_Element_Render__TextEdit(
 		}
 		else
 		{
+			/*----------------------------------------------------------------*/
+			/* This is an empty line, but if this empty line is included in a */
+			/* highlighted section, a tiny section of the left side of the    */
+			/* should be highlighted. Additionally, the cursor may be present */
+			/* on this line.                                                  */
+			/*----------------------------------------------------------------*/
+			/* Check for and fill in highlight text selection background.     */
+			/*----------------------------------------------------------------*/
+			if ( (eBase->eSt.hasFocus && te->highlightIsSet) &&
+					(lineCtr >= te->highlightStartLine && 
+					 lineCtr < te->highlightEndLine))
+			{
+				rect.x = rl.x + 6;
+				rect.y = rl.y + yPos;
+				rect.w = blankW + 1;
+				rect.h = blankH;
+
+				bgClr = &(aCfg->bgColorHl);
+				SDL_SetRenderDrawColor(
+					rend, bgClr->r, bgClr->g, bgClr->b, 255);
+				SDL_RenderFillRect(rend, &rect);
+				bgClr = &(aCfg->bgColor);
+			}
+
 			/*----------------------------------------------------------------*/
 			/* This is a blank line but the cursor may be present.            */
 			/*----------------------------------------------------------------*/

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -60,14 +60,16 @@ int neuik_TextEdit_UpdatePanCursor(
 	int                    textH      = 0;
 	int                    normWidth  = 0;
 	char                   tempChar;
+	char                 * lineBytes  = NULL;
 	TTF_Font             * font       = NULL;
 	NEUIK_ElementBase    * eBase      = NULL;
 	NEUIK_TextEditConfig * aCfg       = NULL; /* the active textEntry config */
 	static char            funcName[] = "neuik_TextEdit_UpdatePanCursor";
-	static char          * errMsgs[] = {"",                           // [0] no error
-		"Argument `te` is not of TextEdit class.",                    // [1]
+	static char          * errMsgs[] = {"", // [0] no error
+		"Argument `te` is not of TextEdit class.",                     // [1]
 		"Argument `te` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"FontSet_GetFont returned NULL.",                              // [3]
+		"Failure in function `neuik_TextBlock_GetLine`.",              // [4]
 	};
 
 	if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
@@ -126,10 +128,16 @@ int neuik_TextEdit_UpdatePanCursor(
 	/* Before proceeding, check to see where the cursor is located within the */
 	/* currently visible TextEdit field.                                     */
 	/*------------------------------------------------------------------------*/
-	TTF_SizeText(font, te->text, &textW, &textH);
+	if (neuik_TextBlock_GetLine(te->textBlk, te->cursorLine, &lineBytes))
+	{
+		eNum = 4;
+		goto out;
+	}
+
+
+	TTF_SizeText(font, lineBytes, &textW, &textH);
 	textW++;
 	normWidth = (eBase->eSt.rSize).w - 12; 
-	// printf("textW: %d, normWidth %d, `%s`\n", textW, normWidth, te->text);
 	if (textW < normWidth) 
 	{
 		/*--------------------------------------------------------------------*/
@@ -153,13 +161,13 @@ int neuik_TextEdit_UpdatePanCursor(
 		/*--------------------------------------------------------------------*/
 		/* Update the cursorX position                                        */
 		/*--------------------------------------------------------------------*/
-		tempChar = te->text[te->cursorPos];
+		tempChar = lineBytes[te->cursorPos];
 		if (tempChar != '\0')
 		{
-			te->text[te->cursorPos] = '\0';
+			lineBytes[te->cursorPos] = '\0';
 		}
-		TTF_SizeText(font, te->text, &(te->cursorX), &textH);
-		te->text[te->cursorPos] = tempChar;
+		TTF_SizeText(font, lineBytes, &(te->cursorX), &textH);
+		lineBytes[te->cursorPos] = tempChar;
 
 
 		switch (cursorChange)
@@ -197,6 +205,7 @@ out:
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 	}
+	if (lineBytes != NULL) free(lineBytes);
 
 	// printf("UpdatePanCursor: te->panCursor = %d\n", te->panCursor);
 
@@ -217,18 +226,18 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                    evCaptured   = 0;
+	int                    doContinue   = FALSE;
+	int                    evCaptured   = FALSE;
 	int                    textW        = 0;
 	int                    textH        = 0;
 	int                    textHFull    = 0;
 	int                    charW        = 0;
-	int                    doContinue   = 0;
 	int                    eNum         = 0; /* which error to report (if any) */
 	int                    lastW        = 0; /* position of previous char */
 	int                    normWidth    = 0;
 	int                    yRel         = 0;
 	int                    yPos         = 0;
-	int                    shift_held   = 0;
+	int                    shift_held   = FALSE;
 	size_t                 lineLen      = 0;
 	size_t                 nLines       = 0;
 	size_t                 clickLine    = 0;
@@ -268,8 +277,16 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	aCfg = te->cfgPtr;
 	if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
 
-	font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-		aCfg->fontBold, aCfg->fontItalic);
+	if (aCfg->fontMono)
+	{
+		font = NEUIK_FontSet_GetFont(aCfg->fontSetMS, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+	}
+	else
+	{
+		font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+	}
 	if (font == NULL)
 	{
 		eNum = 1;
@@ -282,15 +299,16 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	keyMod = SDL_GetModState();
 	if (keyMod & KMOD_SHIFT)
 	{
-		shift_held = 1;
+		shift_held = TRUE;
 	}
 
 
 	/*------------------------------------------------------------------------*/
 	/* Redirect the MouseEvent to the appropriate handling section            */
 	/*------------------------------------------------------------------------*/
-	if (ev->type == SDL_MOUSEBUTTONDOWN)
+	switch (ev->type)
 	{
+	case SDL_MOUSEBUTTONDOWN:
 		mouseButEv = (SDL_MouseButtonEvent*)(ev);
 
 		/*--------------------------------------------------------------------*/
@@ -308,8 +326,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					/*--------------------------------------------------------*/
 					/* This TextEdit did not have the window focus            */
 					/*--------------------------------------------------------*/
-					te->selected    = 1;
-					te->wasSelected = 1;
+					te->selected    = TRUE;
+					te->wasSelected = TRUE;
 					neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)te);
 					SDL_StartTextInput();
 
@@ -317,13 +335,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					rLoc  = eBase->eSt.rLoc;
 					neuik_Element_RequestRedraw(te, rLoc, rSize);
 				}
-				doContinue = 1;
+				doContinue = TRUE;
 				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			}
 		}
 
 		if (!doContinue) goto out;
-		doContinue = 0;
+		doContinue = FALSE;
 
 		rSizePtr = &(eBase->eSt.rSize);
 
@@ -333,13 +351,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		/*--------------------------------------------------------------------*/
 		if (shift_held && !te->highlightIsSet)
 		{
-			te->highlightIsSet     = 1;
+			te->highlightIsSet     = TRUE;
 			te->highlightBeginLine = te->cursorLine;
 			te->highlightBeginPos  = te->cursorPos;
 		}
 		else if (!(shift_held && te->highlightIsSet))
 		{
-			te->highlightIsSet = 0;
+			te->highlightIsSet = FALSE;
 		}
 
 		/*--------------------------------------------------------------------*/
@@ -369,6 +387,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				goto out;
 			}
 
+			doContinue = TRUE;
 			te->cursorLine = clickLine;
 			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 
@@ -376,8 +395,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			{
 				if (*lineBytes != '\0')
 				{
-					doContinue = 1;
-
 					normWidth = (eBase->eSt.rSize).w - 12; 
 					TTF_SizeText(font, lineBytes, &textW, &textH);
 					rect.w = textW;
@@ -386,17 +403,17 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					{
 						switch (aCfg->textHJustify)
 						{
-							case NEUIK_HJUSTIFY_LEFT:
-								rect.x = 6;
-								break;
+						case NEUIK_HJUSTIFY_LEFT:
+							rect.x = 6;
+							break;
 
-							case NEUIK_HJUSTIFY_CENTER:
-								rect.x = (int) ((float)(rSizePtr->w - textW)/2.0);
-								break;
+						case NEUIK_HJUSTIFY_CENTER:
+							rect.x = (int) ((float)(rSizePtr->w - textW)/2.0);
+							break;
 
-							case NEUIK_HJUSTIFY_RIGHT:
-								rect.x = (int) (rSizePtr->w - textW - 6);
-								break;
+						case NEUIK_HJUSTIFY_RIGHT:
+							rect.x = (int) (rSizePtr->w - textW - 6);
+							break;
 						}
 					}
 					else
@@ -420,7 +437,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 
 			te->cursorPos = lineLen;
-			// neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 			rSize = eBase->eSt.rSize;
 			rLoc  = eBase->eSt.rLoc;
 			neuik_Element_RequestRedraw(te, rLoc, rSize);
@@ -455,13 +471,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			mouseButEv->x <= eBase->eSt.rLoc.x + rect.x)
 		{
 			/* move the cursor position all the way to the start */
-			te->cursorPos      = 0;
+			te->cursorPos = 0;
 			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
 		}
 		else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
 		{
 			/* move the cursor position all the way to the end */
-			te->cursorPos      = te->textLen;
+			te->cursorPos = te->textLen;
 			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 		}
 		else
@@ -537,7 +553,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 		if (te->highlightIsSet) {
 			/*----------------------------------------------------------------*/
-			/* Update the highlight selections .  */
+			/* Update the highlight selections .                              */
 			/*----------------------------------------------------------------*/
 			if (te->cursorLine < te->highlightBeginLine ||
 					(te->cursorLine == te->highlightBeginLine &&
@@ -565,20 +581,18 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 
 		te->clickHeld = 1;
-	}
-	else if (ev->type == SDL_MOUSEBUTTONUP)
-	{
+		break;
+	case SDL_MOUSEBUTTONUP:
 		if (eBase->eSt.hasFocus)
 		{
 			/*----------------------------------------------------------------*/
 			/* This text entry has the window focus (unset `clickHeld`)       */
 			/*----------------------------------------------------------------*/
-			te->clickHeld =  0;
-			evCaptured    =  NEUIK_EVENTSTATE_CAPTURED;
+			te->clickHeld = FALSE;
+			evCaptured    = NEUIK_EVENTSTATE_CAPTURED;
 		}
-	}
-	else if (ev->type == SDL_MOUSEMOTION)
-	{
+		break;
+	case SDL_MOUSEMOTION:
 		if (eBase->eSt.hasFocus && te->clickHeld)
 		{
 			/*----------------------------------------------------------------*/
@@ -593,13 +607,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 				{
 					/* This mouse click originated within this button */
-					doContinue = 1;
+					doContinue = TRUE;
 					evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 				}
 			}
 
 			if (!doContinue) goto out;
-			doContinue = 0;
+			doContinue = FALSE;
 
 			rSizePtr = &(eBase->eSt.rSize);
 
@@ -625,7 +639,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/*----------------------------------------------------------------*/
 			if (!te->highlightIsSet)
 			{
-				te->highlightIsSet     = 1;
+				te->highlightIsSet     = TRUE;
 				te->highlightBeginLine = te->cursorLine;
 				te->highlightBeginPos  = te->cursorPos;
 			}
@@ -651,7 +665,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				{
 					if (*lineBytes != '\0')
 					{
-						doContinue = 1;
+						doContinue = TRUE;
 
 						normWidth = (eBase->eSt.rSize).w - 12; 
 						TTF_SizeText(font, lineBytes, &textW, &textH);
@@ -680,7 +694,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 						}
 					}
 				}
-
 			}
 			else
 			{
@@ -733,7 +746,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				mouseMotEv->x <= eBase->eSt.rLoc.x + rect.x)
 			{
 				/* move the cursor position all the way to the start */
-				te->cursorPos      = 0;
+				te->cursorPos = 0;
 			}
 			else if (mouseMotEv->x >= 
 				eBase->eSt.rLoc.x + rect.x + rect.w)
@@ -845,6 +858,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			neuik_Element_RequestRedraw(te, rLoc, rSize);
 			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 		}
+		break;
 	}
 out:
 	if (eNum > 0)
