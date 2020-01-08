@@ -545,18 +545,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 			else
 			{
-				TTF_SizeText(font, te->text, &textW, &textH);
-
-				if (mouseButEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
-				{
-					/* cursor will be before this char */
-					te->cursorPos = 0;
-				}
-				else
-				{
-					/* cursor will be after char */
-					te->cursorPos = 1;
-				}
+				/*------------------------------------------------------------*/
+				/* There is no text on this line, move the cursor to the zero */
+				/* position.                                                  */
+				/*------------------------------------------------------------*/
+				te->cursorPos = 0;
 			}
 		}
 		te->clickOrigin   = te->cursorPos;
@@ -630,7 +623,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				mouseMotEv->y = eBase->eSt.rLoc.y + eBase->eSt.rSize.h;
 			}
 
-			doContinue = FALSE;
 			rSizePtr = &(eBase->eSt.rSize);
 
 			/*----------------------------------------------------------------*/
@@ -681,8 +673,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				{
 					if (*lineBytes != '\0')
 					{
-						doContinue = TRUE;
-
 						normWidth = (eBase->eSt.rSize).w - 12; 
 						TTF_SizeText(font, lineBytes, &textW, &textH);
 						rect.w = textW;
@@ -753,9 +743,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			}
 
-			if (!doContinue) goto out;
 			/*----------------------------------------------------------------*/
-			/* If continuing, this textEntry contains text and so the cursor  */
+			/* If continuing, this TextEdit contains text and so the cursor   */
 			/* placement could have been changed.                             */
 			/*----------------------------------------------------------------*/
 			if (te->panCursor == 0 && 
