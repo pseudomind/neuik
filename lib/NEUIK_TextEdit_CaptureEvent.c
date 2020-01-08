@@ -422,10 +422,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					}
 				}
 			}
-
 		}
 		else
 		{
+			/*----------------------------------------------------------------*/
+			/* The click originated below the final line in the textedit.     */
+			/* Position the cursor at the end of the final line.              */
+			/*----------------------------------------------------------------*/
 			te->cursorLine = nLines - 1;
 
 			if (neuik_TextBlock_GetLineLength(te->textBlk,
@@ -440,7 +443,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			rSize = eBase->eSt.rSize;
 			rLoc  = eBase->eSt.rLoc;
 			neuik_Element_RequestRedraw(te, rLoc, rSize);
-
+			te->clickHeld = 1;
 		}
 
 		if (!doContinue) goto out;
