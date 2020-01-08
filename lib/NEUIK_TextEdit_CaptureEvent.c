@@ -603,21 +603,26 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/* button is still being held down. **Drag Select**               */
 			/*----------------------------------------------------------------*/
 			mouseMotEv = (SDL_MouseMotionEvent*)(ev);
-			if (mouseMotEv->y >= eBase->eSt.rLoc.y && 
-				mouseMotEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
+			if (mouseMotEv->y < eBase->eSt.rLoc.y)
 			{
-				if (mouseMotEv->x >= eBase->eSt.rLoc.x && 
-					mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
-				{
-					/* This mouse click originated within this button */
-					doContinue = TRUE;
-					evCaptured = NEUIK_EVENTSTATE_CAPTURED;
-				}
+				/*------------------------------------------------------------*/
+				/* If the mouse motion event is above the top of the TextEdit */
+				/* treat it as if it occurred at the top of the widget.       */
+				/*------------------------------------------------------------*/
+				mouseMotEv->y = eBase->eSt.rLoc.y;
+			}
+			else if (mouseMotEv->y > eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+			{
+				/*------------------------------------------------------------*/
+				/* If the mouse motion event is below the bottom of the       */
+				/* TextEdit treat it as if it occurred at the top of the      */
+				/* widget.                                                    */
+				/*------------------------------------------------------------*/
+				mouseMotEv->y = eBase->eSt.rLoc.y + eBase->eSt.rSize.h;
 			}
 
-			if (!doContinue) goto out;
 			doContinue = FALSE;
-
 			rSizePtr = &(eBase->eSt.rSize);
 
 			/*----------------------------------------------------------------*/
