@@ -426,7 +426,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		else
 		{
 			/*----------------------------------------------------------------*/
-			/* The click originated below the final line in the textedit.     */
+			/* The click originated below the final line in the TextEdit.     */
 			/* Position the cursor at the end of the final line.              */
 			/*----------------------------------------------------------------*/
 			te->cursorLine = nLines - 1;
@@ -448,8 +448,16 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 
 		if (!doContinue) goto out;
 
+		if (neuik_TextBlock_GetLineLength(te->textBlk,
+			te->cursorLine, &lineLen))
+		{
+			/* ERR: problem reported from textBlock */
+			eNum = 6;
+			goto out;
+		}
+
 		/*--------------------------------------------------------------------*/
-		/* If continuing, this textEntry contains text and so the cursor      */
+		/* If continuing, this TextEdit contains text and so the cursor       */
 		/* cursor placement may have been changed.                            */
 		/*--------------------------------------------------------------------*/
 		if (SDL_GetTicks() - te->timeLastClick < NEUIK_DOUBLE_CLICK_TIMEOUT &&
@@ -458,7 +466,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/*----------------------------------------------------------------*/
 			/* React to a double-click event                                  */
 			/*----------------------------------------------------------------*/
-			if (te->textLen > 0)
+			if (lineLen > 0)
 			{
 				if (neuik_TextBlock_GetLineLength(te->textBlk,
 					te->textBlk->nLines, &lineLen))
@@ -480,13 +488,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		else if (mouseButEv->x >= eBase->eSt.rLoc.x + rect.x + rect.w)
 		{
 			/* move the cursor position all the way to the end */
-			te->cursorPos = te->textLen;
+			te->cursorPos = lineLen;
 			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
 		}
 		else
 		{
 			/* move the cursor somewhere within the text */
-			if (te->textLen > 1)
+			if (lineLen > 1)
 			{
 				oldCursorPos = te->cursorPos;
 				for (ctr = 1;;ctr++)
@@ -772,17 +780,31 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			else
 			{
 				/* move the cursor somewhere within the text */
-				if (te->textLen > 1)
+				if (neuik_TextBlock_GetLineLength(te->textBlk,
+					te->cursorLine, &lineLen))
+				{
+					/* ERR: problem reported from textBlock */
+					eNum = 6;
+					goto out;
+				}
+
+				if (neuik_TextBlock_GetLine(te->textBlk, clickLine, &lineBytes))
+				{
+					eNum = 11;
+					goto out;
+				}
+
+				if (lineLen > 1)
 				{
 					oldCursorPos = te->cursorPos;
 
-					for (ctr = 1;;ctr++)
+					for (ctr = 0; ctr < lineLen; ctr++)
 					{
-						aChar = te->text[ctr];
+						aChar = lineBytes[ctr];
 
-						te->text[ctr] = '\0';
-						TTF_SizeText(font, te->text, &textW, &textH);
-						te->text[ctr] = aChar;
+						lineBytes[ctr] = '\0';
+						TTF_SizeText(font, lineBytes, &textW, &textH);
+						lineBytes[ctr] = aChar;
 
 						if (mouseMotEv->x + te->panCursor <= 
 							eBase->eSt.rLoc.x + rect.x + textW)
@@ -820,22 +842,15 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 						lastW = textW;
 						if (aChar == '\0') break;
 					}
-					te->text[ctr] = aChar;
+					lineBytes[ctr] = aChar;
 				}
 				else
 				{
-					TTF_SizeText(font, te->text, &textW, &textH);
-
-					if (mouseMotEv->x <= eBase->eSt.rLoc.x + rect.x + textW/2)
-					{
-						/* cursor will be before this char */
-						te->cursorPos = 0;
-					}
-					else
-					{
-						/* cursor will be after char */
-						te->cursorPos = 1;
-					}
+					/*--------------------------------------------------------*/
+					/* There is no text on this line, move the cursor to the  */
+					/* zero position.                                         */
+					/*--------------------------------------------------------*/
+					te->cursorPos = 0;
 				}
 			}
 
