@@ -602,6 +602,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	                                         /* point of the selection group */
 	int                    selF         = 0; /* This stores the final point  */
 	                                         /* of the selection group       */
+	unsigned int           timeAtClick  = 0;
 	size_t                 lineLen      = 0;
 	size_t                 nLines       = 0;
 	size_t                 clickLine    = 0;
@@ -824,9 +825,39 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		/* If continuing, this TextEdit contains text and so the cursor       */
 		/* cursor placement may have been changed.                            */
 		/*--------------------------------------------------------------------*/
-		if (SDL_GetTicks() - te->timeLastClick < NEUIK_DOUBLE_CLICK_TIMEOUT &&
+		timeAtClick = SDL_GetTicks();
+		if (timeAtClick - te->timeClickMinus2 < 2*NEUIK_DOUBLE_CLICK_TIMEOUT)
+		{
+			/*----------------------------------------------------------------*/
+			/* React to a triple-click event; select the whole line           */
+			/*----------------------------------------------------------------*/
+			if (neuik_TextBlock_GetLineLength(te->textBlk,
+				te->cursorLine, &lineLen))
+			{
+				/* ERR: problem reported from textBlock */
+				eNum = 6;
+				goto out;
+			}
+
+			te->highlightIsSet     = TRUE;
+			te->highlightStartLine = te->cursorLine;
+			te->highlightStartPos  = 0;
+			te->highlightEndLine   = te->cursorLine;
+			te->highlightEndPos    = lineLen;
+			te->cursorPos          = lineLen;
+
+			rSize = eBase->eSt.rSize;
+			rLoc  = eBase->eSt.rLoc;
+			neuik_Element_RequestRedraw(te, rLoc, rSize);
+			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
+			goto out;
+		}
+		else if (SDL_GetTicks() - te->timeLastClick < NEUIK_DOUBLE_CLICK_TIMEOUT &&
 			!te->highlightIsSet)
 		{
+			te->timeClickMinus2 = te->timeLastClick;
+			te->timeLastClick   = timeAtClick;
+
 			/*----------------------------------------------------------------*/
 			/* React to a double-click event                                  */
 			/*----------------------------------------------------------------*/
@@ -934,8 +965,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->cursorPos = 0;
 			}
 		}
-		te->clickOrigin   = te->cursorPos;
-		te->timeLastClick = SDL_GetTicks();
+		te->clickOrigin     = te->cursorPos;
+		te->timeClickMinus2 = te->timeLastClick;
+		te->timeLastClick   = timeAtClick;
 
 		if (te->highlightIsSet) {
 			/*----------------------------------------------------------------*/

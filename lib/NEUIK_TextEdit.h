@@ -56,6 +56,8 @@ typedef struct {
 		int                    clickHeld;       /* click being held following select click */
 		int                    needsRedraw;
 		unsigned int           timeLastClick;
+		unsigned int           timeClickMinus2; /* time at which the penultimate */
+												/* preceding click was clicked.*/
 } NEUIK_TextEdit;
 
 

@@ -247,6 +247,7 @@ int neuik_Object_New__TextEdit(
 	te->clickHeld          = 0;
 	te->needsRedraw        = 1;
     te->timeLastClick      = 0;
+    te->timeClickMinus2    = 0;
 	te->cfg                = NULL; 
 	te->cfgPtr             = NULL; 
 	te->textSurf           = NULL;
