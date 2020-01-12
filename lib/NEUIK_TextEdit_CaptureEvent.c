@@ -851,6 +851,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightStartPos  = sel0;
 				te->highlightEndLine   = te->cursorLine;
 				te->highlightEndPos    = selF;
+				te->cursorPos          = selF;
 
 				rSize = eBase->eSt.rSize;
 				rLoc  = eBase->eSt.rLoc;
@@ -1493,18 +1494,35 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 				/* SHIFT key is not being held down */
 				if (te->highlightIsSet)
 				{
-					/* breaking out of a highlight selection */
+					/*--------------------------------------------------------*/
+					/* Break out of a highlight selection                     */
+					/*--------------------------------------------------------*/
+					/* Prevent the cursor from moving to a position in excess */
+					/* of the line length.                                    */
+					/*--------------------------------------------------------*/
+					if (neuik_TextBlock_GetLineLength(te->textBlk,
+						te->cursorLine, &lineLen))
+					{
+						/* ERR: problem reported from textBlock */
+						eNum = 6;
+						goto out;
+					}
+
 					te->highlightIsSet = 0;
 					te->cursorLine     = te->highlightEndLine;
 					te->cursorPos      = te->highlightEndPos + 1;
+					if (te->cursorPos >= lineLen)
+					{
+						te->cursorPos--;
+					}
 					doRedraw = 1;
 				}
 				else
 				{
-					/*----------------------------------------------------*/
-					/* Prevent the cursor from moving to a position in    */
-					/* excess of the line length.                         */
-					/*----------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* Prevent the cursor from moving to a position in excess */
+					/* of the line length.                                    */
+					/*--------------------------------------------------------*/
 					if (neuik_TextBlock_GetLineLength(te->textBlk,
 						te->cursorLine, &lineLen))
 					{
@@ -1520,11 +1538,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 					else if (te->cursorPos == lineLen && 
 							te->cursorLine < te->textBlk->nLines)
 					{
-						/*------------------------------------------------*/
-						/* For lines before the final line, attempting to */
-						/* right should cause the cursor to move to the   */
-						/* start of the following line.                   */
-						/*------------------------------------------------*/
+						/*----------------------------------------------------*/
+						/* For lines before the final line, attempting to     */
+						/* right should cause the cursor to move to the start */
+						/* of the following line.                             */
+						/*----------------------------------------------------*/
 						te->cursorLine++;
 						te->cursorPos = 0;
 						doRedraw = 1;
@@ -1537,10 +1555,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 				/* SHIFT key is being held down */
 
 				/* Start highlight selection process */
-				/*--------------------------------------------------------*/
-				/* Prevent the cursor from moving to a position in excess */
-				/* of the line length.                                    */
-				/*--------------------------------------------------------*/
+				/*------------------------------------------------------------*/
+				/* Prevent the cursor from moving to a position in excess of  */
+				/* the line length.                                           */
+				/*------------------------------------------------------------*/
 				if (neuik_TextBlock_GetLineLength(te->textBlk,
 					te->cursorLine, &lineLen))
 				{
@@ -1580,11 +1598,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 				else if (te->cursorPos == lineLen && 
 						te->cursorLine < te->textBlk->nLines)
 				{
-					/*------------------------------------------------*/
-					/* For lines before the final line, attempting to */
-					/* right should cause the cursor to move to the   */
-					/* start of the following line.                   */
-					/*------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* For lines before the final line, attempting to move    */
+					/* right should cause the cursor to move to the start of  */
+					/* the following line.                                    */
+					/*--------------------------------------------------------*/
 					if (!te->highlightIsSet)
 					{
 						te->highlightBeginLine = te->cursorLine;
@@ -1620,9 +1638,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 		case SDLK_BACKSPACE:
 			if (!te->highlightIsSet)
 			{
-				/*--------------------------------------------------------*/
-				/* There is no current text highlighting                  */
-				/*--------------------------------------------------------*/
+				/*------------------------------------------------------------*/
+				/* There is no current text highlighting.                     */
+				/*------------------------------------------------------------*/
 				if (te->cursorPos > 0)
 				{
 					if (neuik_TextBlock_DeleteChar(te->textBlk, 
@@ -1636,11 +1654,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 				}
 				else if (te->cursorLine > 0 && te->cursorPos == 0)
 				{
-					/*----------------------------------------------------*/
-					/* The cursor is in the first position of a line that */
-					/* is not the first line. A backspace here will       */
-					/* combine the current line to the preceding line.    */
-					/*----------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* The cursor is in the first position of a line that is  */
+					/* not the first line. A backspace here will combine the  */
+					/* current line to the preceding line.                    */
+					/*--------------------------------------------------------*/
 					if (neuik_TextBlock_GetLineLength(te->textBlk,
 						(te->cursorLine - 1), &lineLen))
 					{
@@ -1662,9 +1680,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 			}
 			else
 			{
-				/*--------------------------------------------------------*/
-				/* There is text highlighting within the line             */
-				/*--------------------------------------------------------*/
+				/*------------------------------------------------------------*/
+				/* There is text highlighting within the line.                */
+				/*------------------------------------------------------------*/
 				if (neuik_TextBlock_DeleteSection(te->textBlk,
 					te->highlightStartLine, te->highlightStartPos, 
 					te->highlightEndLine, te->highlightEndPos))
@@ -1683,9 +1701,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 		case SDLK_DELETE:
 			if (!te->highlightIsSet)
 			{
-				/*--------------------------------------------------------*/
-				/* There is no current text highlighting                  */
-				/*--------------------------------------------------------*/
+				/*------------------------------------------------------------*/
+				/* There is no current text highlighting.                     */
+				/*------------------------------------------------------------*/
 
 				if (neuik_TextBlock_GetLineLength(te->textBlk,
 					te->cursorLine, &lineLen))
@@ -1696,10 +1714,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 				}
 				if (te->cursorPos < lineLen - 1)
 				{
-					/*----------------------------------------------------*/
-					/* Prevent the deletion of the final terminating NULL */
-					/* character.                                         */
-					/*----------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* Prevent the deletion of the final terminating NULL     */
+					/* character.                                             */
+					/*--------------------------------------------------------*/
 					if (neuik_TextBlock_DeleteChar(te->textBlk,
 						te->cursorLine, te->cursorPos))
 					{
@@ -1712,11 +1730,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 					(te->cursorPos == lineLen) &&
 					(te->textBlk->nLines > te->cursorLine))
 				{
-					/*----------------------------------------------------*/
-					/* The cursor is in the final position of a line that */
-					/* is not the final line. A delete here will combine  */
-					/* the current line to the follwoing line.            */
-					/*----------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* The cursor is in the final position of a line that is  */
+					/* not the final line. A delete here will combine the     */
+					/* current line to the following line.                    */
+					/*--------------------------------------------------------*/
 					if (neuik_TextBlock_MergeLines(te->textBlk, te->cursorLine))
 					{
 						/* ERR: problem reported from textBlock */
@@ -1728,9 +1746,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 			}
 			else
 			{
-				/*--------------------------------------------------------*/
-				/* There is text highlighting within the line             */
-				/*--------------------------------------------------------*/
+				/*------------------------------------------------------------*/
+				/* There is text highlighting within the line.                */
+				/*------------------------------------------------------------*/
 				if (neuik_TextBlock_DeleteSection(te->textBlk,
 					te->highlightStartLine, te->highlightStartPos, 
 					te->highlightEndLine, te->highlightEndPos))
@@ -1815,10 +1833,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 					te->highlightIsSet = 0;
 					te->clickOrigin    = -1;
 
-					/*----------------------------------------------------*/
-					/* Prevent the cursor from moving to a line that is   */
-					/* in excess of the number of lines.                  */
-					/*----------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* Prevent the cursor from moving to a line that is in    */
+					/* excess of the number of lines.                         */
+					/*--------------------------------------------------------*/
 					if (neuik_TextBlock_GetLineCount(te->textBlk, &lineLen))
 					{
 						eNum = 7;
@@ -1829,10 +1847,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->cursorLine++;
 						doRedraw = 1;
 
-						/*------------------------------------------------*/
-						/* Prevent the cursor from moving to a position   */
-						/* in excess of the line length.                  */
-						/*------------------------------------------------*/
+						/*----------------------------------------------------*/
+						/* Prevent the cursor from moving to a position in    */
+						/* excess of the line length.                         */
+						/*----------------------------------------------------*/
 						if (neuik_TextBlock_GetLineLength(te->textBlk,
 							te->cursorLine, &lineLen))
 						{
@@ -1854,10 +1872,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightBeginPos  = te->cursorPos;
 					}
 
-					/*----------------------------------------------------*/
-					/* Prevent the cursor from moving to a line that is   */
-					/* in excess of the number of lines.                  */
-					/*----------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* Prevent the cursor from moving to a line that is in    */
+					/* excess of the number of lines.                         */
+					/*--------------------------------------------------------*/
 					if (neuik_TextBlock_GetLineCount(te->textBlk, &lineLen))
 					{
 						eNum = 7;
@@ -1868,10 +1886,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->cursorLine++;
 						doRedraw = 1;
 
-						/*------------------------------------------------*/
-						/* Prevent the cursor from moving to a position   */
-						/* in excess of the line length.                  */
-						/*------------------------------------------------*/
+						/*----------------------------------------------------*/
+						/* Prevent the cursor from moving to a position in    */
+						/* excess of the line length.                         */
+						/*----------------------------------------------------*/
 						if (neuik_TextBlock_GetLineLength(te->textBlk,
 							te->cursorLine, &lineLen))
 						{
@@ -2261,7 +2279,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Check if the event is captured by the menu (mouseclick/mousemotion).   */
+	/* Check if the event is captured by the menu (mouse-click/mouse-motion). */
 	/*------------------------------------------------------------------------*/
 	switch (ev->type)
 	{
