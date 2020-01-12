@@ -25,7 +25,15 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-static char          * errMsgs[]  = {"",                             // [ 0] no error
+typedef enum {
+	E_CHARTYPE_ALPHA_NUMERIC, // char in the following: [a-z], [A-Z], [0-9], '_'
+	E_CHARTYPE_WHITESPACE,    // char in the following: ' ', '\t', '\n', '\r'
+	E_CHARTYPE_OTHER,         // any character not captured in the two 
+	                          // aforementioned groups.
+	E_CHARTYPE_OTHER_PLUS,    // Identifies `OTHER` chars and `WHITESPACE` chars
+} neuik_E_CharType;
+
+static char          * errMsgs[]  = {"", // [ 0] no error
 	"FontSet_GetFont returned NULL.",                                // [ 1]
 	"Failed to get text from clipboard.",                            // [ 2]
 	"Argument `elem` is not of TextEdit class.",                     // [ 3]
@@ -39,6 +47,7 @@ static char          * errMsgs[]  = {"",                             // [ 0] no 
 	"Failure in function `neuik_TextBlock_GetLine`.",                // [11]
 	"Failure in function `neuik_TextBlock_GetSection`.",             // [12]
 	"Failure in function `neuik_TextBlock_InsertText`.",             // [13]
+	"Failure in function `neuik_getTextSelectionAtPos`.",            // [14]
 };
 
 
@@ -65,7 +74,7 @@ int neuik_TextEdit_UpdatePanCursor(
 	NEUIK_ElementBase    * eBase      = NULL;
 	NEUIK_TextEditConfig * aCfg       = NULL; /* the active textEntry config */
 	static char            funcName[] = "neuik_TextEdit_UpdatePanCursor";
-	static char          * errMsgs[] = {"", // [0] no error
+	static char          * errMsgs2[] = {"", // [0] no error
 		"Argument `te` is not of TextEdit class.",                     // [1]
 		"Argument `te` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"FontSet_GetFont returned NULL.",                              // [3]
@@ -90,13 +99,11 @@ int neuik_TextEdit_UpdatePanCursor(
 	if (te->text == NULL)
 	{
 		te->panCursor = 0;
-		// printf("case0;\n");
 		goto out;
 	}
 	if (te->text[0] == '\0') 
 	{
 		te->panCursor = 0;
-		// printf("case1;\n");
 		goto out;
 	}
 
@@ -144,7 +151,6 @@ int neuik_TextEdit_UpdatePanCursor(
 		/* The text doesn't completely fill the available space; don't pan.   */
 		/*--------------------------------------------------------------------*/
 		te->panCursor = 0;
-		// printf("case2;\n");
 	}
 	else
 	{
@@ -177,14 +183,12 @@ int neuik_TextEdit_UpdatePanCursor(
 				{
 					te->panCursor = te->cursorX;
 				}
-				// printf("case3;\n");
 				break;
 			case CURSORPAN_MOVE_FORWARD:
 				if (te->cursorX > te->panCursor + normWidth)
 				{
 					te->panCursor = (1 + te->cursorX) - normWidth;
 				}
-				// printf("case4;\n");
 				break;
 			case CURSORPAN_TEXT_DELTETED:
 				if (textW - te->panCursor < normWidth)
@@ -196,20 +200,376 @@ int neuik_TextEdit_UpdatePanCursor(
 					/*--------------------------------------------------------*/
 					te->panCursor = textW - normWidth;
 				}
-				// printf("case5;\n");
 				break;
 		}
 	}
 out:
 	if (eNum > 0)
 	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		NEUIK_RaiseError(funcName, errMsgs2[eNum]);
 	}
 	if (lineBytes != NULL) free(lineBytes);
 
-	// printf("UpdatePanCursor: te->panCursor = %d\n", te->panCursor);
-
 	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_charIsAlphaNumeric
+ *
+ *  Description:   Report if the supplied character is a character or a number.
+ *
+ *  Returns:       Returns TRUE if supplied char is within [a-z], [A-Z],  
+ *                 [0-9], or '_' otherwise returns FALSE.
+ *
+ ******************************************************************************/
+int neuik_charIsAlphaNumeric(
+	char c)
+{
+	switch (c)
+	{
+		case '_':
+		case 'a':
+		case 'b':
+		case 'c':
+		case 'd':
+		case 'e':
+		case 'f':
+		case 'g':
+		case 'h':
+		case 'i':
+		case 'j':
+		case 'k':
+		case 'l':
+		case 'm':
+		case 'n':
+		case 'o':
+		case 'p':
+		case 'q':
+		case 'r':
+		case 's':
+		case 't':
+		case 'u':
+		case 'v':
+		case 'w':
+		case 'x':
+		case 'y':
+		case 'z':
+		case 'A':
+		case 'B':
+		case 'C':
+		case 'D':
+		case 'E':
+		case 'F':
+		case 'G':
+		case 'H':
+		case 'I':
+		case 'J':
+		case 'K':
+		case 'L':
+		case 'M':
+		case 'N':
+		case 'O':
+		case 'P':
+		case 'Q':
+		case 'R':
+		case 'S':
+		case 'T':
+		case 'U':
+		case 'V':
+		case 'W':
+		case 'X':
+		case 'Y':
+		case 'Z':
+		case '0':
+		case '1':
+		case '2':
+		case '3':
+		case '4':
+		case '5':
+		case '6':
+		case '7':
+		case '8':
+		case '9':
+			return TRUE;
+	}
+	return FALSE;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_charIsWhitespace
+ *
+ *  Description:   Report if the supplied character is a whitespace character.
+ *
+ *  Returns:       Returns TRUE if supplied char is a whitespace character,
+ *                 otherwise returns FALSE.
+ *
+ ******************************************************************************/
+int neuik_charIsWhitespace(
+	char c)
+{
+	switch (c)
+	{
+		case ' ':
+		case '\t':
+		case '\n':
+		case '\r':
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/*******************************************************************************
+ *
+ *  Name:          neuiK_getCharType
+ *
+ *  Description:   Identifies the character type of the specified character.
+ *
+ *  Returns:       Returns the character type associated with the specified 
+ *                 character.
+ *
+ ******************************************************************************/
+neuik_E_CharType neuiK_getCharType(
+	char c)
+{
+	if (neuik_charIsWhitespace(c))
+	{
+		return E_CHARTYPE_WHITESPACE;
+	}
+	else if (neuik_charIsAlphaNumeric(c))
+	{
+		return E_CHARTYPE_ALPHA_NUMERIC;
+	}
+	return E_CHARTYPE_OTHER;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_getTextSelectionAtPos
+ *
+ *  Description:   Get the text selection resulting from a double-click at a 
+ *                 specified position.
+ *
+ *  Returns:       A non-zero integer will be returned if the operation fails.
+ *
+ ******************************************************************************/
+int neuik_getTextSelectionAtPos(
+	const char *ln,     /* The line of text containing the selection. */
+	int         curPos, /* The cursor position within the line of text. */
+	int        *sel0,   /* This stores the starting point of the selection group */
+	int        *selF)   /* This stores the final point of the selection group */
+{
+	int              ckLeft  = FALSE; /* check for expansion to the left */
+	int              ckRight = FALSE; /* check for expansion to the right */
+	int              lnLen = 0;
+	int              ckPos = 0;
+	char             aChar;
+	neuik_E_CharType aType; /* char type of the current active character */
+	neuik_E_CharType lType; /* char type of the rightmost character */
+	neuik_E_CharType rType; /* char type of the leftmost character */
+	neuik_E_CharType selType;
+
+	if (ln == NULL)
+	{
+		return 1;
+	}
+	if (sel0 == NULL)
+	{
+		return 2;
+	}
+	if (selF == NULL)
+	{
+		return 3;
+	}
+
+	lnLen = strlen(ln);
+	if (lnLen == 0)
+	{
+		return 4;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the character type for the selection; that is, the selType.  */
+	/*------------------------------------------------------------------------*/
+	if (curPos == 0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The cursor is located at the start of the line; check only the     */
+		/* type of the first character.                                       */
+		/*--------------------------------------------------------------------*/
+		aChar = ln[curPos];
+		selType = neuiK_getCharType(aChar);
+		ckRight = TRUE;
+		*sel0 = 0;
+	}
+	else if (curPos == lnLen)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The cursor is located at the end of the line; check only the type  */
+		/* of the final character.                                            */
+		/*--------------------------------------------------------------------*/
+		aChar = ln[curPos-1];
+		selType = neuiK_getCharType(aChar);
+		ckLeft = TRUE;
+		*selF = curPos-1;
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* The cursor is located somewhere in the middle of the line; check   */
+		/* the type of the characters on either side of the cursor position   */
+		/* to identify what type should be selected an which direction(s) the */
+		/* selection should expand.                                           */
+		/*--------------------------------------------------------------------*/
+		aChar = ln[curPos-1];
+		lType = neuiK_getCharType(aChar);
+		aChar = ln[curPos];
+		rType = neuiK_getCharType(aChar);
+
+		if (lType == E_CHARTYPE_ALPHA_NUMERIC || 
+			rType == E_CHARTYPE_ALPHA_NUMERIC)
+		{
+			/*----------------------------------------------------------------*/
+			/* One or both sides of the cursor is `ALPHA_NUMERIC`. Selection  */
+			/* of this type of item is prioritized.                           */
+			/*----------------------------------------------------------------*/
+			selType = E_CHARTYPE_ALPHA_NUMERIC;
+			if (lType == E_CHARTYPE_ALPHA_NUMERIC)
+			{
+				ckLeft = TRUE;
+			}
+			if (rType == E_CHARTYPE_ALPHA_NUMERIC)
+			{
+				ckRight = TRUE;
+			}
+		}
+		else if (lType == E_CHARTYPE_OTHER && rType == E_CHARTYPE_OTHER)
+		{
+			/*----------------------------------------------------------------*/
+			/* Both sides of the cursor are `OTHER` type characters. Expand   */
+			/* until `WHITESPACE` or `ALPHA_NUMERIC` are encountered.         */
+			/*----------------------------------------------------------------*/
+			selType = E_CHARTYPE_OTHER;
+			ckLeft = TRUE;
+			ckRight = TRUE;
+		}
+		else if (lType == E_CHARTYPE_WHITESPACE && 
+				 rType == E_CHARTYPE_WHITESPACE)
+		{
+			/*----------------------------------------------------------------*/
+			/* Both sides of the cursor are `WHITESPACE` type characters.     */
+			/* Expand until `OTHER` or `ALPHA_NUMERIC` are encountered.       */
+			/*----------------------------------------------------------------*/
+			selType = E_CHARTYPE_WHITESPACE;
+			ckLeft = TRUE;
+			ckRight = TRUE;
+		}
+		else
+		{
+			/*----------------------------------------------------------------*/
+			/* This is a junction between a `WHITESPACE` character and an     */
+			/* `OTHER` char.                                                  */
+			/*----------------------------------------------------------------*/
+			selType = E_CHARTYPE_OTHER_PLUS;
+			ckLeft = TRUE;
+			ckRight = TRUE;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Expand the selection to the left.                                      */
+	/*------------------------------------------------------------------------*/
+	*sel0 = curPos; /* this is used if it doesn't expand to the left */
+	if (ckLeft)
+	{
+		if (selType != E_CHARTYPE_OTHER_PLUS)
+		{
+			/*----------------------------------------------------------------*/
+			/* For cases other than `OTHER_PLUS`, we don't need to check for  */
+			/* multiple types, so the code can be reused.                     */
+			/*----------------------------------------------------------------*/
+			for (ckPos = curPos-1; ckPos > 0; ckPos--)
+			{
+				aChar = ln[ckPos];
+				aType = neuiK_getCharType(aChar);
+				if (aType != selType)
+				{
+					ckPos++;
+					break;
+				}
+			}
+			*sel0 = ckPos;
+		}
+		else
+		{
+			/*----------------------------------------------------------------*/
+			/* Selection is `OTHER_PLUS` check for chars of either `OTHER` or */
+			/* whitespace and include them in the selection.                  */
+			/*----------------------------------------------------------------*/
+			for (ckPos = curPos-1; ckPos > 0; ckPos--)
+			{
+				aChar = ln[ckPos];
+				aType = neuiK_getCharType(aChar);
+				if (aType != lType)
+				{
+					ckPos++;
+					break;
+				}
+			}
+			*sel0 = ckPos;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Expand the selection to the right.                                     */
+	/*------------------------------------------------------------------------*/
+	*selF = curPos; /* this is used if it doesn't expand to the right */
+	if (ckRight)
+	{
+		if (selType != E_CHARTYPE_OTHER_PLUS)
+		{
+			/*----------------------------------------------------------------*/
+			/* For cases other than `OTHER_PLUS`, we don't need to check for  */
+			/* multiple types, so the code can be reused.                     */
+			/*----------------------------------------------------------------*/
+			for (ckPos = curPos; ckPos < lnLen; ckPos++)
+			{
+				aChar = ln[ckPos];
+				aType = neuiK_getCharType(aChar);
+				if (aType != selType)
+				{
+					break;
+				}
+			}
+			*selF = ckPos;
+		}
+		else
+		{
+			/*----------------------------------------------------------------*/
+			/* Selection is `OTHER_PLUS` check for chars of either `OTHER` or */
+			/* whitespace and include them in the selection.                  */
+			/*----------------------------------------------------------------*/
+			for (ckPos = curPos; ckPos < lnLen; ckPos++)
+			{
+				aChar = ln[ckPos];
+				aType = neuiK_getCharType(aChar);
+				if (aType != rType)
+				{
+					break;
+				}
+			}
+			*selF = ckPos;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* There were no issues; return 0.                                        */
+	/*------------------------------------------------------------------------*/
+	return 0;
 }
 
 
@@ -238,6 +598,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	int                    yRel         = 0;
 	int                    yPos         = 0;
 	int                    shift_held   = FALSE;
+	int                    sel0         = 0; /* This stores the starting     */
+	                                         /* point of the selection group */
+	int                    selF         = 0; /* This stores the final point  */
+	                                         /* of the selection group       */
 	size_t                 lineLen      = 0;
 	size_t                 nLines       = 0;
 	size_t                 clickLine    = 0;
@@ -468,14 +832,31 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/*----------------------------------------------------------------*/
 			if (lineLen > 0)
 			{
-				if (neuik_TextBlock_GetLineLength(te->textBlk,
-					te->textBlk->nLines, &lineLen))
+				if (neuik_TextBlock_GetLine(te->textBlk, clickLine, &lineBytes))
 				{
-					/* ERR: problem reported from textBlock */
-					eNum = 6;
+					eNum = 11;
 					goto out;
 				}
-				#pragma message("[TODO] `neuik_Element_CaptureEvent__TextEdit` DoubleClick")
+
+				if (neuik_getTextSelectionAtPos(
+					lineBytes, te->cursorPos, &sel0, &selF))
+				{
+					/* ERR: problem reported from neuik_getTextSelectionAtPos */
+					eNum = 14;
+					goto out;
+				}
+
+				te->highlightIsSet     = TRUE;
+				te->highlightStartLine = te->cursorLine;
+				te->highlightStartPos  = sel0;
+				te->highlightEndLine   = te->cursorLine;
+				te->highlightEndPos    = selF;
+
+				rSize = eBase->eSt.rSize;
+				rLoc  = eBase->eSt.rLoc;
+				neuik_Element_RequestRedraw(te, rLoc, rSize);
+				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
+				goto out;
 			}
 		}
 		else if (te->panCursor == 0 && 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2552,7 +2552,7 @@ int neuik_Element_RequestRedraw(
 	int               (*funcImp) (NEUIK_Element, RenderLoc, RenderSize);
 	int                  eNum       = 0; /* which error to report (if any) */
 	static char          funcName[] = "neuik_Element_RequestRedraw";
-	static char        * errMsgs[] = {"" // [0] no error
+	static char        * errMsgs[] = {"", // [0] no error
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
 		"Failure in `neuik_MaskMap_UnmaskRect()`",                       // [2]
 	};
