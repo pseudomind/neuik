@@ -846,6 +846,20 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			te->highlightEndPos    = lineLen;
 			te->cursorPos          = lineLen;
 
+			if (te->cursorLine < te->textBlk->nLines)
+			{
+				/*------------------------------------------------------------*/
+				/* For lines before the final line, a full line selection     */
+				/* should place the cursor and the end of highlight section   */ 
+				/* at the start of the following line.                        */
+				/*------------------------------------------------------------*/
+				te->cursorLine++;
+				te->cursorPos        = 0;
+				te->highlightEndLine = te->cursorLine;
+				te->highlightEndPos  = 0;
+			}
+
+
 			rSize = eBase->eSt.rSize;
 			rLoc  = eBase->eSt.rLoc;
 			neuik_Element_RequestRedraw(te, rLoc, rSize);
