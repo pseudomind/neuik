@@ -49,5 +49,8 @@ enum neuik_VJustify
 #ifndef TRUE
 	#define TRUE 1
 #endif
+#ifndef UNDEFINED
+	#define UNDEFINED -1
+#endif
 
 #endif /* NEUIK_DEFS_H */

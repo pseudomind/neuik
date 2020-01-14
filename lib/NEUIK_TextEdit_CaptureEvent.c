@@ -31,6 +31,7 @@ typedef enum {
 	E_CHARTYPE_OTHER,         // any character not captured in the two 
 	                          // aforementioned groups.
 	E_CHARTYPE_OTHER_PLUS,    // Identifies `OTHER` chars and `WHITESPACE` chars
+	E_CHARTYPE_UNDEFINED,     // Indicates a failure to initialize a value
 } neuik_E_CharType;
 
 static char          * errMsgs[]  = {"", // [ 0] no error
@@ -368,10 +369,10 @@ int neuik_getTextSelectionAtPos(
 	int              lnLen = 0;
 	int              ckPos = 0;
 	char             aChar;
-	neuik_E_CharType aType; /* char type of the current active character */
-	neuik_E_CharType lType; /* char type of the rightmost character */
-	neuik_E_CharType rType; /* char type of the leftmost character */
-	neuik_E_CharType selType;
+	neuik_E_CharType aType   = E_CHARTYPE_UNDEFINED; /* char type of the current active character */
+	neuik_E_CharType lType   = E_CHARTYPE_UNDEFINED; /* char type of the rightmost character */
+	neuik_E_CharType rType   = E_CHARTYPE_UNDEFINED; /* char type of the leftmost character */
+	neuik_E_CharType selType = E_CHARTYPE_UNDEFINED; /* char type of the selection */
 
 	if (ln == NULL)
 	{
@@ -805,6 +806,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 
 			te->cursorPos = lineLen;
+			te->vertMovePos = te->cursorPos;
 			rSize = eBase->eSt.rSize;
 			rLoc  = eBase->eSt.rLoc;
 			neuik_Element_RequestRedraw(te, rLoc, rSize);
@@ -845,6 +847,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			te->highlightEndLine   = te->cursorLine;
 			te->highlightEndPos    = lineLen;
 			te->cursorPos          = lineLen;
+			te->vertMovePos        = te->cursorPos;
 
 			if (te->cursorLine < te->textBlk->nLines)
 			{
@@ -897,6 +900,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightEndLine   = te->cursorLine;
 				te->highlightEndPos    = selF;
 				te->cursorPos          = selF;
+				te->vertMovePos = te->cursorPos;
 
 				rSize = eBase->eSt.rSize;
 				rLoc  = eBase->eSt.rLoc;
@@ -936,7 +940,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 						eBase->eSt.rLoc.x + rect.x + textW)
 					{
 						/* cursor will be before this char */
-						te->cursorPos = ctr - 1;
+						te->cursorPos   = ctr - 1;
+						te->vertMovePos = te->cursorPos;
 						charW = textW - lastW;
 						if (mouseButEv->x + te->panCursor <= 
 							eBase->eSt.rLoc.x + rect.x + textW - charW/3)
@@ -1140,7 +1145,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					eNum = 6;
 					goto out;
 				}
-				te->cursorPos = lineLen;
+				te->cursorPos       = lineLen;
+				te->highlightEndPos = te->cursorPos;
+				te->vertMovePos     = te->cursorPos;
 
 				/*------------------------------------------------------------*/
 				/* Update the highlight selections .                          */
@@ -1179,7 +1186,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				mouseMotEv->x <= eBase->eSt.rLoc.x + rect.x)
 			{
 				/* move the cursor position all the way to the start */
-				te->cursorPos = 0;
+				te->cursorPos   = 0;
+				te->vertMovePos = te->cursorPos;
 			}
 			else if (mouseMotEv->x >= 
 				eBase->eSt.rLoc.x + rect.x + rect.w)
@@ -1192,7 +1200,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					eNum = 6;
 					goto out;
 				}
-				te->cursorPos = lineLen;
+				te->cursorPos   = lineLen;
+				te->vertMovePos = te->cursorPos;
 			}
 			else
 			{
@@ -1227,7 +1236,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 							eBase->eSt.rLoc.x + rect.x + textW)
 						{
 							/* cursor will be before this char */
-							te->cursorPos = ctr - 1;
+							te->cursorPos   = ctr - 1;
 							charW = textW - lastW;
 							if (mouseMotEv->x + te->panCursor <= 
 								eBase->eSt.rLoc.x + rect.x + textW - charW/3)
@@ -1240,6 +1249,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 								/* cursor will be after char */
 								te->cursorPos = ctr;
 							}
+							te->vertMovePos = te->cursorPos;
 
 							/*--------------------------------------------*/
 							/* Update the cursor Panning (if necessary)   */
@@ -1267,7 +1277,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					/* There is no text on this line, move the cursor to the  */
 					/* zero position.                                         */
 					/*--------------------------------------------------------*/
-					te->cursorPos = 0;
+					te->cursorPos   = 0;
+					te->vertMovePos = te->cursorPos;
 				}
 			}
 
@@ -1458,6 +1469,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	switch (keyEv->keysym.sym)
 	{
 		case SDLK_LEFT:
+
+			te->vertMovePos = UNDEFINED;
 			if (!(keyMod & KMOD_SHIFT))
 			{
 				/* SHIFT key is not being held down */
@@ -1535,6 +1548,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 			break;
 
 		case SDLK_RIGHT:
+
+			te->vertMovePos = UNDEFINED;
 			if (!(keyMod & KMOD_SHIFT))
 			{
 				/* SHIFT key is not being held down */
@@ -1758,7 +1773,22 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 					eNum = 6;
 					goto out;
 				}
-				if (te->cursorPos < lineLen - 1)
+				if (lineLen == 0 && (te->textBlk->nLines > te->cursorLine))
+				{
+					/*--------------------------------------------------------*/
+					/* The cursor is in the final position of a line that is  */
+					/* not the final line. A delete here will combine the     */
+					/* current line to the following line.                    */
+					/*--------------------------------------------------------*/
+					if (neuik_TextBlock_MergeLines(te->textBlk, te->cursorLine))
+					{
+						/* ERR: problem reported from textBlock */
+						eNum = 9;
+						goto out;
+					}
+					doRedraw = 1;
+				}
+				else if (te->cursorPos < lineLen - 1)
 				{
 					/*--------------------------------------------------------*/
 					/* Prevent the deletion of the final terminating NULL     */
@@ -1812,38 +1842,78 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
 		case SDLK_UP:
 			/* Move the cursor to the start of the line of text */
-			if (te->cursorPos > 0)
+			if (te->cursorLine > 0)
 			{
+				/*------------------------------------------------------------*/
+				/* The cursor is on a lower line. Move the cursor upwards     */
+				/* preferentially keeping the initial x position.             */
+				/*------------------------------------------------------------*/
 				if (!(keyMod & KMOD_SHIFT))
 				{
 					/* SHIFT key is not being held down */
-					te->highlightIsSet = 0;
-					te->clickOrigin    = -1;
-					if (te->cursorLine > 0)
+
+					te->highlightIsSet = FALSE;
+					te->clickOrigin    = UNDEFINED;
+					te->cursorLine--;
+
+					if (te->vertMovePos == UNDEFINED)
 					{
-						te->cursorLine--;
-						doRedraw = 1;
+						/*----------------------------------------------------*/
+						/* Initial x position for vertical movement not set.  */
+						/* Set it now...                                      */
+						/*----------------------------------------------------*/
+						te->vertMovePos = te->cursorPos;
 					}
+
+					if (neuik_TextBlock_GetLineLength(te->textBlk,
+						te->cursorLine, &lineLen))
+					{
+						/* ERR: problem reported from textBlock */
+						eNum = 6;
+						goto out;
+					}
+
+					te->cursorPos = lineLen;
+					if (lineLen > te->vertMovePos)
+					{
+						te->cursorPos = te->vertMovePos;
+					}
+					doRedraw = TRUE;
 				}
 				else
 				{
 					/* SHIFT key IS being held down */
 					if (!te->highlightIsSet)
 					{
-						te->highlightIsSet     = 1;
+						te->highlightIsSet     = TRUE;
 						te->highlightBeginLine = te->cursorLine;
 						te->highlightBeginPos  = te->cursorPos;
 					}
 
-					if (te->cursorLine > 0)
+					te->cursorLine--;
+					if (te->vertMovePos == UNDEFINED)
 					{
-						te->cursorLine--;
+						/*----------------------------------------------------*/
+						/* Initial x position for vertical movement not set.  */
+						/* Set it now...                                      */
+						/*----------------------------------------------------*/
+						te->vertMovePos = te->cursorPos;
 					}
-					else
+
+					if (neuik_TextBlock_GetLineLength(te->textBlk,
+						te->cursorLine, &lineLen))
 					{
-						te->cursorPos = 0;
+						/* ERR: problem reported from textBlock */
+						eNum = 6;
+						goto out;
 					}
-					doRedraw = 1;
+
+					te->cursorPos = lineLen;
+					if (lineLen > te->vertMovePos)
+					{
+						te->cursorPos = te->vertMovePos;
+					}
+					doRedraw = TRUE;
 
 					if (te->cursorLine < te->highlightBeginLine ||
 							(te->cursorLine == te->highlightBeginLine &&
@@ -1864,50 +1934,105 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightEndPos    = te->cursorPos;
 					}
 				}
+				neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
 			}
-			// neuik_TextEdit_UpdateCursorX(te);
-			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* The cursor is already in the top line. Simply move the     */
+				/* cursor over to the start of the first line of text.        */
+				/*------------------------------------------------------------*/
+				te->vertMovePos = 0;
+				if (te->cursorPos > 0)
+				{
+					if (!(keyMod & KMOD_SHIFT))
+					{
+						/* SHIFT key is not being held down */
+						te->highlightIsSet = 0;
+						te->clickOrigin    = UNDEFINED;
+						te->cursorPos      = 0;
+					}
+					else
+					{
+						/* SHIFT key IS being held down */
+						if (!te->highlightIsSet)
+						{
+							te->highlightIsSet     = TRUE;
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
+						}
+						te->cursorPos = 0;
+
+						if (te->cursorLine < te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos < te->highlightBeginPos))
+						{
+							/* highlight is expanding to the left */
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos;
+						}
+						else
+						{
+							/* highlight is contracting to the left */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos;
+						}
+					}
+					doRedraw = TRUE;
+					neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
+				}
+			}
 			break;
 
 		case SDLK_DOWN:
 			/* Move the cursor to the end of the line of text */
-			if (te->cursorPos < te->textLen)
+			if (neuik_TextBlock_GetLineCount(te->textBlk, &lineLen))
 			{
+				eNum = 7;
+				goto out;
+			}
+
+			if (te->cursorLine < lineLen-1)
+			{
+				/*--------------------------------------------------------*/
+				/* Prevent the cursor from moving to a line that is in    */
+				/* excess of the number of lines.                         */
+				/*--------------------------------------------------------*/
 				if (!(keyMod & KMOD_SHIFT))
 				{
 					/* SHIFT key is not being held down */
-					te->highlightIsSet = 0;
-					te->clickOrigin    = -1;
+					te->highlightIsSet = FALSE;
+					te->clickOrigin    = UNDEFINED;
 
-					/*--------------------------------------------------------*/
-					/* Prevent the cursor from moving to a line that is in    */
-					/* excess of the number of lines.                         */
-					/*--------------------------------------------------------*/
-					if (neuik_TextBlock_GetLineCount(te->textBlk, &lineLen))
+					te->cursorLine++;
+
+					if (te->vertMovePos == UNDEFINED)
 					{
-						eNum = 7;
+						/*----------------------------------------------------*/
+						/* Initial x position for vertical movement not set.  */
+						/* Set it now...                                      */
+						/*----------------------------------------------------*/
+						te->vertMovePos = te->cursorPos;
+					}
+
+					if (neuik_TextBlock_GetLineLength(te->textBlk,
+						te->cursorLine, &lineLen))
+					{
+						/* ERR: problem reported from textBlock */
+						eNum = 6;
 						goto out;
 					}
-					if (te->cursorLine < lineLen)
-					{
-						te->cursorLine++;
-						doRedraw = 1;
 
-						/*----------------------------------------------------*/
-						/* Prevent the cursor from moving to a position in    */
-						/* excess of the line length.                         */
-						/*----------------------------------------------------*/
-						if (neuik_TextBlock_GetLineLength(te->textBlk,
-							te->cursorLine, &lineLen))
-						{
-							eNum = 6;
-							goto out;
-						}
-						if (te->cursorPos > lineLen)
-						{
-							te->cursorPos = lineLen - 1;
-						}
+					te->cursorPos = lineLen;
+					if (lineLen > te->vertMovePos)
+					{
+						te->cursorPos = te->vertMovePos;
 					}
+					doRedraw = TRUE;
 				}
 				else
 				{
@@ -1918,34 +2043,29 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightBeginPos  = te->cursorPos;
 					}
 
-					/*--------------------------------------------------------*/
-					/* Prevent the cursor from moving to a line that is in    */
-					/* excess of the number of lines.                         */
-					/*--------------------------------------------------------*/
-					if (neuik_TextBlock_GetLineCount(te->textBlk, &lineLen))
+					te->cursorLine++;
+
+					if (te->vertMovePos == UNDEFINED)
 					{
-						eNum = 7;
+						/*----------------------------------------------------*/
+						/* Initial x position for vertical movement not set.  */
+						/* Set it now...                                      */
+						/*----------------------------------------------------*/
+						te->vertMovePos = te->cursorPos;
+					}
+
+					if (neuik_TextBlock_GetLineLength(te->textBlk,
+						te->cursorLine, &lineLen))
+					{
+						/* ERR: problem reported from textBlock */
+						eNum = 6;
 						goto out;
 					}
-					if (te->cursorLine < lineLen)
-					{
-						te->cursorLine++;
-						doRedraw = 1;
 
-						/*----------------------------------------------------*/
-						/* Prevent the cursor from moving to a position in    */
-						/* excess of the line length.                         */
-						/*----------------------------------------------------*/
-						if (neuik_TextBlock_GetLineLength(te->textBlk,
-							te->cursorLine, &lineLen))
-						{
-							eNum = 6;
-							goto out;
-						}
-						if (te->cursorPos > lineLen)
-						{
-							te->cursorPos = lineLen - 1;
-						}
+					te->cursorPos = lineLen;
+					if (lineLen > te->vertMovePos)
+					{
+						te->cursorPos = te->vertMovePos;
 					}
 
 					if (te->cursorLine > te->highlightBeginLine ||
@@ -1965,11 +2085,69 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						te->highlightEndLine   = te->highlightBeginLine;
 						te->highlightEndPos    = te->highlightBeginPos;
 					}
-
+					doRedraw = TRUE;
 				}
 			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* The cursor is already in the bottom line. Simply move the  */
+				/* cursor over to the end of the final line of text.          */
+				/*------------------------------------------------------------*/
+				if (neuik_TextBlock_GetLineLength(te->textBlk,
+					te->cursorLine, &lineLen))
+				{
+					/* ERR: problem reported from textBlock */
+					eNum = 6;
+					goto out;
+				}
+				te->vertMovePos = lineLen;
+
+				if (te->cursorPos < lineLen)
+				{
+
+					if (!(keyMod & KMOD_SHIFT))
+					{
+						/* SHIFT key is not being held down */
+						te->highlightIsSet = 0;
+						te->clickOrigin    = UNDEFINED;
+						te->cursorPos      = lineLen;
+					}
+					else
+					{
+						/* SHIFT key IS being held down */
+						if (!te->highlightIsSet)
+						{
+							te->highlightIsSet     = TRUE;
+							te->highlightBeginLine = te->cursorLine;
+							te->highlightBeginPos  = te->cursorPos;
+						}
+						te->cursorPos = lineLen;
+
+						if (te->cursorLine < te->highlightBeginLine ||
+								(te->cursorLine == te->highlightBeginLine &&
+								 te->cursorPos < te->highlightBeginPos))
+						{
+							/* highlight is expanding to the left */
+							te->highlightStartLine = te->cursorLine;
+							te->highlightStartPos  = te->cursorPos;
+							te->highlightEndLine   = te->highlightBeginLine;
+							te->highlightEndPos    = te->highlightBeginPos;
+						}
+						else
+						{
+							/* highlight is contracting to the left */
+							te->highlightStartLine = te->highlightBeginLine;
+							te->highlightStartPos  = te->highlightBeginPos;
+							te->highlightEndLine   = te->cursorLine;
+							te->highlightEndPos    = te->cursorPos;
+						}
+					}
+					neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_BACK);
+				}
+				doRedraw = TRUE;
+			}
 			neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_MOVE_FORWARD);
-			// neuik_TextEdit_UpdateCursorX(te);
 			break;
 
 		case SDLK_RETURN:

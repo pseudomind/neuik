@@ -230,6 +230,7 @@ int neuik_Object_New__TextEdit(
 	/*------------------------------------------------------------------------*/
 	te->cursorLine         = 0;
 	te->cursorPos          = 0;
+	te->vertMovePos        = UNDEFINED;
 	te->cursorX            = 0;
 	te->selected           = 0;
 	te->wasSelected        = 0;
@@ -243,7 +244,7 @@ int neuik_Object_New__TextEdit(
 	te->panX               = 0;
 	te->panCursor          = 0;
 	te->isActive           = 0;
-	te->clickOrigin        = -1;
+	te->clickOrigin        = UNDEFINED;
 	te->clickHeld          = 0;
 	te->needsRedraw        = 1;
     te->timeLastClick      = 0;
@@ -1663,6 +1664,7 @@ void neuik_Element_Defocus__TextEdit(
 		return;
 	}
 	neuik_Element_RequestRedraw(te, rLoc, rSize);
+	te->vertMovePos        = UNDEFINED;
 	te->highlightIsSet     = 0;
 	te->highlightBeginLine = 0;
 	te->highlightBeginPos  = 0;

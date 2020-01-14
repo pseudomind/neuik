@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -38,6 +38,7 @@ typedef struct {
 		size_t                 textAllocSize; /* current mem alloc for text */
 		size_t                 cursorLine;    /* line on which the cursor is */
 		size_t                 cursorPos;     /* position of cursor within line */
+		long long              vertMovePos;   /* desired position of vertical movement (-1=unset) */
 		int                    cursorX;       /* px pos of cursor (not considering pan) */
 		int                    selected;
 		int                    wasSelected;
