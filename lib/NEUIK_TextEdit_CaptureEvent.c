@@ -2194,6 +2194,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 			goto out;
 
 		case SDLK_HOME:
+
+			te->vertMovePos = UNDEFINED;
 			if (!(keyMod & KMOD_SHIFT))
 			{
 				/* SHIFT key is not being held down */
@@ -2252,6 +2254,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
 		case SDLK_END:
 
+			te->vertMovePos = UNDEFINED;
 			if (neuik_TextBlock_GetLineLength(te->textBlk,
 				te->cursorLine, &lineLen))
 			{
