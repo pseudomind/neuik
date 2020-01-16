@@ -148,7 +148,6 @@ out:
 int neuik_Object_New__TextEdit(
 	void ** tePtr)
 {
-	int                sLen       = 1;
 	int                eNum       = 0; /* which error to report (if any) */
 	NEUIK_Element    * sClassPtr  = NULL;
 	NEUIK_TextEdit   * te         = NULL;
@@ -213,18 +212,6 @@ int neuik_Object_New__TextEdit(
 		goto out;
 	}
 
-	/* allocate for a minimum of 50 char (larger if it starts with more) */
-	sLen = 50;
-	te->text = (char*)malloc(sLen*sizeof(char));
-	if (te->text == NULL) {
-		eNum = 1;
-		goto out;
-	}
-	/* Allocation successful */
-	te->text[0] = '\0';
-	te->textLen = 0;
-	te->textAllocSize = sLen;
-
 	/*------------------------------------------------------------------------*/
 	/* All allocations successful                                             */
 	/*------------------------------------------------------------------------*/
@@ -232,8 +219,8 @@ int neuik_Object_New__TextEdit(
 	te->cursorPos          = 0;
 	te->vertMovePos        = UNDEFINED;
 	te->cursorX            = 0;
-	te->selected           = 0;
-	te->wasSelected        = 0;
+	te->selected           = FALSE;
+	te->wasSelected        = FALSE;
 	te->highlightIsSet     = 0;
 	te->highlightBeginPos  = 0;
 	te->highlightBeginLine = 0;
@@ -245,8 +232,8 @@ int neuik_Object_New__TextEdit(
 	te->panCursor          = 0;
 	te->isActive           = 0;
 	te->clickOrigin        = UNDEFINED;
-	te->clickHeld          = 0;
-	te->needsRedraw        = 1;
+	te->clickHeld          = FALSE;
+	te->needsRedraw        = TRUE;
     te->timeLastClick      = 0;
     te->timeClickMinus2    = 0;
 	te->cfg                = NULL; 
@@ -289,7 +276,7 @@ out:
 		/* free any dynamically allocated memory */
 		if (te != NULL)
 		{
-			if (te->text != NULL) free(te->text);
+			#pragma message("TODO: Free TextBlock (on error)")
 			free(te);
 		}
 		te = NULL;
@@ -329,15 +316,12 @@ int NEUIK_MakeTextEdit(
 	NEUIK_TextEdit ** tePtr, /* [out] The newly created NEUIK_TextEdit. */
 	const char      * text)  /* [in]  Initial TextEdit text. */
 {
-	size_t           sLen       = 1;
 	int              eNum       = 0; /* which error to report (if any) */
 	NEUIK_TextEdit * te         = NULL;
 	static char      funcName[] = "NEUIK_MakeTextEdit";
 	static char    * errMsgs[]  = {"",                       // [0] no error
 		"Failure in function `neuik_Object_New__TextEdit`.", // [1]
-		"Failure to allocate memory.",                       // [2]
-		"Failure to reallocate memory.",                     // [3]
-		"Failure in function `neuik_TextBlock_SetText`.",    // [4]
+		"Failure in function `neuik_TextBlock_SetText`.",    // [2]
 	};
 
 	if (neuik_Object_New__TextEdit((void**)tePtr))
@@ -347,67 +331,13 @@ int NEUIK_MakeTextEdit(
 	}
 	te = *tePtr;
 
-	if (text == NULL)
-	{
-		/* textEntry will contain no text */
-		if (te->text != NULL) te->text[0] = '\0';
-		goto out;
-	}
-	else if (text[0] == '\0')
-	{
-		/* textEntry will contain no text */
-		if (te->text != NULL) te->text[0] = '\0';
-		goto out;
-	}
-	else
-	{
-		te->textLen  = strlen(text);	
-		sLen        += te->textLen;	
-	}
-
-	/*------------------------------------------------------------------------*/
-	/* Make sure the allocated text buffer is large enough to store the text  */
-	/*------------------------------------------------------------------------*/
-	if (te->text == NULL)
-	{
-		/*--------------------------------------------------------------------*/
-		/* Memory not currently allocated; allocate now.                      */
-		/*--------------------------------------------------------------------*/
-		te->text = (char*)malloc((sLen+10)*sizeof(char));
-		if (te->text == NULL)
-		{
-			eNum = 2;
-			goto out;
-		}
-		te->textAllocSize = sLen+10;
-	}
-	else if (sLen > te->textAllocSize)
-	{
-		/*--------------------------------------------------------------------*/
-		/* Reallocate memory so that the string can be fit.                   */
-		/*--------------------------------------------------------------------*/
-		te->text = (char*)realloc(te->text, (sLen+10)*sizeof(char));
-		if (te->text == NULL)
-		{
-			eNum = 3;
-			goto out;
-		}
-		te->textAllocSize = sLen+10;
-	}
-
 	if (text != NULL)
 	{
 		if (neuik_TextBlock_SetText(te->textBlk, text))
 		{
-			eNum = 4;
+			eNum = 2;
 			goto out;
 		}
-
-		strcpy(te->text, text);
-	}
-	else
-	{
-		te->text[0] = '\0';
 	}
 out:
 	if (eNum > 0)
@@ -463,11 +393,10 @@ int neuik_Object_Free__TextEdit(
 		eNum = 2;
 		goto out;
 	}
-	if (te->text     != NULL) free(te->text);
+	#pragma message("TODO: Free TextBlock Data")
 	if (te->textSurf != NULL) SDL_FreeSurface(te->textSurf);
 	if (te->textTex  != NULL) SDL_DestroyTexture(te->textTex);
 	if (te->textRend != NULL) SDL_DestroyRenderer(te->textRend);
-	#pragma message("TODO: Free TextBlock Data")
 
 	if(neuik_Object_Free(te->cfg))
 	{
@@ -577,17 +506,14 @@ int NEUIK_TextEdit_SetText(
 		NEUIK_TextEdit * te,
 		const char     * text)
 {
-	size_t        sLen    = 1;
-	size_t        textLen = 0;
 	int           eNum    = 0; /* which error to report (if any) */
 	RenderSize    rSize;
 	RenderLoc     rLoc;
 	static char   funcName[] = "NEUIK_TextEdit_SetText";
 	static char * errMsgs[] = {"",                          // [0] no error
 		"Argument `te` is not of TextEdit class.",          // [1]
-		"Failure to allocate memory.",                      // [2]
-		"Failure in function `neuik_TextBlock_SetText`.",   // [3]
-		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [4]
+		"Failure in function `neuik_TextBlock_SetText`.",   // [2]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
 	};
 
 	if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
@@ -596,46 +522,20 @@ int NEUIK_TextEdit_SetText(
 		goto out;
 	}
 
-	/*------------------------------------------------------------------------*/
-	/* Conditionally free button text before setting the new contents         */
-	/*------------------------------------------------------------------------*/
-	if (te->text != NULL) {
-		free(te->text);
-	}
 
 	/*------------------------------------------------------------------------*/
 	/* Set the new TextEdit text contents                                    */
 	/*------------------------------------------------------------------------*/
-	if (text == NULL){
-		/* button will contain no text */
-		te->text = NULL;
-	}
-	else if (text[0] == '\0')
-	{
-		/* button will contain no text */
-		te->text = NULL;
-	}
-	else
+	if (text != NULL)
 	{
 		if (neuik_TextBlock_SetText(te->textBlk, text))
 		{
-			eNum = 3;
-			goto out;
-		}
-
-		textLen = strlen(text);
-		sLen += textLen;
-		te->text = (char*)malloc(sLen*sizeof(char));
-		if (te->text == NULL) {
 			eNum = 2;
 			goto out;
 		}
-		/* Allocation successful */
-		strcpy(te->text, text);
 	}
 
-	te->textLen            = textLen;
-	te->highlightIsSet     = 0;
+	te->highlightIsSet     = FALSE;
 	te->highlightBeginPos  = 0;
 	te->highlightBeginLine = 0;
 	te->highlightStartPos  = 0;
@@ -643,11 +543,11 @@ int NEUIK_TextEdit_SetText(
 	te->highlightEndPos    = 0;
 	te->highlightEndLine   = 0;
 	te->clickOrigin        = 0;
-	te->clickHeld          = 0;
+	te->clickHeld          = FALSE;
 
 	if (neuik_Element_GetSizeAndLocation(te, &rSize, &rLoc))
 	{
-		eNum = 4;
+		eNum = 3;
 		goto out;
 	}
 	neuik_Element_RequestRedraw(te, rLoc, rSize);
@@ -676,7 +576,6 @@ const char * NEUIK_TextEdit_GetText(
 {
 	int            eNum = 0; /* which error to report (if any) */
 	const char   * rvPtr      = NULL;
-	static char    emptyStr[] = "";
 	static char    funcName[] = "NEUIK_TextEdit_GetText";
 	static char  * errMsgs[]  = {"",               // [0] no error
 		"Argument `te` is not of TextEdit class.", // [1]
@@ -689,16 +588,9 @@ const char * NEUIK_TextEdit_GetText(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Set the new TextEdit text contents                                    */
+	/* Get text contents from TextBlock.                                      */
 	/*------------------------------------------------------------------------*/
-	if (te->text == NULL){
-		/* button will contain no text */
-		rvPtr = emptyStr;
-	}
-	else
-	{
-		rvPtr = te->text;
-	}
+	#pragma message("TODO: Get text contents from TextBlock.")
 out:
 	if (eNum > 0)
 	{

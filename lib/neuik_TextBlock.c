@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -136,6 +136,7 @@ int neuik_NewTextBlock(
 	tblk->blockSize         = DefaultBlockSize;
 	tblk->chapterSize       = DefaultChapterSize;
 	tblk->nDataBlocks       = 1;
+	tblk->length            = 0;
 	tblk->nLines            = 1;
 	tblk->nChapters         = 1;
 	tblk->chaptersAllocated = DefaultChaptersAllocated;
@@ -269,6 +270,7 @@ int neuik_TextBlock_SetText(
 	neuik_TextBlock * tblk,
 	const char      * text)
 {
+	size_t                dataLen;
 	size_t                textLen;
 	neuik_TextBlockData * aBlock;
 	size_t                charCtr;
@@ -299,7 +301,8 @@ int neuik_TextBlock_SetText(
 	/*------------------------------------------------------------------------*/
 	/* Determine the number of data blocks required to load this text.        */
 	/*------------------------------------------------------------------------*/
-	textLen = strlen(text);
+	dataLen = strlen(text);
+	textLen = dataLen;
 
 	/*------------------------------------------------------------------------*/
 	/* Count the number of (`\r`,`\n`, and `\r\n`) combos in the text and add */
@@ -431,6 +434,7 @@ int neuik_TextBlock_SetText(
 	{
 		#pragma message("[TODO]: `neuik_TextBlock_SetText` Copy Data into multiple blocks.")
 	}
+	tblk->length = dataLen;
 out:
 	if (eNum > 0)
 	{
@@ -440,13 +444,46 @@ out:
 	return eNum;
 }
 
+int neuik_TextBlock_GetLength(
+	neuik_TextBlock * tblk,
+	size_t          * length)
+{
+	int           eNum       = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_TextBlock_GetLength";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `tblk` is NULL.",          // [1]
+		"Output argument `length` is NULL.", // [2]
+	};
+
+	if (tblk == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (length == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	*length = tblk->length;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	return eNum;
+}
+
+
 int neuik_TextBlock_GetLineCount(
 	neuik_TextBlock * tblk,
 	size_t          * nLines)
 {
 	int           eNum       = 0; /* which error to report (if any) */
 	static char   funcName[] = "neuik_TextBlock_GetLineCount";
-	static char * errMsgs[]  = {"",          // [0] no error
+	static char * errMsgs[]  = {"", // [0] no error
 		"Argument `tblk` is NULL.",          // [1]
 		"Output argument `nLines` is NULL.", // [2]
 	};

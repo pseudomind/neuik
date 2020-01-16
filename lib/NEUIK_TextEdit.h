@@ -32,10 +32,7 @@ typedef struct {
 		void                 * textSurf;      /*  `SDL_Surface *` */ 
 		void                 * textTex;       /*  `SDL_Texture *` */ 
 		void                 * textRend;      /*  `SDL_Renderer*` */ 
-		char                 * text;
 		neuik_TextBlock      * textBlk;
-		size_t                 textLen;       /* current length of the text */
-		size_t                 textAllocSize; /* current mem alloc for text */
 		size_t                 cursorLine;    /* line on which the cursor is */
 		size_t                 cursorPos;     /* position of cursor within line */
 		long long              vertMovePos;   /* desired position of vertical movement (-1=unset) */
