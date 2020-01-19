@@ -587,7 +587,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	int                    evCaptured   = FALSE;
 	int                    textW        = 0;
 	int                    textH        = 0;
-	int                    textHFull    = 0;
+	float                  textHFull    = 0;
 	int                    charW        = 0;
 	int                    eNum         = 0; /* which error to report (if any) */
 	int                    lastW        = 0; /* position of previous char */
@@ -726,7 +726,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		/* Determine the line of text in which the click occurred             */
 		/*--------------------------------------------------------------------*/
 		TTF_SizeText(font, " ", &textW, &textH);
-		textHFull = (int)(1.1*textH);
+		textHFull = 1.1*(float)(textH);
 
 		yPos = 6; /* <-- this is the offset from the top where text begins */
 		if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
@@ -736,7 +736,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		}
 
 		yRel = mouseButEv->y - eBase->eSt.rLoc.y;
-		clickLine = (yRel - yPos)/textHFull;
+		clickLine = (size_t)((float)(yRel - yPos)/textHFull);
 
 		if (clickLine < nLines)
 		{
@@ -1070,7 +1070,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/* Determine the line of text in which the click occurred         */
 			/*----------------------------------------------------------------*/
 			TTF_SizeText(font, " ", &textW, &textH);
-			textHFull = (int)(1.1*textH);
+			textHFull = 1.1*(float)(textH);
 
 			yPos = 6; /* <-- this is the offset from the top where text begins */
 			if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
@@ -1080,7 +1080,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 
 			yRel = mouseMotEv->y - eBase->eSt.rLoc.y;
-			clickLine = (yRel - yPos)/textHFull;
+			clickLine = (size_t)((float)(yRel - yPos)/textHFull);
 
 			/*----------------------------------------------------------------*/
 			/* If this is the start of text selection highlighting, then save */

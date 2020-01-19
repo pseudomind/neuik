@@ -469,8 +469,17 @@ int neuik_Element_GetMinSize__TextEdit(
 		goto out;
 	}
 
-	font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-		aCfg->fontBold, aCfg->fontItalic);
+	/* Determine the full size of the rendered text content */
+	if (aCfg->fontMono)
+	{
+		font = NEUIK_FontSet_GetFont(aCfg->fontSetMS, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+	}
+	else
+	{
+		font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+	}
 	if (font == NULL) 
 	{
 		eNum = 4;

@@ -36,6 +36,7 @@ typedef struct {
 	size_t                 nLines;            /* total number of lines in the TextBlock */
 	size_t                 nChapters;         /* total number of chapters in the TextBlock */
 	size_t                 chaptersAllocated; /* size of allocated chapter array */
+	unsigned int           overProvisionPct;  /* percent of textBlockData required to be unused. */
 	neuik_TextBlockData *  firstBlock;
 	neuik_TextBlockData *  lastBlock;
 	neuik_TextBlockData ** chapters;      /*  */

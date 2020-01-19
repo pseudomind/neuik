@@ -25,7 +25,7 @@
 const unsigned int DefaultBlockSize         = 2048;
 const unsigned int DefaultChapterSize       = 10;
 const unsigned int DefaultChaptersAllocated = 20;
-const double       DefaultBlockFracitonFree = 0.05; /* 5% */
+const unsigned int DefaultOverProvisionPct  = 5; /* 5% */
 
 // typedef struct {
 // 	unsigned int   firstLineNo;    /* 0 = start of */
@@ -140,6 +140,7 @@ int neuik_NewTextBlock(
 	tblk->nLines            = 1;
 	tblk->nChapters         = 1;
 	tblk->chaptersAllocated = DefaultChaptersAllocated;
+	tblk->overProvisionPct  = DefaultOverProvisionPct;
 
 	/*------------------------------------------------------------------------*/
 	/* Update TextBlock size and if a non-default value was specified.        */
@@ -270,21 +271,25 @@ int neuik_TextBlock_SetText(
 	neuik_TextBlock * tblk,
 	const char      * text)
 {
-	size_t                dataLen;
-	size_t                textLen;
-	neuik_TextBlockData * aBlock;
-	size_t                charCtr;
+	int                   ctr              = 0;
+	int                   firstLineNo      = 0;
+	size_t                dataLen          = 0;
+	size_t                textLen          = 0;
+	size_t                charCtr          = 0;
 	size_t                writeCtr         = 0;
+	size_t                blockLines       = 0;
 	size_t                lineCtr          = 1;
 	size_t                nBlocksRequried  = 0;
-	unsigned int          maxInitBlockFill = (unsigned int)(
-		(1.0 - DefaultBlockFracitonFree) * (double)(DefaultBlockSize));
+	unsigned int          maxInitBlockFill = 0;
+	neuik_TextBlockData * aBlock;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_SetText";
-	static char         * errMsgs[]  = {"",                       // [0] no error
+	static char         * errMsgs[]  = {"", // [0] no error
 		"Output argument `tblk` is NULL.",                        // [1]
 		"Argument `text` is NULL.",                               // [2]
 		"Failure in function `neuik_TextBlock_AppendDataBlock`.", // [3]
+		"Invalid value set for `tblk->overProvisionPct`.",        // [4]
+		"A contained `TextBlockData` struct is NULL.",            // [5]
 	};
 
 	if (tblk == NULL)
@@ -295,6 +300,11 @@ int neuik_TextBlock_SetText(
 	if (text == NULL)
 	{
 		eNum = 2;
+		goto out;
+	}
+	if (tblk->overProvisionPct > 99)
+	{
+		eNum = 4;
 		goto out;
 	}
 
@@ -345,6 +355,14 @@ int neuik_TextBlock_SetText(
 	}
 	textLen += lineCtr;
 
+	/*------------------------------------------------------------------------*/
+	/* Calculate the size of a filled DataBlock (when overprovisioning is     */
+	/* considered).                                                           */
+	/*------------------------------------------------------------------------*/
+	maxInitBlockFill = 
+		(unsigned int)(((100.0 - (float)(tblk->overProvisionPct))/100.0) *
+		(float)(tblk->blockSize));
+
 	nBlocksRequried = textLen/maxInitBlockFill;
 	if (textLen % maxInitBlockFill > 0)
 	{
@@ -379,6 +397,9 @@ int neuik_TextBlock_SetText(
 	/*------------------------------------------------------------------------*/
 	if (nBlocksRequried == 1)
 	{
+		/*--------------------------------------------------------------------*/
+		/* The text data will fit within a single data block.                 */
+		/*--------------------------------------------------------------------*/
 		aBlock = tblk->firstBlock;
 
 		if (textLen > 1)
@@ -391,9 +412,9 @@ int neuik_TextBlock_SetText(
 			{
 				if (text[charCtr-1] == '\r' && text[charCtr-1] == '\n')
 				{
-					/*------------------------------------------------------------*/
-					/* This is a CR-LF line ending (m$-windows-style)             */
-					/*------------------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* This is a CR-LF line ending (m$-windows-style)         */
+					/*--------------------------------------------------------*/
 					charCtr++;
 					aBlock->data[writeCtr++] = '\r';
 					aBlock->data[writeCtr++] = '\n';
@@ -401,17 +422,17 @@ int neuik_TextBlock_SetText(
 				}
 				else if (text[charCtr-1] == '\r')
 				{
-					/*------------------------------------------------------------*/
-					/* This is a CR line ending (macos-style)                     */
-					/*------------------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* This is a CR line ending (macos-style)                 */
+					/*--------------------------------------------------------*/
 					aBlock->data[writeCtr++] = '\r';
 					aBlock->data[writeCtr++] = '\0';
 				}
 				else if (text[charCtr-1] == '\n')
 				{
-					/*------------------------------------------------------------*/
-					/* This is a LF line ending (linux-style)                     */
-					/*------------------------------------------------------------*/
+					/*--------------------------------------------------------*/
+					/* This is a LF line ending (linux-style)                 */
+					/*--------------------------------------------------------*/
 					aBlock->data[writeCtr++] = '\n';
 					aBlock->data[writeCtr++] = '\0';
 				}
@@ -432,7 +453,103 @@ int neuik_TextBlock_SetText(
 	}
 	else
 	{
-		#pragma message("[TODO]: `neuik_TextBlock_SetText` Copy Data into multiple blocks.")
+		/*--------------------------------------------------------------------*/
+		/* The text data will need to occupy multiple data blocks.            */
+		/*--------------------------------------------------------------------*/
+		blockLines = 0;
+		charCtr    = 1;
+		aBlock = tblk->firstBlock;
+		for (ctr = 0; ctr < nBlocksRequried; ctr++)
+		{
+			if (aBlock == NULL)
+			{
+				eNum = 5;
+				goto out;
+			}
+			if (charCtr >= textLen)
+			{
+				/*------------------------------------------------------------*/
+				/* There are no more characters which could be put into this  */
+				/* DataBlock.                                                 */
+				/*------------------------------------------------------------*/
+				break;
+			}
+			if (ctr > 0)
+			{
+				/*------------------------------------------------------------*/
+				/* Set the first line number for the data block.              */
+				/*------------------------------------------------------------*/
+				aBlock->firstLineNo = firstLineNo;
+
+			}
+
+			/*----------------------------------------------------------------*/
+			/* Copy over data one byte at a time taking special care to       */
+			/* include a `\0` character after each line ending sequence.      */
+			/*----------------------------------------------------------------*/
+			for (writeCtr = 0; writeCtr < maxInitBlockFill;)
+			{
+				if (charCtr >= textLen)
+				{
+					/*--------------------------------------------------------*/
+					/* This means that we have hit the end of the src data.   */
+					/*--------------------------------------------------------*/
+					break;
+				}
+				if (text[charCtr-1] == '\r' && text[charCtr-1] == '\n')
+				{
+					/*--------------------------------------------------------*/
+					/* This is a CR-LF line ending (m$-windows-style)         */
+					/*--------------------------------------------------------*/
+					blockLines++;
+					charCtr++;
+					aBlock->data[writeCtr++] = '\r';
+					aBlock->data[writeCtr++] = '\n';
+					aBlock->data[writeCtr++] = '\0';
+				}
+				else if (text[charCtr-1] == '\r')
+				{
+					/*--------------------------------------------------------*/
+					/* This is a CR line ending (macos-style)                 */
+					/*--------------------------------------------------------*/
+					blockLines++;
+					aBlock->data[writeCtr++] = '\r';
+					aBlock->data[writeCtr++] = '\0';
+				}
+				else if (text[charCtr-1] == '\n')
+				{
+					/*--------------------------------------------------------*/
+					/* This is a LF line ending (linux-style)                 */
+					/*--------------------------------------------------------*/
+					blockLines++;
+					aBlock->data[writeCtr++] = '\n';
+					aBlock->data[writeCtr++] = '\0';
+				}
+				else
+				{
+					aBlock->data[writeCtr++] = text[charCtr-1];
+				}
+				charCtr++;
+			}
+			/*----------------------------------------------------------------*/
+			/* This would be a final single trailing character                */
+			/*----------------------------------------------------------------*/
+			if (text[charCtr] == '\r' || text[charCtr] == '\n')
+			{
+				/*------------------------------------------------------------*/
+				/* This would be a final single character trailing newline    */
+				/*------------------------------------------------------------*/
+				blockLines++;
+			}
+			aBlock->data[writeCtr++] = text[charCtr];
+			aBlock->bytesInUse       = writeCtr - 1;
+			aBlock->nLines           = blockLines;
+			firstLineNo += blockLines;
+
+			aBlock = aBlock->nextBlock;
+		}
+
+		tblk->nLines = lineCtr;
 	}
 	tblk->length = dataLen;
 out:
