@@ -1230,6 +1230,15 @@ int neuik_Element_Render__TextEdit(
 	yPos = 6;
 	for (lineCtr = 0; lineCtr < nLines; lineCtr++)
 	{
+		if (yPos > rSize->h)
+		{
+			/*----------------------------------------------------------------*/
+			/* The next line of text exists at a position in excess of what   */
+			/* should be drawn to the window.                                 */
+			/*----------------------------------------------------------------*/
+			break;
+		}
+
 		if (neuik_TextBlock_GetLine(te->textBlk, lineCtr, &lineBytes))
 		{
 			eNum = 9;
