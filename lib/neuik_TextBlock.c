@@ -1841,8 +1841,9 @@ int neuik_TextBlock_MergeLines(
 	neuik_TextBlock * tblk,
 	size_t            lineNo)
 {
+	neuik_TextBlockData * startBlock;
+	neuik_TextBlockData * endBlock;
 	neuik_TextBlockData * aBlock;
-	neuik_TextBlockData * aBlock2;
 	size_t                lineLen;
 	size_t                position;
 	size_t                position2;
@@ -1883,7 +1884,7 @@ int neuik_TextBlock_MergeLines(
 		goto out;
 	}
 	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
-		tblk, lineNo, lineLen, &aBlock, &position))
+		tblk, lineNo, lineLen, &startBlock, &position))
 	{
 		eNum = 3;
 		goto out;
@@ -1893,18 +1894,19 @@ int neuik_TextBlock_MergeLines(
 	/* Determine the where the data of the subsequent line begins.            */
 	/*------------------------------------------------------------------------*/
 	if (neuik_TextBlock_GetPositionLineStart__noErrChecks(
-			tblk, lineNo+1, &aBlock2, &position2))
+			tblk, lineNo+1, &endBlock, &position2))
 	{
 		eNum = 4;
 		goto out;
 	}
 
-	if (aBlock == aBlock2)
+	if (startBlock == endBlock)
 	{
 		/*--------------------------------------------------------------------*/
 		/* The end of the first line and the start of the second line are     */
 		/* both within the same data block.                                   */
 		/*--------------------------------------------------------------------*/
+		aBlock = startBlock;
 		for (;position2 < aBlock->bytesInUse;)
 		{
 			aBlock->data[position] = aBlock->data[position2];
@@ -1918,6 +1920,20 @@ int neuik_TextBlock_MergeLines(
 	else
 	{
 		#pragma message("[TODO] `neuik_TextBlock_MergeLines` OutOfBlock Merge")
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Adjust subsequent blocks (after the initial block).                    */
+	/*------------------------------------------------------------------------*/
+	aBlock = startBlock;
+	aBlock = aBlock->nextBlock;
+	for (;;)
+	{
+		if (aBlock == NULL) break;
+
+		aBlock->firstLineNo--;
+
+		aBlock = aBlock->nextBlock;
 	}
 out:
 	if (eNum > 0)

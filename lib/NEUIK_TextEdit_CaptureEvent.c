@@ -1798,7 +1798,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 					}
 					doRedraw = 1;
 				}
-				else if (te->cursorPos < lineLen - 1)
+				else if (te->cursorPos < lineLen)
 				{
 					/*--------------------------------------------------------*/
 					/* Prevent the deletion of the final terminating NULL     */
