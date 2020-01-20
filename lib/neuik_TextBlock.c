@@ -1940,6 +1940,7 @@ int neuik_TextBlock_DeleteSection(
 {
 	neuik_TextBlockData * startBlock;
 	neuik_TextBlockData * endBlock;
+	neuik_TextBlockData * aBlock; /* the current active block */
 	size_t                checkCtr;
 	size_t                copyCtr;
 	size_t                copyOffset;
@@ -1949,6 +1950,7 @@ int neuik_TextBlock_DeleteSection(
 	size_t                startPosition;
 	size_t                endPosition;
 	char                  remChar;
+	int                   nLineMod   = 0; /* modifier for number of lines */
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_DeleteSection";
 	static char         * errMsgs[]  = {"",                            // [0] no error
@@ -2040,6 +2042,7 @@ int neuik_TextBlock_DeleteSection(
 				/*------------------------------------------------------------*/
 				// copyOffset++;
 				tblk->nLines--;
+				nLineMod--;
 				startBlock->nLines--;
 			}
 		}
@@ -2067,6 +2070,29 @@ int neuik_TextBlock_DeleteSection(
 		/*--------------------------------------------------------------------*/
 		#pragma message("[TODO]: `neuik_TextBlock_DeleteSection` Delete over multiple blocks.")
 	}
+
+	/*------------------------------------------------------------------------*/
+	/* Adjust the firstLineNo on all subsequent blocks if an end of line char */
+	/* (or more) was deleted.                                                 */
+	/*------------------------------------------------------------------------*/
+	if (nLineMod == 0) {
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Adjust subsequent blocks (after the initial block).                    */
+	/*------------------------------------------------------------------------*/
+	aBlock = startBlock;
+	aBlock = aBlock->nextBlock;
+	for (;;)
+	{
+		if (aBlock == NULL) break;
+
+		aBlock->firstLineNo += nLineMod;
+
+		aBlock = aBlock->nextBlock;
+	}
+
 out:
 	if (eNum > 0)
 	{
