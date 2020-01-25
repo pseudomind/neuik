@@ -228,6 +228,7 @@ int neuik_TextBlock_AppendDataBlock(
 		goto out;
 	}
 	lastBlock = lastBlock->nextBlock;
+	lastBlock->previousBlock = tblk->lastBlock;
 	tblk->lastBlock = lastBlock;
 
 	nChaptersOld = 1 + (tblk->nDataBlocks/tblk->chapterSize);
@@ -1841,9 +1842,9 @@ int neuik_TextBlock_MergeLines(
 	neuik_TextBlock * tblk,
 	size_t            lineNo)
 {
-	neuik_TextBlockData * startBlock;
-	neuik_TextBlockData * endBlock;
-	neuik_TextBlockData * aBlock;
+	neuik_TextBlockData * startBlock; /* block containing the first line */
+	neuik_TextBlockData * endBlock;   /* block containing the second line */
+	neuik_TextBlockData * aBlock;     /* current active block */
 	size_t                lineLen;
 	size_t                position;
 	size_t                position2;
@@ -1920,6 +1921,7 @@ int neuik_TextBlock_MergeLines(
 	else
 	{
 		#pragma message("[TODO] `neuik_TextBlock_MergeLines` OutOfBlock Merge")
+		printf("[UNHANDLED] `neuik_TextBlock_MergeLines` OutOfBlock Merge\n");
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -1960,12 +1962,14 @@ int neuik_TextBlock_DeleteSection(
 	size_t                checkCtr;
 	size_t                copyCtr;
 	size_t                copyOffset;
+	size_t                rmOffset;
 	size_t                endOfCopy;
 	size_t                startLineLen;
 	size_t                endLineLen;
 	size_t                startPosition;
 	size_t                endPosition;
 	char                  remChar;
+	int                   copyOffsetMod;  /* modifier for copy offset */
 	int                   nLineMod   = 0; /* modifier for number of lines */
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_DeleteSection";
@@ -2056,7 +2060,6 @@ int neuik_TextBlock_DeleteSection(
 				/*------------------------------------------------------------*/
 				/* Shift over the bytes by one more character                 */
 				/*------------------------------------------------------------*/
-				// copyOffset++;
 				tblk->nLines--;
 				nLineMod--;
 				startBlock->nLines--;
@@ -2084,7 +2087,177 @@ int neuik_TextBlock_DeleteSection(
 		/*--------------------------------------------------------------------*/
 		/* The section being deleted spans more than one block                */
 		/*--------------------------------------------------------------------*/
-		#pragma message("[TODO]: `neuik_TextBlock_DeleteSection` Delete over multiple blocks.")
+		//DEBUG XXX START
+		// {
+		// 	int                   dbgCtr    = 0;
+		// 	int                   dbgLnLen  = 0;
+		// 	size_t                dbgOffset = 0;
+		// 	size_t                dbgFinalBlockLn;
+		// 	char                  dbgFinalLn[2048];
+		// 	char                * dbgLineData = NULL;
+		// 	neuik_TextBlockData * dbgBlock;
+
+		// 	aBlock = startBlock;
+		// 	dbgFinalBlockLn = aBlock->firstLineNo + aBlock->nLines;
+
+		// 	if (neuik_TextBlock_GetLine(tblk, dbgFinalBlockLn, &dbgLineData))
+		// 	{
+		// 		printf("[UNHANDLED] `neuik_TextBlock_DeleteSection` dbgGetLine.\n");
+		// 		return 1;
+		// 	}
+
+		// 	if (neuik_TextBlock_GetPositionLineStart__noErrChecks(
+		// 		tblk, dbgFinalBlockLn, &dbgBlock, &dbgOffset))
+		// 	{
+		// 		printf("[UNHANDLED] `neuik_TextBlock_DeleteSection` GetPositionLineStart.\n");
+		// 		return 1;
+		// 	}
+
+		// 	printf("---------------------------------------------------------\n");
+		// 	printf("DBG: Final line `%lu` of startBlock: \n>>`%s`\n", 
+		// 		dbgFinalBlockLn, dbgLineData);
+		// 	if (dbgLineData != NULL) free(dbgLineData);
+
+		// 	printf("   ");
+		// 	dbgLnLen = aBlock->bytesInUse - dbgOffset;
+		// 	for (dbgCtr = 0; dbgCtr < dbgLnLen; dbgCtr++)
+		// 	{
+		// 		printf(" ");
+		// 	}
+		// 	printf("^~~~~~~\n");
+		// 	printf(" ... Block ends at the location shown on previous line.\n");
+		// 	printf(" ... The indicated char occurs within the next block...\n");
+		// 	printf("---------------------------------------------------------\n");
+		// }
+		//DEBUG XXX END
+
+
+		//DEBUG XXX START
+		// {
+		// 	int    dbgCtr        = 0;
+		// 	char   dbgByte       = 0;
+		// 	FILE * dbgFileEndSec = NULL;
+
+		// 	dbgFileEndSec = fopen("dbg_EndSec0.dat", "w");
+		// 	for (dbgCtr = 0; dbgCtr < endBlock->bytesAllocated; dbgCtr++)
+		// 	{
+		// 		dbgByte = endBlock->data[dbgCtr];
+		// 		fputc(dbgByte, dbgFileEndSec);
+		// 	}
+		// 	fflush(dbgFileEndSec);
+		// 	fclose(dbgFileEndSec);
+		// }
+		//DEBUG XXX END
+
+		/*====================================================================*/
+		/* Chop off the desired portion from the final block in the section.  */
+		/*====================================================================*/
+		/* Check for any captured lineBreaks/newline characters               */
+		/*--------------------------------------------------------------------*/
+		copyOffsetMod = 1;
+		for (checkCtr = 0; checkCtr <= endPosition; checkCtr++)
+		{
+			remChar = endBlock->data[checkCtr];
+			if (remChar == '\0')
+			{
+				/*------------------------------------------------------------*/
+				/* Shift over the bytes by one more character                 */
+				/*------------------------------------------------------------*/
+				copyOffsetMod = 0;
+				tblk->nLines--;
+				nLineMod--;
+				endBlock->nLines--;
+			}
+		}
+		copyOffset = copyOffsetMod + endPosition;
+		endOfCopy  = endBlock->bytesInUse - copyOffset;
+
+		/*--------------------------------------------------------------------*/
+		/* Simply shift over the bytes by one                                 */
+		/*--------------------------------------------------------------------*/
+		for (copyCtr = 0; copyCtr < endOfCopy; copyCtr++)
+		{
+			/*----------------------------------------------------------------*/
+			/* First store the value of the deleted character.                */
+			/*----------------------------------------------------------------*/
+			endBlock->data[copyCtr] = endBlock->data[copyCtr+copyOffset];
+		}
+		endBlock->bytesInUse -= copyOffset;
+		endBlock->data[endBlock->bytesInUse] = '\0';
+
+		//DEBUG XXX START
+		// printf("endBlock Bytes[0-3] : [`%c`,`%c`,`%c`,`%c`]\n",
+		// 	endBlock->data[0], 
+		// 	endBlock->data[1], 
+		// 	endBlock->data[2], 
+		// 	endBlock->data[3]);
+		//DEBUG XXX END
+
+		//DEBUG XXX START
+		// {
+		// 	int    dbgCtr        = 0;
+		// 	char   dbgByte       = 0;
+		// 	FILE * dbgFileEndSec = NULL;
+
+		// 	dbgFileEndSec = fopen("dbg_EndSecF.dat", "w");
+		// 	for (dbgCtr = 0; dbgCtr < endBlock->bytesAllocated; dbgCtr++)
+		// 	{
+		// 		dbgByte = endBlock->data[dbgCtr];
+		// 		fputc(dbgByte, dbgFileEndSec);
+		// 	}
+		// 	fflush(dbgFileEndSec);
+		// 	fclose(dbgFileEndSec);
+		// }
+		//DEBUG XXX END
+
+		/*--------------------------------------------------------------------*/
+		/* Adjust subsequent blocks (those following this block).             */
+		/*--------------------------------------------------------------------*/
+		aBlock = endBlock;
+		aBlock = aBlock->nextBlock;
+		for (;;)
+		{
+			if (aBlock == NULL) break;
+
+			aBlock->firstLineNo += nLineMod;
+
+			aBlock = aBlock->nextBlock;
+		}
+
+		/*====================================================================*/
+		/* Completely remove all fully encapsulated inner blocks until the    */
+		/* startBlock is reached.                                             */
+		/*====================================================================*/
+		aBlock = endBlock;
+		aBlock = aBlock->previousBlock;
+		for (;;)
+		{
+			if (aBlock == NULL) break;
+			if (aBlock == startBlock) break;
+
+			#pragma message("[TODO]: `neuik_TextBlock_DeleteSection` Delete over 3+ blocks.")
+			printf("[UNHANDLED] `neuik_TextBlock_DeleteSection` Delete over 3+ blocks.\n");
+		}
+
+		/*====================================================================*/
+		/* Chop off the desired portion from the first block in the section.  */
+		/*====================================================================*/
+		nLineMod = 0;
+		for (checkCtr = startPosition+1; checkCtr < startBlock->bytesInUse; checkCtr++)
+		{
+			remChar = startBlock->data[checkCtr];
+			if (remChar == '\0')
+			{
+				/*------------------------------------------------------------*/
+				/* Shift over the bytes by one more character                 */
+				/*------------------------------------------------------------*/
+				tblk->nLines--;
+				nLineMod--;
+				startBlock->nLines--;
+			}
+		}
+		startBlock->data[startPosition+1] = '\0';
+		startBlock->bytesInUse = startPosition;
 	}
 
 	/*------------------------------------------------------------------------*/
