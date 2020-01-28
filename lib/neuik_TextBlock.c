@@ -102,6 +102,145 @@ out:
 	return eNum;
 }
 
+/*******************************************************************************
+ *
+ *  Name:          neuik_FreeTextBlockData
+ *
+ *  Description:   Free memory associated with a neuik_TextBlockData object.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_FreeTextBlockData(
+	neuik_TextBlockData * dataPtr)
+{
+	int           eNum       = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_FreeTextBlockData";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Output argument `dataPtr` is NULL.", // [1]
+	};
+
+	if (dataPtr == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (dataPtr->data != NULL) free(dataPtr->data);
+	free(dataPtr);
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	return eNum;
+}
+
+/*----------------------------------------------------------------------------*/
+/* Dump data stored within the TextBlock. This procedure should not be used   */
+/* except for diagnosing issues with the TextBlock object.                    */
+/*----------------------------------------------------------------------------*/
+int	neuik_TextBlock_debugDump(
+	neuik_TextBlock * tblk)
+{
+	int                   blkCtr   = 0;
+	int                   dbgCtr   = 0;
+	char                  dbgByte  = 0;
+	char                * dbgLine  = NULL;
+	FILE                * dbgFileA = NULL;
+	FILE                * dbgFileB = NULL;
+	char                  blkFName[2048];
+	neuik_TextBlockData * aBlock;   /* the current active block. */
+
+	/*------------------------------------------------------------------------*/
+	/* Write out data from the TextBlock to files, specifically:              */
+	/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+	/*  - dbg_TextBlock.txt :                                                 */
+	/*        Contains exactly the data in the TextBlock.                     */
+	/*                                                                        */
+	/*  - dbg_TextBlock_lineNos.txt :                                         */
+	/*        Contains data in the TextBlock and also includes line numbers.  */
+	/*------------------------------------------------------------------------*/
+	dbgFileA = fopen("dbg_TextBlock.txt", "w");
+	dbgFileB = fopen("dbg_TextBlock_lineNos.txt", "w");
+	for (dbgCtr = 0; dbgCtr < tblk->nLines; dbgCtr++)
+	{
+		if (dbgLine != NULL) free(dbgLine);
+		if (neuik_TextBlock_GetLine(tblk, dbgCtr, &dbgLine))
+		{
+			printf("DBG_ERROR: Write out every line of the TextBlock to a file.\n");
+			return 1;
+		}
+
+		fprintf(dbgFileA, "%s\n", dbgLine);
+		fprintf(dbgFileB, "[%4d]%s\n", dbgCtr+1, dbgLine);
+		// if (dbgCtr == 24)
+		// {
+		// 	size_t position;
+		// 	neuik_TextBlockData * dbgBlock;   /* the current active block. */
+			
+		// 	neuik_TextBlock_GetPositionLineStart__noErrChecks(tblk, 
+		// 		dbgCtr, &dbgBlock, &position);
+		// 	aBlock = tblk->firstBlock;
+		// 	for (blkCtr = 0;; blkCtr++)
+		// 	{
+		// 		if (aBlock == NULL) break;
+		// 		if (aBlock == dbgBlock) break;
+
+		// 		aBlock = aBlock->nextBlock;
+		// 	}
+
+		// 	printf("ln 24 : `%s`\n", dbgLine);
+		// 	printf(" ... dbgBlock = `%d`\n", blkCtr);
+		// 	printf(" ... position = `%zu`\n", position);
+		// }
+	}
+
+	if (dbgLine != NULL) free(dbgLine);
+	fflush(dbgFileA);
+	fclose(dbgFileA);
+	fflush(dbgFileB);
+	fclose(dbgFileB);
+
+	/*------------------------------------------------------------------------*/
+	/* Write out contents of the TextBlockData blocks stored within the       */
+	/* TextBlock (exactly as they are stored in memory).                      */
+	/*------------------------------------------------------------------------*/
+	dbgFileA = fopen("dbg_TextBlockData_Params.txt", "w");
+
+	aBlock = tblk->firstBlock;
+	for (blkCtr = 0;; blkCtr++)
+	{
+		if (aBlock == NULL) break;
+
+		/*--------------------------------------------------------------------*/
+		/* Write out the data stored within this textBlockData object.        */
+		/*--------------------------------------------------------------------*/
+		sprintf(blkFName, "dbg_TextBlockData_s%04d.dat", blkCtr);
+		dbgFileB = fopen(blkFName, "w");
+		for (dbgCtr = 0; dbgCtr < aBlock->bytesAllocated; dbgCtr++)
+		{
+			dbgByte = aBlock->data[dbgCtr];
+			fputc(dbgByte, dbgFileB);
+		}
+		fflush(dbgFileB);
+		fclose(dbgFileB);
+
+		fprintf(dbgFileA, "[DataBlock %d]\n", blkCtr);
+		fprintf(dbgFileA, " ... firstLineNo    = `%zu`\n", aBlock->firstLineNo);
+		fprintf(dbgFileA, " ... nLines         = `%zu`\n", aBlock->nLines);
+		fprintf(dbgFileA, " ... bytesAllocated = `%zu`\n", aBlock->bytesAllocated);
+		fprintf(dbgFileA, " ... bytesInUse     = `%zu`\n", aBlock->bytesInUse);
+
+		aBlock = aBlock->nextBlock;
+	}
+
+	fflush(dbgFileA);
+	fclose(dbgFileA);
+	return 0;
+}
+
 int neuik_NewTextBlock(
 	neuik_TextBlock ** tblkPtr,
 	size_t             blockSize,
@@ -274,6 +413,7 @@ int neuik_TextBlock_SetText(
 {
 	int                   ctr              = 0;
 	int                   firstLineNo      = 0;
+	int                   writeBufferBytes = 0; /* Num. of bytes in w buffer. */
 	size_t                dataLen          = 0;
 	size_t                textLen          = 0;
 	size_t                charCtr          = 0;
@@ -282,6 +422,7 @@ int neuik_TextBlock_SetText(
 	size_t                lineCtr          = 1;
 	size_t                nBlocksRequried  = 0;
 	unsigned int          maxInitBlockFill = 0;
+	char                  writeBuffer[3];
 	neuik_TextBlockData * aBlock;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_SetText";
@@ -457,11 +598,11 @@ int neuik_TextBlock_SetText(
 		/*--------------------------------------------------------------------*/
 		/* The text data will need to occupy multiple data blocks.            */
 		/*--------------------------------------------------------------------*/
-		blockLines = 0;
 		charCtr    = 1;
 		aBlock = tblk->firstBlock;
 		for (ctr = 0; ctr < nBlocksRequried; ctr++)
 		{
+			blockLines = 0;
 			if (aBlock == NULL)
 			{
 				eNum = 5;
@@ -488,8 +629,27 @@ int neuik_TextBlock_SetText(
 			/* Copy over data one byte at a time taking special care to       */
 			/* include a `\0` character after each line ending sequence.      */
 			/*----------------------------------------------------------------*/
-			for (writeCtr = 0; writeCtr < maxInitBlockFill;)
+			for (writeCtr = 0; writeCtr <= maxInitBlockFill;)
 			{
+				if (writeBufferBytes > 0)
+				{
+					aBlock->data[writeCtr++] = writeBuffer[0];
+					if (writeBuffer[0] != '\0')
+					{
+						charCtr++;
+					}
+					if (writeBuffer[0] == '\0')
+					{
+						blockLines++;
+					}
+					if (writeBufferBytes > 1)
+					{
+						writeBuffer[0] = writeBuffer[1];
+						writeBuffer[1] = writeBuffer[2];
+					}
+					writeBufferBytes--;
+					continue;
+				}
 				if (charCtr >= textLen)
 				{
 					/*--------------------------------------------------------*/
@@ -497,54 +657,42 @@ int neuik_TextBlock_SetText(
 					/*--------------------------------------------------------*/
 					break;
 				}
-				if (text[charCtr-1] == '\r' && text[charCtr-1] == '\n')
+				if (text[charCtr-1] == '\r' && text[charCtr] == '\n')
 				{
 					/*--------------------------------------------------------*/
 					/* This is a CR-LF line ending (m$-windows-style)         */
 					/*--------------------------------------------------------*/
-					blockLines++;
-					charCtr++;
-					aBlock->data[writeCtr++] = '\r';
-					aBlock->data[writeCtr++] = '\n';
-					aBlock->data[writeCtr++] = '\0';
+					writeBufferBytes = 3;
+					writeBuffer[0] = '\r';
+					writeBuffer[1] = '\n';
+					writeBuffer[2] = '\0';
 				}
 				else if (text[charCtr-1] == '\r')
 				{
 					/*--------------------------------------------------------*/
 					/* This is a CR line ending (macos-style)                 */
 					/*--------------------------------------------------------*/
-					blockLines++;
-					aBlock->data[writeCtr++] = '\r';
-					aBlock->data[writeCtr++] = '\0';
+					writeBufferBytes = 2;
+					writeBuffer[0] = '\r';
+					writeBuffer[1] = '\0';
 				}
 				else if (text[charCtr-1] == '\n')
 				{
 					/*--------------------------------------------------------*/
 					/* This is a LF line ending (linux-style)                 */
 					/*--------------------------------------------------------*/
-					blockLines++;
-					aBlock->data[writeCtr++] = '\n';
-					aBlock->data[writeCtr++] = '\0';
+					writeBufferBytes = 2;
+					writeBuffer[0] = '\n';
+					writeBuffer[1] = '\0';
 				}
 				else
 				{
-					aBlock->data[writeCtr++] = text[charCtr-1];
+					writeBufferBytes = 1;
+					writeBuffer[0] = text[charCtr-1];
 				}
-				charCtr++;
 			}
-			/*----------------------------------------------------------------*/
-			/* This would be a final single trailing character                */
-			/*----------------------------------------------------------------*/
-			if (text[charCtr] == '\r' || text[charCtr] == '\n')
-			{
-				/*------------------------------------------------------------*/
-				/* This would be a final single character trailing newline    */
-				/*------------------------------------------------------------*/
-				blockLines++;
-			}
-			aBlock->data[writeCtr++] = text[charCtr];
-			aBlock->bytesInUse       = writeCtr - 1;
-			aBlock->nLines           = blockLines;
+			aBlock->bytesInUse = writeCtr;
+			aBlock->nLines     = blockLines;
 			firstLineNo += blockLines;
 
 			aBlock = aBlock->nextBlock;
@@ -553,6 +701,9 @@ int neuik_TextBlock_SetText(
 		tblk->nLines = lineCtr;
 	}
 	tblk->length = dataLen;
+
+	// neuik_TextBlock_debugDump(tblk);
+
 out:
 	if (eNum > 0)
 	{
@@ -670,12 +821,8 @@ int neuik_TextBlockData_GetLineStartOffset__noErrChecks (
 	/* Now iterate through the data and count instances of `\0` chars.        */
 	/* Once lineCtr == lineNo, we have found the start of the desired line.   */
 	/*------------------------------------------------------------------------*/
-	for (position = 1; position <= final; position++)
+	for (position = 0; position <= final; position++)
 	{
-		if (data->data[position-1] == '\0')
-		{
-			lineCtr++;
-		}
 		if (lineCtr == lineNo)
 		{
 			/*----------------------------------------------------------------*/
@@ -683,6 +830,10 @@ int neuik_TextBlockData_GetLineStartOffset__noErrChecks (
 			/*----------------------------------------------------------------*/
 			*offset = position;
 			break;
+		}
+		if (data->data[position] == '\0')
+		{
+			lineCtr++;
 		}
 	}
 out:
@@ -704,33 +855,13 @@ int neuik_TextBlock_GetLineStartBlockData__noErrChecks (
 	neuik_TextBlockData ** blockPtr)
 {
 	int                   hasErr   = 0;
-	unsigned int          chapter;
 	neuik_TextBlockData * block    = NULL;
-
-	/*------------------------------------------------------------------------*/
-	/* Iterate over the chapters till either the first line number of a       */
-	/* chapter exceeds the line that we are looking for or, we reach the      */
-	/* final chapter.                                                         */
-	/*------------------------------------------------------------------------*/
-	for (chapter = 0; chapter < tblk->nChapters; chapter++)
-	{
-		block = tblk->chapters[chapter];
-
-		if (block->firstLineNo > lineNo)
-		{
-			/*----------------------------------------------------------------*/
-			/* This means that we have gone too far... walk back to the       */
-			/* previous chapter.                                              */
-			/*----------------------------------------------------------------*/
-			block = tblk->chapters[chapter-1];
-			break;
-		}
-	}
 
 	/*------------------------------------------------------------------------*/
 	/* Now check one block at a time looking for the block that contains the  */
 	/* start of the desired line.                                             */
 	/*------------------------------------------------------------------------*/
+	block = tblk->firstBlock;
 	for (;;)
 	{
 		if (block == NULL)
@@ -739,8 +870,7 @@ int neuik_TextBlock_GetLineStartBlockData__noErrChecks (
 			goto out;
 		}
 
-		if (block->firstLineNo <= lineNo && 
-			lineNo <= block->firstLineNo + block->nLines)
+		if (lineNo <= block->firstLineNo + block->nLines)
 		{
 			/*----------------------------------------------------------------*/
 			/* This block contains the start of the desired line              */
@@ -889,6 +1019,7 @@ int neuik_TextBlock_GetPositionInLine__noErrChecks (
 			goto out;
 		}
 
+		byteCtr--;
 		position = 0;
 	}
 out:
@@ -1958,17 +2089,19 @@ int neuik_TextBlock_DeleteSection(
 {
 	neuik_TextBlockData * startBlock;
 	neuik_TextBlockData * endBlock;
-	neuik_TextBlockData * aBlock; /* the current active block */
+	neuik_TextBlockData * aBlock;   /* the current active block. */
+	neuik_TextBlockData * refBlock; /* A block being referenced. */
+	neuik_TextBlockData * rmBlock;  /* pointer used for blocks being removed. */
 	size_t                checkCtr;
 	size_t                copyCtr;
 	size_t                copyOffset;
-	size_t                rmOffset;
 	size_t                endOfCopy;
 	size_t                startLineLen;
 	size_t                endLineLen;
 	size_t                startPosition;
 	size_t                endPosition;
 	char                  remChar;
+	int                   zeroCtr;        /* counter for zeroing out trailing values */
 	int                   copyOffsetMod;  /* modifier for copy offset */
 	int                   nLineMod   = 0; /* modifier for number of lines */
 	int                   eNum       = 0; /* which error to report (if any) */
@@ -2024,12 +2157,6 @@ int neuik_TextBlock_DeleteSection(
 		eNum = 5;
 		goto out;
 	}
-
-	printf("Deleting Section from [%u:%u] to [%u:%u]\n",
-		(unsigned int)(startLineNo), 
-		(unsigned int)(startLinePos), 
-		(unsigned int)(endLineNo), 
-		(unsigned int)(endLinePos));
 
 	if (startBlock == endBlock)
 	{
@@ -2087,74 +2214,15 @@ int neuik_TextBlock_DeleteSection(
 		/*--------------------------------------------------------------------*/
 		/* The section being deleted spans more than one block                */
 		/*--------------------------------------------------------------------*/
-		//DEBUG XXX START
-		// {
-		// 	int                   dbgCtr    = 0;
-		// 	int                   dbgLnLen  = 0;
-		// 	size_t                dbgOffset = 0;
-		// 	size_t                dbgFinalBlockLn;
-		// 	char                  dbgFinalLn[2048];
-		// 	char                * dbgLineData = NULL;
-		// 	neuik_TextBlockData * dbgBlock;
-
-		// 	aBlock = startBlock;
-		// 	dbgFinalBlockLn = aBlock->firstLineNo + aBlock->nLines;
-
-		// 	if (neuik_TextBlock_GetLine(tblk, dbgFinalBlockLn, &dbgLineData))
-		// 	{
-		// 		printf("[UNHANDLED] `neuik_TextBlock_DeleteSection` dbgGetLine.\n");
-		// 		return 1;
-		// 	}
-
-		// 	if (neuik_TextBlock_GetPositionLineStart__noErrChecks(
-		// 		tblk, dbgFinalBlockLn, &dbgBlock, &dbgOffset))
-		// 	{
-		// 		printf("[UNHANDLED] `neuik_TextBlock_DeleteSection` GetPositionLineStart.\n");
-		// 		return 1;
-		// 	}
-
-		// 	printf("---------------------------------------------------------\n");
-		// 	printf("DBG: Final line `%lu` of startBlock: \n>>`%s`\n", 
-		// 		dbgFinalBlockLn, dbgLineData);
-		// 	if (dbgLineData != NULL) free(dbgLineData);
-
-		// 	printf("   ");
-		// 	dbgLnLen = aBlock->bytesInUse - dbgOffset;
-		// 	for (dbgCtr = 0; dbgCtr < dbgLnLen; dbgCtr++)
-		// 	{
-		// 		printf(" ");
-		// 	}
-		// 	printf("^~~~~~~\n");
-		// 	printf(" ... Block ends at the location shown on previous line.\n");
-		// 	printf(" ... The indicated char occurs within the next block...\n");
-		// 	printf("---------------------------------------------------------\n");
-		// }
-		//DEBUG XXX END
 
 
-		//DEBUG XXX START
-		// {
-		// 	int    dbgCtr        = 0;
-		// 	char   dbgByte       = 0;
-		// 	FILE * dbgFileEndSec = NULL;
-
-		// 	dbgFileEndSec = fopen("dbg_EndSec0.dat", "w");
-		// 	for (dbgCtr = 0; dbgCtr < endBlock->bytesAllocated; dbgCtr++)
-		// 	{
-		// 		dbgByte = endBlock->data[dbgCtr];
-		// 		fputc(dbgByte, dbgFileEndSec);
-		// 	}
-		// 	fflush(dbgFileEndSec);
-		// 	fclose(dbgFileEndSec);
-		// }
-		//DEBUG XXX END
 
 		/*====================================================================*/
 		/* Chop off the desired portion from the final block in the section.  */
 		/*====================================================================*/
 		/* Check for any captured lineBreaks/newline characters               */
 		/*--------------------------------------------------------------------*/
-		copyOffsetMod = 1;
+		nLineMod = 0;
 		for (checkCtr = 0; checkCtr <= endPosition; checkCtr++)
 		{
 			remChar = endBlock->data[checkCtr];
@@ -2163,52 +2231,34 @@ int neuik_TextBlock_DeleteSection(
 				/*------------------------------------------------------------*/
 				/* Shift over the bytes by one more character                 */
 				/*------------------------------------------------------------*/
-				copyOffsetMod = 0;
 				tblk->nLines--;
 				nLineMod--;
 				endBlock->nLines--;
 			}
 		}
-		copyOffset = copyOffsetMod + endPosition;
+		copyOffset = endPosition;
 		endOfCopy  = endBlock->bytesInUse - copyOffset;
 
 		/*--------------------------------------------------------------------*/
 		/* Simply shift over the bytes by one                                 */
 		/*--------------------------------------------------------------------*/
-		for (copyCtr = 0; copyCtr < endOfCopy; copyCtr++)
+		for (copyCtr = 0; copyCtr <= endOfCopy; copyCtr++)
 		{
 			/*----------------------------------------------------------------*/
 			/* First store the value of the deleted character.                */
 			/*----------------------------------------------------------------*/
 			endBlock->data[copyCtr] = endBlock->data[copyCtr+copyOffset];
 		}
+
 		endBlock->bytesInUse -= copyOffset;
-		endBlock->data[endBlock->bytesInUse] = '\0';
+		for (zeroCtr = 1 + endBlock->bytesInUse; 
+			 zeroCtr <= endBlock->bytesAllocated; 
+			 zeroCtr++)
+		{
+			endBlock->data[zeroCtr] = '\0';
+		}
 
-		//DEBUG XXX START
-		// printf("endBlock Bytes[0-3] : [`%c`,`%c`,`%c`,`%c`]\n",
-		// 	endBlock->data[0], 
-		// 	endBlock->data[1], 
-		// 	endBlock->data[2], 
-		// 	endBlock->data[3]);
-		//DEBUG XXX END
 
-		//DEBUG XXX START
-		// {
-		// 	int    dbgCtr        = 0;
-		// 	char   dbgByte       = 0;
-		// 	FILE * dbgFileEndSec = NULL;
-
-		// 	dbgFileEndSec = fopen("dbg_EndSecF.dat", "w");
-		// 	for (dbgCtr = 0; dbgCtr < endBlock->bytesAllocated; dbgCtr++)
-		// 	{
-		// 		dbgByte = endBlock->data[dbgCtr];
-		// 		fputc(dbgByte, dbgFileEndSec);
-		// 	}
-		// 	fflush(dbgFileEndSec);
-		// 	fclose(dbgFileEndSec);
-		// }
-		//DEBUG XXX END
 
 		/*--------------------------------------------------------------------*/
 		/* Adjust subsequent blocks (those following this block).             */
@@ -2228,6 +2278,7 @@ int neuik_TextBlock_DeleteSection(
 		/* Completely remove all fully encapsulated inner blocks until the    */
 		/* startBlock is reached.                                             */
 		/*====================================================================*/
+		nLineMod = 0;
 		aBlock = endBlock;
 		aBlock = aBlock->previousBlock;
 		for (;;)
@@ -2235,8 +2286,46 @@ int neuik_TextBlock_DeleteSection(
 			if (aBlock == NULL) break;
 			if (aBlock == startBlock) break;
 
-			#pragma message("[TODO]: `neuik_TextBlock_DeleteSection` Delete over 3+ blocks.")
-			printf("[UNHANDLED] `neuik_TextBlock_DeleteSection` Delete over 3+ blocks.\n");
+			/*----------------------------------------------------------------*/
+			/* Adjust the TextBlock total line count and increment the        */
+			/* TextBlockData start line modifier.                             */
+			/*----------------------------------------------------------------*/
+			tblk->nLines -= aBlock->nLines;
+			nLineMod     -= aBlock->nLines;
+
+			/*----------------------------------------------------------------*/
+			/* Remove the links to this block from the doubly linked list.    */
+			/*----------------------------------------------------------------*/
+			/* Update the nextBlock pointer for the preceding block.          */
+			/*----------------------------------------------------------------*/
+			refBlock = aBlock->previousBlock;
+			refBlock->nextBlock = aBlock->nextBlock;
+			/*----------------------------------------------------------------*/
+			/* Update the previousBlock pointer for the following block.      */
+			/*----------------------------------------------------------------*/
+			refBlock = aBlock->nextBlock;
+			refBlock->previousBlock = aBlock->previousBlock;
+
+			rmBlock = aBlock;
+			aBlock  = rmBlock->previousBlock;
+			neuik_FreeTextBlockData(rmBlock);
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Adjust subsequent blocks starting lines.                           */
+		/*--------------------------------------------------------------------*/
+		if (nLineMod != 0)
+		{
+
+			aBlock = endBlock;
+			for (;;)
+			{
+				if (aBlock == NULL) break;
+
+				aBlock->firstLineNo += nLineMod;
+
+				aBlock = aBlock->nextBlock;
+			}
 		}
 
 		/*====================================================================*/
@@ -2256,8 +2345,13 @@ int neuik_TextBlock_DeleteSection(
 				startBlock->nLines--;
 			}
 		}
-		startBlock->data[startPosition+1] = '\0';
 		startBlock->bytesInUse = startPosition;
+		for (zeroCtr = startBlock->bytesInUse; 
+			 zeroCtr <= startBlock->bytesAllocated; 
+			 zeroCtr++)
+		{
+			startBlock->data[zeroCtr] = '\0';
+		}
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -2424,6 +2518,4 @@ int
 	neuik_TextBlock_Refactor(
 		neuik_TextBlock * tblk,
 		int               refactorLevel); /**/
-
-
 
