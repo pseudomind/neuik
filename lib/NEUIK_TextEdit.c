@@ -1043,6 +1043,7 @@ int neuik_Element_Render__TextEdit(
 	size_t                 nLines;
 	char                 * lineBytes  = NULL;
 	RenderLoc              rl;
+	SDL_Rect               srcRect;
 	SDL_Rect               rect;
 	const NEUIK_Color    * fgClr      = NULL;
 	const NEUIK_Color    * bgClr      = NULL;
@@ -1430,8 +1431,31 @@ int neuik_Element_Render__TextEdit(
 			rect.w = textWFull + blankW;
 			rect.h = textHFull;
 
-			SDL_RenderCopy(rend, te->textTex, NULL, &rect);
-			ConditionallyDestroyTexture(&tTex);
+			if (yPos + textHFull <= rSize->h - 2)
+			{
+				/*------------------------------------------------------------*/
+				/* This line of text has enough vertical space to be fully    */
+				/* drawn.                                                     */
+				/*------------------------------------------------------------*/
+				SDL_RenderCopy(rend, te->textTex, NULL, &rect);
+				ConditionallyDestroyTexture(&tTex);
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* The next line of text only has enough space to be drawn    */
+				/* partially.                                                 */
+				/*------------------------------------------------------------*/
+				srcRect.x = 0;
+				srcRect.y = 0;
+				srcRect.w = textWFull + blankW;
+				srcRect.h = rSize->h - (2 + yPos);
+
+				rect.h = srcRect.h;
+
+				SDL_RenderCopy(rend, te->textTex, &srcRect, &rect);
+				ConditionallyDestroyTexture(&tTex);
+			}
 		}
 		else
 		{

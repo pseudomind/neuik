@@ -2102,7 +2102,6 @@ int neuik_TextBlock_DeleteSection(
 	size_t                endPosition;
 	char                  remChar;
 	int                   zeroCtr;        /* counter for zeroing out trailing values */
-	int                   copyOffsetMod;  /* modifier for copy offset */
 	int                   nLineMod   = 0; /* modifier for number of lines */
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_DeleteSection";
