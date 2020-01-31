@@ -218,6 +218,8 @@ int neuik_Object_New__TextEdit(
 	te->cursorLine         = 0;
 	te->cursorPos          = 0;
 	te->vertMovePos        = UNDEFINED;
+	te->vertPanLn          = 0;
+	te->vertPanPx          = 0;
 	te->cursorX            = 0;
 	te->selected           = FALSE;
 	te->wasSelected        = FALSE;
@@ -1229,7 +1231,7 @@ int neuik_Element_Render__TextEdit(
 	/* Place the lines one-at-a-time where they should go.                    */
 	/*------------------------------------------------------------------------*/
 	yPos = 6;
-	for (lineCtr = 0; lineCtr < nLines; lineCtr++)
+	for (lineCtr = te->vertPanLn; lineCtr < nLines; lineCtr++)
 	{
 		if (yPos > rSize->h)
 		{

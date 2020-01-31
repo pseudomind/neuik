@@ -25,6 +25,9 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
+#define VERT_PAN_PX 50
+
+
 typedef enum {
 	E_CHARTYPE_ALPHA_NUMERIC, // char in the following: [a-z], [A-Z], [0-9], '_'
 	E_CHARTYPE_WHITESPACE,    // char in the following: ' ', '\t', '\n', '\r'
@@ -569,6 +572,250 @@ int neuik_getTextSelectionAtPos(
 	return 0;
 }
 
+/*******************************************************************************
+ *
+ *  Name:          neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent
+ *
+ *  Description:   Check to see if this event is captured by a NEUIK_TextEdit.
+ *
+ *  Returns:       1 if event is captured; 0 otherwise
+ *
+ ******************************************************************************/
+neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
+	NEUIK_Element   elem,
+	SDL_Event     * ev)
+{
+	int                    evCaptured   = FALSE;
+	int                    textW        = 0;
+	int                    textH        = 0;
+	int                    blankH       = 0;
+	int                    blankW       = 0;
+	int                    panDiff      = 0;
+	int                    panLines     = 0;
+	unsigned long long     oldVertPanLn = 0;
+	unsigned int           oldVertPanPx = 0;
+	int                    eNum         = 0; /* which error to report (if any) */
+	size_t                 nLines       = 0;
+	TTF_Font             * font         = NULL;
+	SDL_MouseWheelEvent  * mWheelEv     = NULL;
+	NEUIK_TextEdit       * te           = NULL;
+	NEUIK_TextEditConfig * aCfg         = NULL; /* the active button config */
+	NEUIK_ElementBase    * eBase        = NULL;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
+
+	static char funcName[] = 
+		"neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent";
+	static char * fnErrMsgs[] = {"", // [ 0] no error
+		"Argument `elem` is not of TextEdit class.",                       // [1]
+		"Argument `elem` caused `neuik_Object_GetClassObject()` failure.", // [2]
+		"FontSet_GetFont returned NULL.",                                  // [3]
+		"Failure in `neuik_TextBlock_GetLineCount()`.",                    // [4]
+	};
+
+	if (!neuik_Object_IsClass(elem, neuik__Class_TextEdit))
+	{
+		eNum = 1;
+		goto out;
+	}
+	te = (NEUIK_TextEdit*)elem;
+	if (neuik_Object_GetClassObject(te, neuik__Class_Element, (void**)&eBase))
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Select the correct element configuration to use (pointer or internal). */
+	/*------------------------------------------------------------------------*/
+	aCfg = te->cfgPtr;
+	if (aCfg == NULL)  aCfg = te->cfg;  /* Fallback to internal config */
+
+	if (aCfg->fontMono)
+	{
+		font = NEUIK_FontSet_GetFont(aCfg->fontSetMS, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+	}
+	else
+	{
+		font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+			aCfg->fontBold, aCfg->fontItalic);
+	}
+	if (font == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	mWheelEv = (SDL_MouseWheelEvent*)(ev);
+
+
+	/*------------------------------------------------------------------------*/
+	/* Check to see if the mouse event was within the bounds of this element. */
+	/*------------------------------------------------------------------------*/
+	if (mWheelEv->y >= eBase->eSt.rLoc.y && 
+		mWheelEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+	{
+		if (mWheelEv->x >= eBase->eSt.rLoc.x && 
+			mWheelEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+		{
+			/*----------------------------------------------------------------*/
+			/* This mouse event originated within this element.               */
+			/*----------------------------------------------------------------*/
+			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
+		}
+	}
+
+
+	/*------------------------------------------------------------------------*/
+	/* Get the total number of lines in this text.                            */
+	/*------------------------------------------------------------------------*/
+	if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the height of a line of text at the specified font & size.   */
+	/*------------------------------------------------------------------------*/
+	TTF_SizeText(font, " ", &textW, &textH);
+	blankW = (int)(0.65*(float)(textW));
+	blankH = (int)(1.1*textH);
+
+	oldVertPanLn = te->vertPanLn;
+	oldVertPanPx = te->vertPanPx;
+
+
+	/*------------------------------------------------------------------------*/
+	/* Handle VERTICAL MouseWheel movement events.                            */
+	/*------------------------------------------------------------------------*/
+	if (mWheelEv->y > 0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Handle a MouseWheel `Scroll-Up` event.                             */
+		/*--------------------------------------------------------------------*/
+		panDiff = VERT_PAN_PX;
+		if (panDiff > blankH)
+		{
+			/*----------------------------------------------------------------*/
+			/* The number of pixels scrolled in a single event are larger     */
+			/* than the height of a single line of text.                      */
+			/*----------------------------------------------------------------*/
+			panLines = panDiff / blankH;
+			if (panLines > te->vertPanLn)
+			{
+				/*------------------------------------------------------------*/
+				/* The user has scrolled all the way to the top of the text.  */
+				/*------------------------------------------------------------*/
+				te->vertPanLn = 0;
+				te->vertPanPx = 0;
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* There is still some scrolling left to do before hitting    */
+				/* the top of the text.                                       */
+				/*------------------------------------------------------------*/
+				te->vertPanLn -= panLines;
+				panDiff = VERT_PAN_PX % blankH;
+				te->vertPanPx += panDiff;
+
+				if (te->vertPanPx > blankH)
+				{
+					if (te->vertPanLn > 0)
+					{
+						te->vertPanLn -= 1;
+						te->vertPanPx -= blankH;
+					}
+				}
+			}
+		}
+		else
+		{
+			/*----------------------------------------------------------------*/
+			/* The number of pixels scrolled in a single event are less than  */
+			/* the height of a single line of text.                           */
+			/*----------------------------------------------------------------*/
+			if (panDiff > te->vertPanPx)
+			{
+				/*------------------------------------------------------------*/
+				/* The number of total panned pixels will exceeded the number */
+				/* required to equal a panned line.                           */
+				/*------------------------------------------------------------*/
+				if (te->vertPanLn > 0)
+				{
+					te->vertPanLn--;
+					te->vertPanPx += blankH - panDiff;
+				}
+				else
+				{
+					/*--------------------------------------------------------*/
+					/* The user has scrolled all the way to the top of text.  */
+					/*--------------------------------------------------------*/
+					te->vertPanLn = 0;
+					te->vertPanPx = 0;
+				}
+			}
+			else
+			{
+				te->vertPanPx -= panDiff;
+			}
+		}
+		printf(" ... te->vertPanLn = %llu\n", te->vertPanLn);
+		printf(" ... te->vertPanPx = %u\n", te->vertPanPx);
+	}
+	else if (mWheelEv->y < 0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Handle a MouseWheel `Scroll-Down` event.                           */
+		/*--------------------------------------------------------------------*/
+		te->vertPanPx += VERT_PAN_PX;
+
+		if (te->vertPanPx > blankH)
+		{
+			te->vertPanLn += te->vertPanPx / blankH;
+			te->vertPanPx = te->vertPanPx % blankH;
+		}
+		if (te->vertPanLn + 1 > nLines)
+		{
+			te->vertPanLn = 0;
+			te->vertPanPx = 0;
+			if (nLines > 1)
+			{
+				te->vertPanLn = nLines - 1;
+			}
+		}
+		printf(" ... te->vertPanLn = %llu\n", te->vertPanLn);
+		printf(" ... te->vertPanPx = %u\n", te->vertPanPx);
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Handle HORIZONAL MouseWheel movement events.                           */
+	/*------------------------------------------------------------------------*/
+	if (mWheelEv->x > 0)
+	{
+		printf("Mouse wheel scroll right event!!!\n");
+	}
+	else if (mWheelEv->x < 0)
+	{
+		printf("Mouse wheel scroll left event!!!\n");
+	}
+
+	if (oldVertPanLn != te->vertPanLn || oldVertPanPx != te->vertPanPx)
+	{
+		rSize = eBase->eSt.rSize;
+		rLoc  = eBase->eSt.rLoc;
+		neuik_Element_RequestRedraw(te, rLoc, rSize);
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, fnErrMsgs[eNum]);
+	}
+
+	return evCaptured;
+}
 
 /*******************************************************************************
  *
@@ -2533,6 +2780,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit(
 	case SDL_MOUSEBUTTONUP:
 	case SDL_MOUSEMOTION:
 		evCaptured = neuik_Element_CaptureEvent__TextEdit_MouseEvent(elem, ev);
+		break;
+
+	case SDL_MOUSEWHEEL:
+		evCaptured = neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(elem, ev);
 		break;
 
 	case SDL_TEXTINPUT:

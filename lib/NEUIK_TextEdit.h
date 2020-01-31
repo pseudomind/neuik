@@ -36,6 +36,8 @@ typedef struct {
 		size_t                 cursorLine;    /* line on which the cursor is */
 		size_t                 cursorPos;     /* position of cursor within line */
 		long long              vertMovePos;   /* desired position of vertical movement (-1=unset) */
+		unsigned long long     vertPanLn;     /* Vertical number of lines the view is panned */
+		unsigned int           vertPanPx;     /* Additional pixels of vertical view panning */
 		int                    cursorX;       /* px pos of cursor (not considering pan) */
 		int                    selected;
 		int                    wasSelected;
