@@ -221,6 +221,8 @@ int neuik_Object_New__TextEdit(
 	te->vertPanLn          = 0;
 	te->vertPanPx          = 0;
 	te->cursorX            = 0;
+	te->lastMouseX         = UNDEFINED;
+	te->lastMouseY         = UNDEFINED;
 	te->selected           = FALSE;
 	te->wasSelected        = FALSE;
 	te->highlightIsSet     = 0;

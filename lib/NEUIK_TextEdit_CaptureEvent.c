@@ -589,7 +589,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 	int                    textW        = 0;
 	int                    textH        = 0;
 	int                    blankH       = 0;
-	int                    blankW       = 0;
 	int                    panDiff      = 0;
 	int                    panLines     = 0;
 	unsigned long long     oldVertPanLn = 0;
@@ -647,17 +646,15 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 		goto out;
 	}
 
-	mWheelEv = (SDL_MouseWheelEvent*)(ev);
-
-
 	/*------------------------------------------------------------------------*/
 	/* Check to see if the mouse event was within the bounds of this element. */
 	/*------------------------------------------------------------------------*/
-	if (mWheelEv->y >= eBase->eSt.rLoc.y && 
-		mWheelEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+	mWheelEv = (SDL_MouseWheelEvent*)(ev);
+	if (te->lastMouseY >= eBase->eSt.rLoc.y && 
+		te->lastMouseY <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
 	{
-		if (mWheelEv->x >= eBase->eSt.rLoc.x && 
-			mWheelEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+		if (te->lastMouseX >= eBase->eSt.rLoc.x && 
+			te->lastMouseX <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
 		{
 			/*----------------------------------------------------------------*/
 			/* This mouse event originated within this element.               */
@@ -665,7 +662,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 		}
 	}
-
+	if (evCaptured == FALSE)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The mouse wasn't positioned over the top of this element.          */
+		/*--------------------------------------------------------------------*/
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Get the total number of lines in this text.                            */
@@ -680,7 +683,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 	/* Calculate the height of a line of text at the specified font & size.   */
 	/*------------------------------------------------------------------------*/
 	TTF_SizeText(font, " ", &textW, &textH);
-	blankW = (int)(0.65*(float)(textW));
 	blankH = (int)(1.1*textH);
 
 	oldVertPanLn = te->vertPanLn;
@@ -786,6 +788,12 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 				te->vertPanLn = nLines - 1;
 			}
 		}
+
+		//  eBase->eSt.rSize.h;
+		// if (yPos + textHFull <= rSize->h - 2)
+		// {
+
+
 		printf(" ... te->vertPanLn = %llu\n", te->vertPanLn);
 		printf(" ... te->vertPanPx = %u\n", te->vertPanPx);
 	}
@@ -919,6 +927,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	{
 	case SDL_MOUSEBUTTONDOWN:
 		mouseButEv = (SDL_MouseButtonEvent*)(ev);
+		te->lastMouseX = mouseButEv->x;
+		te->lastMouseY = mouseButEv->y;
 
 		/*--------------------------------------------------------------------*/
 		/* Check to see if the click was within the bounds of this element    */
@@ -1275,6 +1285,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		te->clickHeld = 1;
 		break;
 	case SDL_MOUSEBUTTONUP:
+		mouseButEv = (SDL_MouseButtonEvent*)(ev);
+		te->lastMouseX = mouseButEv->x;
+		te->lastMouseY = mouseButEv->y;
+
 		if (eBase->eSt.hasFocus)
 		{
 			/*----------------------------------------------------------------*/
@@ -1285,13 +1299,16 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		}
 		break;
 	case SDL_MOUSEMOTION:
+		mouseMotEv = (SDL_MouseMotionEvent*)(ev);
+		te->lastMouseX = mouseMotEv->x;
+		te->lastMouseY = mouseMotEv->y;
+
 		if (eBase->eSt.hasFocus && te->clickHeld)
 		{
 			/*----------------------------------------------------------------*/
 			/* This text entry currently has the window focus and the mouse   */
 			/* button is still being held down. **Drag Select**               */
 			/*----------------------------------------------------------------*/
-			mouseMotEv = (SDL_MouseMotionEvent*)(ev);
 			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			if (mouseMotEv->y < eBase->eSt.rLoc.y)
 			{

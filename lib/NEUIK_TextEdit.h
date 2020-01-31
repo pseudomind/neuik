@@ -39,6 +39,8 @@ typedef struct {
 		unsigned long long     vertPanLn;     /* Vertical number of lines the view is panned */
 		unsigned int           vertPanPx;     /* Additional pixels of vertical view panning */
 		int                    cursorX;       /* px pos of cursor (not considering pan) */
+		int                    lastMouseX;    /* X-position of associated last mouse event */
+		int                    lastMouseY;    /* Y-position of associated last mouse event */
 		int                    selected;
 		int                    wasSelected;
 		int                    highlightIsSet;
