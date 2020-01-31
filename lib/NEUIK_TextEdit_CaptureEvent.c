@@ -789,10 +789,16 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 			}
 		}
 
-		//  eBase->eSt.rSize.h;
-		// if (yPos + textHFull <= rSize->h - 2)
-		// {
-
+		if ((nLines < eBase->eSt.rSize.h - 2) && 
+			(nLines*blankH < eBase->eSt.rSize.h - 2))
+		{
+			/*----------------------------------------------------------------*/
+			/* All contents of the text should be visible without any need    */
+			/* for panning. Prevent the view from panning.                    */
+			/*----------------------------------------------------------------*/
+			te->vertPanLn = 0;
+			te->vertPanPx = 0;
+		}
 
 		printf(" ... te->vertPanLn = %llu\n", te->vertPanLn);
 		printf(" ... te->vertPanPx = %u\n", te->vertPanPx);
