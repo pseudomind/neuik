@@ -991,7 +991,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		TTF_SizeText(font, " ", &textW, &textH);
 		textHFull = 1.1*(float)(textH);
 
-		yPos = 6; /* <-- this is the offset from the top where text begins */
+		yPos = 2; /* <-- this is the offset from the top where text begins */
 		if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
 		{
 			eNum = 7;

@@ -1232,7 +1232,7 @@ int neuik_Element_Render__TextEdit(
 	/* There appears to be one or more lines of valid text in the Block.      */
 	/* Place the lines one-at-a-time where they should go.                    */
 	/*------------------------------------------------------------------------*/
-	yPos = 6;
+	yPos = 2;
 	for (lineCtr = te->vertPanLn; lineCtr < nLines; lineCtr++)
 	{
 		if (yPos > rSize->h)
@@ -1405,7 +1405,7 @@ int neuik_Element_Render__TextEdit(
 				tempChar = lineBytes[te->cursorPos];
 				if (tempChar == '\0')
 				{
-					rect.x = textWFull - 1;
+					rect.x = textWFull - 2;
 				}
 				else
 				{
@@ -1420,6 +1420,9 @@ int neuik_Element_Render__TextEdit(
 				SDL_RenderDrawLine(te->textRend, 
 					rect.x, rect.y, 
 					rect.x, rect.y + rect.h); 
+				SDL_RenderDrawLine(te->textRend, 
+					rect.x+1, rect.y, 
+					rect.x+1, rect.y + rect.h); 
 			}
 
 			SDL_RenderPresent(te->textRend);
@@ -1509,6 +1512,9 @@ int neuik_Element_Render__TextEdit(
 				SDL_RenderDrawLine(rend, 
 					rect.x, rect.y, 
 					rect.x, rect.y + rect.h); 
+				SDL_RenderDrawLine(rend, 
+					rect.x+1, rect.y, 
+					rect.x+1, rect.y + rect.h); 
 			}
 		}
 
