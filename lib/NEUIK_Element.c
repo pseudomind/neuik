@@ -2116,6 +2116,11 @@ int NEUIK_Element_SetCallback(
 		if (eBase->eCT.OnTextChanged) free(eBase->eCT.OnTextChanged);
 		eBase->eCT.OnTextChanged = NEUIK_NewCallback(cbFunc, cbArg1, cbArg2);
 	}
+	else if (!strcmp("OnCursorMoved", cbName))
+	{
+		if (eBase->eCT.OnCursorMoved) free(eBase->eCT.OnCursorMoved);
+		eBase->eCT.OnCursorMoved = NEUIK_NewCallback(cbFunc, cbArg1, cbArg2);
+	}
 	else
 	{
 		eNum = 4;
@@ -2369,6 +2374,12 @@ int  neuik_Element_TriggerCallback(
 			}
 			break;
 
+		case NEUIK_CALLBACK_ON_CURSOR_MOVED:
+			if (eBase->eCT.OnCursorMoved)
+			{
+				NEUIK_Callback_Trigger(eBase->eCT.OnCursorMoved, eBase->eSt.window);
+			}
+			break;
 
 
 		default:

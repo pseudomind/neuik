@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,6 +32,7 @@ typedef enum {
 	NEUIK_CALLBACK_ON_TEXT_CHANGED,
 	NEUIK_CALLBACK_ON_EXPANDED,
 	NEUIK_CALLBACK_ON_COLLAPSED,
+	NEUIK_CALLBACK_ON_CURSOR_MOVED,
 } neuik_CallbackEnum;
 
 
@@ -71,6 +72,7 @@ typedef struct {
 	void  *  OnTextChanged; /* 12 */
 	void  *  OnExpanded;    /* 13 */
 	void  *  OnCollapsed;   /* 14 */
+	void  *  OnCursorMoved; /* 15 */
 } NEUIK_CallbackTable;
 
 

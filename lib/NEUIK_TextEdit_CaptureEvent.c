@@ -865,6 +865,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	size_t                 nLines       = 0;
 	size_t                 clickLine    = 0;
 	size_t                 oldCursorPos = 0;
+	size_t                 oldCursorLn  = 0;
 	size_t                 ctr          = 0;
 	char                   aChar        = 0;
 	char                 * lineBytes    = NULL; /* FREE at exit */
@@ -925,6 +926,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		shift_held = TRUE;
 	}
 
+	oldCursorPos = te->cursorPos;
+	oldCursorLn  = te->cursorLine;
 
 	/*------------------------------------------------------------------------*/
 	/* Redirect the MouseEvent to the appropriate handling section            */
@@ -954,6 +957,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 					te->selected    = TRUE;
 					te->wasSelected = TRUE;
 					neuik_Window_TakeFocus(eBase->eSt.window, (NEUIK_Element)te);
+					neuik_Element_TriggerCallback(te, NEUIK_CALLBACK_ON_CLICK);
 					SDL_StartTextInput();
 
 					rSize = eBase->eSt.rSize;
@@ -1207,7 +1211,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				goto out;
 			}
 
-			oldCursorPos = te->cursorPos;
 			for (ctr = 1;;ctr++)
 			{
 				aChar = lineBytes[ctr];
@@ -1281,6 +1284,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightEndLine   = te->cursorLine;
 				te->highlightEndPos    = te->cursorPos;
 			}
+		}
+
+		if (te->cursorLine != oldCursorLn || te->cursorPos != oldCursorPos)
+		{
+			neuik_Element_TriggerCallback(te, NEUIK_CALLBACK_ON_CURSOR_MOVED);
 		}
 
 		rSize = eBase->eSt.rSize;
@@ -1584,6 +1592,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightEndPos    = te->cursorPos;
 			}
 
+			if (te->cursorLine != oldCursorLn || te->cursorPos != oldCursorPos)
+			{
+				neuik_Element_TriggerCallback(te, NEUIK_CALLBACK_ON_CURSOR_MOVED);
+			}
+
 			rSize = eBase->eSt.rSize;
 			rLoc  = eBase->eSt.rLoc;
 			neuik_Element_RequestRedraw(te, rLoc, rSize);
@@ -1615,13 +1628,15 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                  evCaptured = 0;
-	int                  eNum       = 0; /* which error to report (if any) */
-	size_t               inpLen     = 0; /* length of text input */
-	char               * clipText   = NULL;
-	SDL_TextInputEvent * textInpEv  = NULL;
-	NEUIK_TextEdit     * te         = NULL;
-	NEUIK_ElementBase  * eBase      = NULL;
+	int                  evCaptured   = 0;
+	int                  eNum         = 0; /* which error to report (if any) */
+	size_t               inpLen       = 0; /* length of text input */
+	size_t               oldCursorPos = 0;
+	size_t               oldCursorLn  = 0;
+	char               * clipText     = NULL;
+	SDL_TextInputEvent * textInpEv    = NULL;
+	NEUIK_TextEdit     * te           = NULL;
+	NEUIK_ElementBase  * eBase        = NULL;
 	RenderSize           rSize;
 	RenderLoc            rLoc;
 	static char          funcName[] = 
@@ -1644,6 +1659,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 		goto out;
 	}
 	textInpEv = (SDL_TextInputEvent*)(ev);
+
+	oldCursorPos = te->cursorPos;
+	oldCursorLn  = te->cursorLine;
 
 	/*--------------------------------------------------------------------*/
 	/* First delete the currently highlighted section (if it exists)      */
@@ -1684,6 +1702,12 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_TextInputEvent(
 	te->cursorPos += inpLen;
 
 	neuik_TextEdit_UpdatePanCursor(te, CURSORPAN_TEXT_INSERTED);
+
+	if (te->cursorLine != oldCursorLn || te->cursorPos != oldCursorPos)
+	{
+		neuik_Element_TriggerCallback(te, NEUIK_CALLBACK_ON_CURSOR_MOVED);
+	}
+
 	rSize = eBase->eSt.rSize;
 	rLoc  = eBase->eSt.rLoc;
 	neuik_Element_RequestRedraw(te, rLoc, rSize);
@@ -1712,16 +1736,18 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	NEUIK_Element   elem,
 	SDL_Event     * ev)
 {
-	int                 evCaptured = 0;
-	int                 doRedraw   = 0;
-	int                 eNum       = 0; /* which error to report (if any) */
-	size_t              lineLen    = 0;
-	size_t              nLines     = 0;
-	char              * clipText   = NULL;
-	SDL_Keymod          keyMod;
+	int                 evCaptured   = 0;
+	int                 doRedraw     = 0;
+	int                 eNum         = 0; /* which error to report (if any) */
+	size_t              lineLen      = 0;
+	size_t              nLines       = 0;
+	size_t              oldCursorPos = 0;
+	size_t              oldCursorLn  = 0;
+	char              * clipText     = NULL;
+	NEUIK_TextEdit    * te           = NULL;
+	NEUIK_ElementBase * eBase        = NULL;
 	SDL_KeyboardEvent * keyEv;
-	NEUIK_TextEdit    * te         = NULL;
-	NEUIK_ElementBase * eBase      = NULL;
+	SDL_Keymod          keyMod;
 	RenderSize          rSize;
 	RenderLoc           rLoc;
 	static char         funcName[] = 
@@ -1743,6 +1769,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 	{
 		goto out;
 	}
+
+	oldCursorPos = te->cursorPos;
+	oldCursorLn  = te->cursorLine;
 
 	keyEv  = (SDL_KeyboardEvent*)(ev);
 	keyMod = SDL_GetModState();
@@ -2746,6 +2775,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
 	if (doRedraw)
 	{
+		if (te->cursorLine != oldCursorLn || te->cursorPos != oldCursorPos)
+		{
+			neuik_Element_TriggerCallback(te, NEUIK_CALLBACK_ON_CURSOR_MOVED);
+		}
+		
 		rSize = eBase->eSt.rSize;
 		rLoc  = eBase->eSt.rLoc;
 		neuik_Element_RequestRedraw(te, rLoc, rSize);
