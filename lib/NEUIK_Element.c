@@ -2232,6 +2232,11 @@ int NEUIK_Element_SetBindingCallback(
 		if (eBase->eCT.OnTextChanged) free(eBase->eCT.OnTextChanged);
 		eBase->eCT.OnTextChanged = NEUIK_NewBindingCallback(bindID);
 	}
+	else if (!strcmp("OnCursorMoved", cbName))
+	{
+		if (eBase->eCT.OnCursorMoved) free(eBase->eCT.OnCursorMoved);
+		eBase->eCT.OnCursorMoved = NEUIK_NewBindingCallback(bindID);
+	}
 	else
 	{
 		eNum = 4;
