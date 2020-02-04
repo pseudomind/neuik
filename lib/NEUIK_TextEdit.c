@@ -614,6 +614,83 @@ out:
 	return rvPtr;
 }
 
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_TextEdit_GetHighlightInfo
+ *
+ *  Description:   Get the number of lines and characters within the highlighted
+ *                 selection.
+ *
+ *  Returns:       NULL if there is a problem; otherwise a valid string
+ *
+ ******************************************************************************/
+int NEUIK_TextEdit_GetHighlightInfo(
+	NEUIK_TextEdit * te,
+	size_t         * nLines,
+	size_t         * nChars)
+{
+	int           eNum    = 0; /* which error to report (if any) */
+	static char   funcName[] = "NEUIK_TextEdit_GetHighlightInfo";
+	static char * errMsgs[] = {"", // [0] no error
+		"Argument `te` is not of TextEdit class.", // [1]
+		"Output Argument `nLines` is NULL.",       // [2]
+		"Output Argument `nChars` is NULL.",       // [3]
+	};
+
+	if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (nLines == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (nChars == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	*nLines = 0;
+	*nChars = 0;
+
+	if (!te->highlightIsSet)
+	{
+		/*--------------------------------------------------------------------*/
+		/* There is no highlight; return zeros.                               */
+		/*--------------------------------------------------------------------*/
+		goto out;
+	}
+	
+	if (te->highlightStartLine == te->highlightEndLine)
+	{
+		/*--------------------------------------------------------------------*/
+		/* All highlighted characters exist within the same line.             */
+		/*--------------------------------------------------------------------*/
+		*nChars = te->highlightEndPos - te->highlightStartPos;
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* The highlighted characters span more than one line.                */
+		/*--------------------------------------------------------------------*/
+		*nLines = 1 + te->highlightEndLine - te->highlightStartLine;
+		#pragma message("TODO: Get `nChar` count from TextBlock.")
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
 void neuik_TextEdit_Configure_capture_segv(
 	int sig_num)
 {

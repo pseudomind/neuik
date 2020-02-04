@@ -76,6 +76,12 @@ const char *
 	NEUIK_TextEdit_GetText(
 			NEUIK_TextEdit * te);
 
+int
+	NEUIK_TextEdit_GetHighlightInfo(
+			NEUIK_TextEdit * te,
+			size_t         * nLines,
+			size_t         * nChars);
+
 int 
 	NEUIK_TextEdit_SetText(
 			NEUIK_TextEdit * te,
