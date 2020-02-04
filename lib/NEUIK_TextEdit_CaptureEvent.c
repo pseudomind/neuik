@@ -1125,10 +1125,16 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				te->highlightEndPos  = 0;
 			}
 
-
 			rSize = eBase->eSt.rSize;
 			rLoc  = eBase->eSt.rLoc;
 			neuik_Element_RequestRedraw(te, rLoc, rSize);
+
+			if (te->cursorLine != oldCursorLn || te->cursorPos != oldCursorPos)
+			{
+				neuik_Element_TriggerCallback(te, 
+					NEUIK_CALLBACK_ON_CURSOR_MOVED);
+			}
+
 			evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 			goto out;
 		}
@@ -1169,6 +1175,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				rSize = eBase->eSt.rSize;
 				rLoc  = eBase->eSt.rLoc;
 				neuik_Element_RequestRedraw(te, rLoc, rSize);
+
+				if (te->cursorLine != oldCursorLn || 
+					te->cursorPos != oldCursorPos)
+				{
+					neuik_Element_TriggerCallback(te, 
+						NEUIK_CALLBACK_ON_CURSOR_MOVED);
+				}
 				evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 				goto out;
 			}
@@ -2779,7 +2792,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 		{
 			neuik_Element_TriggerCallback(te, NEUIK_CALLBACK_ON_CURSOR_MOVED);
 		}
-		
+
 		rSize = eBase->eSt.rSize;
 		rLoc  = eBase->eSt.rLoc;
 		neuik_Element_RequestRedraw(te, rLoc, rSize);
