@@ -491,6 +491,8 @@ int NEUIK_Label_SetText(
 		"Argument `label` is not of Label class.",          // [1]
 		"Failure to allocate memory.",                      // [2]
 		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [3]
+		"Failure in `neuik_Element_GetMinSize__Label()`.",  // [4]
+		"Failure in `neuik_Element_StoreFrameMinSize()`",   // [5]
 	};
 
 	if (!neuik_Object_IsClass(label, neuik__Class_Label))
@@ -530,12 +532,31 @@ int NEUIK_Label_SetText(
 		strcpy(label->text, text);
 	}
 
+	/*------------------------------------------------------------------------*/
+	/* Request a redraw of the old size at old location. This will make sure  */
+	/* the old text is erased (in case the new text is shorter).              */
+	/*------------------------------------------------------------------------*/
 	if (neuik_Element_GetSizeAndLocation(label, &rSize, &rLoc))
 	{
 		eNum = 3;
 		goto out;
 	}
 	neuik_Element_RequestRedraw(label, rLoc, rSize);
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the updated minimum size for the label and store the new     */
+	/* frame minimum size.                                                    */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_GetMinSize__Label(label, &rSize))
+	{
+		eNum = 4;
+		goto out;
+	}
+	if (neuik_Element_StoreFrameMinSize(label, &rSize))
+	{
+		eNum = 5;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
