@@ -109,6 +109,18 @@ int
 			char           ** secData);
 
 /*----------------------------------------------------------------------------*/
+/* Get the number of characters encapsulated by the specified section.        */
+/*----------------------------------------------------------------------------*/
+int 
+	neuik_TextBlock_GetSectionLength(
+			neuik_TextBlock * tblk,
+			size_t            startLineNo,
+			size_t            startLinePos,
+			size_t            endLineNo,
+			size_t            endLinePos,
+			size_t          * secLen);
+
+/*----------------------------------------------------------------------------*/
 /* Replace an actual line of data with another                                */
 /*----------------------------------------------------------------------------*/
 int

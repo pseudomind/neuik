@@ -1352,11 +1352,11 @@ int neuik_TextBlock_GetSection(
 	char                * writeStr = NULL;
 	int                   eNum       = 0; /* which error to report (if any) */
 	static char           funcName[] = "neuik_TextBlock_GetSection";
-	static char         * errMsgs[]  = {"",                            // [0] no error
-		"Output argument `tblk` is NULL.",                             // [1]
+	static char         * errMsgs[]  = {"", // [0] no error
+		"Argument `tblk` is NULL.",                                    // [1]
 		"Failure in function `neuik_TextBlock_GetLineLength`.",        // [2]
-		"Argument `startLineNo` has value in excess of line length.",  // [3]
-		"Argument `endLineNo` has value in excess of line length.",    // [4]
+		"Argument `startLinePos` has value in excess of line length.", // [3]
+		"Argument `endLinePos` has value in excess of line length.",   // [4]
 		"Fundamental error in basic function `GetPositionInLine`.",    // [5]
 		"Output argument `secData` is NULL.",                          // [6]
 		"Requested Line not in TextBlock.",                            // [7]
@@ -1462,7 +1462,7 @@ int neuik_TextBlock_GetSection(
 	else
 	{
 		/*--------------------------------------------------------------------*/
-		/* The section being deleted spans more than one block                */
+		/* The section spans more than one block.                             */
 		/*--------------------------------------------------------------------*/
 		#pragma message("[TODO]: `neuik_TextBlock_GetSection` Get over multiple blocks.")
 	}
@@ -1475,6 +1475,156 @@ out:
 	return eNum;
 }
 
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_TextBlock_GetSectionLength
+ *
+ *  Description:   Get the number of characters encapsulated by the specified
+ *                 section.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_TextBlock_GetSectionLength(
+	neuik_TextBlock * tblk,
+	size_t            startLineNo,
+	size_t            startLinePos,
+	size_t            endLineNo,
+	size_t            endLinePos,
+	size_t          * secLen)
+{
+	int                   eNum       = 0; /* which error to report (if any) */
+	char                  aChar;
+	size_t                rawSize;
+	size_t                ctr;
+	size_t                startLineLen;
+	size_t                endLineLen;
+	size_t                startPosition;
+	size_t                endPosition;
+	neuik_TextBlockData * startBlock;
+	neuik_TextBlockData * endBlock;
+	static char           funcName[] = "neuik_TextBlock_GetSectionLength";
+	static char         * errMsgs[]  = {"", // [0] no error
+		"Argument `tblk` is NULL.",                                    // [1]
+		"Output argument `secLen` is NULL.",                           // [2]
+		"Argument `startLineNo` exceeds line count in TextBlock.",     // [3]
+		"Argument `endLineNo` exceeds line count in TextBlock.",       // [4]
+		"Failure in function `neuik_TextBlock_GetLineLength()`.",      // [5]
+		"Argument `startLinePos` has value in excess of line length.", // [6]
+		"Argument `endLinePos` has value in excess of line length.",   // [7]
+		"Fundamental error in function `GetPositionInLine()`.",        // [8]
+	};
+
+	if (tblk == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (secLen == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (startLineNo > tblk->nLines)
+	{
+		eNum = 3;
+		goto out;
+	}
+	if (endLineNo > tblk->nLines)
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Make sure we weren't given an impossible start or end location.        */
+	/*------------------------------------------------------------------------*/
+	if (neuik_TextBlock_GetLineLength(tblk, startLineNo, &startLineLen))
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (startLinePos > startLineLen)
+	{
+		eNum = 6;
+		goto out;
+	}
+	if (neuik_TextBlock_GetLineLength(tblk, endLineNo, &endLineLen))
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (endLinePos > endLineLen)
+	{
+		printf("endLinePos = `%zu`, endLineLen = `%zu`\n", endLinePos, endLineLen);
+		eNum = 7;
+		goto out;
+	}
+
+	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
+		tblk, startLineNo, startLinePos, &startBlock, &startPosition))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (neuik_TextBlock_GetPositionInLine__noErrChecks(
+		tblk, endLineNo, endLinePos, &endBlock, &endPosition))
+	{
+		eNum = 8;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the overall number of encapsulated characters.               */
+	/*------------------------------------------------------------------------*/
+	if (startBlock == endBlock)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The section is all contained within a single block                 */
+		/*--------------------------------------------------------------------*/
+		if (startLineNo == endLineNo && startLinePos > endLinePos)
+		{
+			/*----------------------------------------------------------------*/
+			/* Nothing is selected, there is nothing to be done.              */
+			/*----------------------------------------------------------------*/
+			goto out;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* The section contains one or more characters                        */
+		/*--------------------------------------------------------------------*/
+		rawSize = endPosition - startPosition;
+
+		/*--------------------------------------------------------------------*/
+		/* Deduct the number of NULL characters within the TextBlock section  */
+		/* in the section from the resulting length.                          */
+		/*--------------------------------------------------------------------*/
+		for (ctr = startPosition; ctr < endPosition; ctr++)
+		{
+			aChar = startBlock->data[ctr];
+			if (aChar == '\0')
+			{
+				rawSize--;
+			}
+		}
+		*secLen = rawSize;
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* The section spans more than one block.                             */
+		/*--------------------------------------------------------------------*/
+		#pragma message("[TODO]: `neuik_TextBlock_GetSectionLength` Get over multiple blocks.")
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	return eNum;
+}
 
 /*----------------------------------------------------------------------------*/
 /* Replace an actual line of data with another                                */

@@ -633,9 +633,10 @@ int NEUIK_TextEdit_GetHighlightInfo(
 	int           eNum    = 0; /* which error to report (if any) */
 	static char   funcName[] = "NEUIK_TextEdit_GetHighlightInfo";
 	static char * errMsgs[] = {"", // [0] no error
-		"Argument `te` is not of TextEdit class.", // [1]
-		"Output Argument `nLines` is NULL.",       // [2]
-		"Output Argument `nChars` is NULL.",       // [3]
+		"Argument `te` is not of TextEdit class.",                   // [1]
+		"Output Argument `nLines` is NULL.",                         // [2]
+		"Output Argument `nChars` is NULL.",                         // [3]
+		"Failure in function `neuik_TextBlock_GetSectionLength()`.", // [4]
 	};
 
 	if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
@@ -678,7 +679,14 @@ int NEUIK_TextEdit_GetHighlightInfo(
 		/* The highlighted characters span more than one line.                */
 		/*--------------------------------------------------------------------*/
 		*nLines = 1 + te->highlightEndLine - te->highlightStartLine;
-		#pragma message("TODO: Get `nChar` count from TextBlock.")
+		if (neuik_TextBlock_GetSectionLength(te->textBlk,
+			te->highlightStartLine,	te->highlightStartPos,
+			te->highlightEndLine, te->highlightEndPos,
+			nChars))
+		{
+			eNum = 4;
+			goto out;
+		}
 	}
 out:
 	if (eNum > 0)
