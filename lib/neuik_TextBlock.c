@@ -1502,6 +1502,7 @@ int neuik_TextBlock_GetSectionLength(
 	size_t                endLineLen;
 	size_t                startPosition;
 	size_t                endPosition;
+	neuik_TextBlockData * aBlock;
 	neuik_TextBlockData * startBlock;
 	neuik_TextBlockData * endBlock;
 	static char           funcName[] = "neuik_TextBlock_GetSectionLength";
@@ -1557,7 +1558,6 @@ int neuik_TextBlock_GetSectionLength(
 	}
 	if (endLinePos > endLineLen)
 	{
-		printf("endLinePos = `%zu`, endLineLen = `%zu`\n", endLinePos, endLineLen);
 		eNum = 7;
 		goto out;
 	}
@@ -1615,7 +1615,57 @@ int neuik_TextBlock_GetSectionLength(
 		/*--------------------------------------------------------------------*/
 		/* The section spans more than one block.                             */
 		/*--------------------------------------------------------------------*/
-		#pragma message("[TODO]: `neuik_TextBlock_GetSectionLength` Get over multiple blocks.")
+		rawSize = startBlock->bytesInUse - startPosition;
+		for (ctr = startPosition+1; ctr < startBlock->bytesInUse; ctr++)
+		{
+			aChar = startBlock->data[ctr];
+			if (aChar == '\0')
+			{
+				rawSize--;
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Add up the characters encompased by completely encapsulated blocks */
+		/*--------------------------------------------------------------------*/
+		aBlock = startBlock;
+		aBlock = aBlock->nextBlock;
+		for (;;)
+		{
+			if (aBlock == NULL) break;
+			if (aBlock == endBlock) break;
+			/*----------------------------------------------------------------*/
+			/* This TextDataBlock is completely encapsulated.                 */
+			/*----------------------------------------------------------------*/
+
+			rawSize += aBlock->bytesInUse;
+			for (ctr = 0; ctr < aBlock->bytesInUse; ctr++)
+			{
+				aChar = aBlock->data[ctr];
+				if (aChar == '\0')
+				{
+					rawSize--;
+				}
+			}
+			aBlock = aBlock->nextBlock;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Add up the characters encompased within the final selected block.  */
+		/*--------------------------------------------------------------------*/
+		if (aBlock == endBlock)
+		{
+			rawSize += endPosition;
+			for (ctr = 0; ctr <= endPosition; ctr++)
+			{
+				aChar = aBlock->data[ctr];
+				if (aChar == '\0')
+				{
+					rawSize--;
+				}
+			}
+		}
+		*secLen = rawSize;
 	}
 out:
 	if (eNum > 0)
@@ -2364,8 +2414,6 @@ int neuik_TextBlock_DeleteSection(
 		/* The section being deleted spans more than one block                */
 		/*--------------------------------------------------------------------*/
 
-
-
 		/*====================================================================*/
 		/* Chop off the desired portion from the final block in the section.  */
 		/*====================================================================*/
@@ -2406,8 +2454,6 @@ int neuik_TextBlock_DeleteSection(
 		{
 			endBlock->data[zeroCtr] = '\0';
 		}
-
-
 
 		/*--------------------------------------------------------------------*/
 		/* Adjust subsequent blocks (those following this block).             */
