@@ -72,9 +72,10 @@ int
 			NEUIK_TextEdit ** tePtr,
 			const char      * text);
 
-const char *
+int 
 	NEUIK_TextEdit_GetText(
-			NEUIK_TextEdit * te);
+			NEUIK_TextEdit  * te,
+			char           ** textPtr);
 
 int
 	NEUIK_TextEdit_GetHighlightInfo(

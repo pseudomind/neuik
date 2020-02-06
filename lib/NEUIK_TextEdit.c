@@ -579,19 +579,29 @@ out:
  *
  *  Name:          NEUIK_TextEdit_GetText
  *
- *  Description:   Get a pointer to the text in a NEUIK_TextEdit.
+ *  Description:   Get a copy of the text stored within a NEUIK_TextEdit.
  *
- *  Returns:       NULL if there is a problem; otherwise a valid string
+ *  Returns:       1 if there is an error; 0 otherwise.
  *
  ******************************************************************************/
-const char * NEUIK_TextEdit_GetText(
-		NEUIK_TextEdit * te)
+int NEUIK_TextEdit_GetText(
+		NEUIK_TextEdit  * te,
+		char           ** textPtr)
 {
-	int            eNum = 0; /* which error to report (if any) */
-	const char   * rvPtr      = NULL;
-	static char    funcName[] = "NEUIK_TextEdit_GetText";
-	static char  * errMsgs[]  = {"",               // [0] no error
-		"Argument `te` is not of TextEdit class.", // [1]
+	int           eNum         = 0; /* which error to report (if any) */
+	size_t        nLines       = 0;
+	size_t        startLineNo  = 0;
+	size_t        startLinePos = 0;
+	size_t        endLineNo    = 0;
+	size_t        endLinePos   = 0;
+	const char  * rvPtr        = NULL;
+	static char   funcName[] = "NEUIK_TextEdit_GetText";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `te` is not of TextEdit class.",       // [1]
+		"Output argument `textPtr` is NULL.",            // [2]
+		"Failure in `neuik_TextBlock_GetLineCount()`.",  // [3]
+		"Failure in `neuik_TextBlock_GetLineLength()`.", // [4]
+		"Failure in `neuik_TextBlock_GetSection()`.",    // [5]
 	};
 
 	if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
@@ -599,19 +609,42 @@ const char * NEUIK_TextEdit_GetText(
 		eNum = 1;
 		goto out;
 	}
+	if (textPtr == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Get text contents from TextBlock.                                      */
 	/*------------------------------------------------------------------------*/
-	#pragma message("TODO: Get text contents from TextBlock.")
+	if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
+	{
+		eNum = 3;
+		goto out;
+	}
+	endLineNo = nLines - 1;
+
+	if (neuik_TextBlock_GetLineLength(te->textBlk, endLineNo, &endLinePos))
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	if (neuik_TextBlock_GetSection(
+		te->textBlk, startLineNo, startLinePos, endLineNo, endLinePos, textPtr))
+	{
+		eNum = 5;
+		goto out;
+	}
 out:
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		rvPtr = NULL;
+		eNum = 1;
 	}
 
-	return rvPtr;
+	return eNum;
 }
 
 
