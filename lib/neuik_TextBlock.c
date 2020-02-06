@@ -1339,8 +1339,11 @@ int neuik_TextBlock_GetSection(
 	size_t             endLinePos,
 	char            ** secData)
 {
+	neuik_TextBlockData * aBlock;
 	neuik_TextBlockData * startBlock;
 	neuik_TextBlockData * endBlock;
+	size_t                ctr;
+	size_t                rawSize;
 	size_t                copyCtr;
 	size_t                writeCtr;
 	size_t                copySize;
@@ -1348,6 +1351,7 @@ int neuik_TextBlock_GetSection(
 	size_t                endLineLen;
 	size_t                startPosition;
 	size_t                endPosition;
+	char                  aChar;
 	char                  copyChar;
 	char                * writeStr = NULL;
 	int                   eNum       = 0; /* which error to report (if any) */
@@ -1464,7 +1468,126 @@ int neuik_TextBlock_GetSection(
 		/*--------------------------------------------------------------------*/
 		/* The section spans more than one block.                             */
 		/*--------------------------------------------------------------------*/
-		#pragma message("[TODO]: `neuik_TextBlock_GetSection` Get over multiple blocks.")
+
+		/*====================================================================*/
+		/* Calculate the number of characters in the selection.               */
+		/*====================================================================*/
+		rawSize = startBlock->bytesInUse - startPosition;
+		for (ctr = startPosition+1; ctr < startBlock->bytesInUse; ctr++)
+		{
+			aChar = startBlock->data[ctr];
+			if (aChar == '\0')
+			{
+				rawSize--;
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Add up the characters encompased by completely encapsulated blocks */
+		/*--------------------------------------------------------------------*/
+		aBlock = startBlock;
+		aBlock = aBlock->nextBlock;
+		for (;;)
+		{
+			if (aBlock == NULL) break;
+			if (aBlock == endBlock) break;
+			/*----------------------------------------------------------------*/
+			/* This TextDataBlock is completely encapsulated.                 */
+			/*----------------------------------------------------------------*/
+
+			rawSize += aBlock->bytesInUse;
+			for (ctr = 0; ctr < aBlock->bytesInUse; ctr++)
+			{
+				aChar = aBlock->data[ctr];
+				if (aChar == '\0')
+				{
+					rawSize--;
+				}
+			}
+			aBlock = aBlock->nextBlock;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Add up the characters encompased within the final selected block.  */
+		/*--------------------------------------------------------------------*/
+		if (aBlock == endBlock)
+		{
+			rawSize += endPosition;
+			for (ctr = 0; ctr <= endPosition; ctr++)
+			{
+				aChar = aBlock->data[ctr];
+				if (aChar == '\0')
+				{
+					rawSize--;
+				}
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Allocate memory for the full selection string.                     */
+		/*--------------------------------------------------------------------*/
+		copySize = rawSize + 1;
+
+		(*secData) = (char *)malloc(copySize*sizeof(char));
+		writeStr = *secData;
+		if (writeStr == NULL)
+		{
+			eNum = 8;
+			goto out;
+		}
+
+		/*====================================================================*/
+		/* Copy over the data from the various blocks.                        */
+		/*====================================================================*/
+		writeCtr = 0;
+		for (ctr = startPosition; ctr < startBlock->bytesInUse; ctr++)
+		{
+			copyChar = startBlock->data[ctr];
+			if (copyChar != '\0')
+			{
+				writeStr[writeCtr++] = copyChar;
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Add up the characters encompased by completely encapsulated blocks */
+		/*--------------------------------------------------------------------*/
+		aBlock = startBlock;
+		aBlock = aBlock->nextBlock;
+		for (;;)
+		{
+			if (aBlock == NULL) break;
+			if (aBlock == endBlock) break;
+			/*----------------------------------------------------------------*/
+			/* This TextDataBlock is completely encapsulated.                 */
+			/*----------------------------------------------------------------*/
+
+			for (ctr = 0; ctr < aBlock->bytesInUse; ctr++)
+			{
+				copyChar = aBlock->data[ctr];
+				if (copyChar != '\0')
+				{
+					writeStr[writeCtr++] = copyChar;
+				}
+			}
+			aBlock = aBlock->nextBlock;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Add up the characters encompased within the final selected block.  */
+		/*--------------------------------------------------------------------*/
+		if (aBlock == endBlock)
+		{
+			for (ctr = 0; ctr <= endPosition; ctr++)
+			{
+				copyChar = aBlock->data[ctr];
+				if (copyChar != '\0')
+				{
+					writeStr[writeCtr++] = copyChar;
+				}
+			}
+		}
+		writeStr[writeCtr++] = '\0';
 	}
 out:
 	if (eNum > 0)
