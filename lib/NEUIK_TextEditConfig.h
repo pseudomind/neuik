@@ -22,28 +22,30 @@
 
 
 typedef struct {
-		neuik_Object    objBase;         /* this structure is requied to be an neuik object */
-		NEUIK_FontSet * fontSet;         /* NEUIK_FontSet */
-		NEUIK_FontSet * fontSetMS;       /* NEUIK_FontSet (monospaced) */
-		int             fontSize;        /* point size to use for the TTF_Font */
-		int             fontBold;        /* (bool) use bold style */
-		int             fontItalic;      /* (bool) use italic style */
-		int             fontMono;        /* (bool) use monospaced FontSet */
-		char          * fontName;        /* font name for the TTF_Font */
-		char          * fontNameMS;      /* font name for the TTF_Font (monospaced) */
-		NEUIK_Color     bgColor;         /* background color used when not selected */
-		NEUIK_Color     fgColor;         /* foreground color used when not selected */
-		NEUIK_Color     bgColorHl;       /* background color used when highlighted */
-		NEUIK_Color     fgColorHl;       /* foreground color used when highlighted */
-		NEUIK_Color     bgColorSelect;   /* border color used when selected */
-		NEUIK_Color     borderColor;     /* color used for the button border */
-		NEUIK_Color     borderColorDark; /* color used for the button border */
-		int             textVJustify;    /* vertical justification of text */
-		int             textHJustify;    /* horizontal justification of text */
-		int             fontEmWidth;     /* nuber of pixels required for an `M` of this font */
-		int             restriction;     /* limit what can be put into the text */
-		char          * restrict_str;    /* used for custom text restrictions */
-		int             emptySpaces;     /* used to size the empty textEdit */
+		neuik_Object    objBase;           /* this structure is requied to be an neuik object */
+		NEUIK_FontSet * fontSet;           /* NEUIK_FontSet */
+		NEUIK_FontSet * fontSetMS;         /* NEUIK_FontSet (monospaced) */
+		int             fontSize;          /* point size to use for the TTF_Font */
+		int             fontBold;          /* (bool) use bold style */
+		int             fontItalic;        /* (bool) use italic style */
+		int             fontMono;          /* (bool) use monospaced FontSet */
+		char          * fontName;          /* font name for the TTF_Font */
+		char          * fontNameMS;        /* font name for the TTF_Font (monospaced) */
+		NEUIK_Color     bgColor;           /* background color used when not selected */
+		NEUIK_Color     fgColor;           /* foreground color used when not selected */
+		NEUIK_Color     bgColorHl;         /* background color used when highlighted */
+		NEUIK_Color     fgColorHl;         /* foreground color used when highlighted */
+		NEUIK_Color     bgColorSelect;     /* border color used when selected */
+		NEUIK_Color     borderColor;       /* color used for the textEdit border */
+		NEUIK_Color     borderColorDark;   /* color used for the textEdit border */
+		NEUIK_Color     bgScrollColor;     /* background color for the textEdit scrollbar */
+		NEUIK_Color     scrollSliderColor; /* color used for the textEdit scrollbar slider */
+		int             textVJustify;      /* vertical justification of text */
+		int             textHJustify;      /* horizontal justification of text */
+		int             fontEmWidth;       /* nuber of pixels required for an `M` of this font */
+		int             restriction;       /* limit what can be put into the text */
+		char          * restrict_str;      /* used for custom text restrictions */
+		int             emptySpaces;       /* used to size the empty textEdit */
 } NEUIK_TextEditConfig;
 
 NEUIK_TextEditConfig * NEUIK_GetDefaultTextEditConfig();

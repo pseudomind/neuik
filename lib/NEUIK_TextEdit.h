@@ -33,6 +33,8 @@ typedef struct {
 		void                 * textTex;       /*  `SDL_Texture *` */ 
 		void                 * textRend;      /*  `SDL_Renderer*` */ 
 		neuik_TextBlock      * textBlk;
+		double                 scrollPct;     /* percent of total TextEdit lines scrolled from top */
+		double                 viewPct;       /* percent of total TextEdit lines currently viewed */
 		size_t                 cursorLine;    /* line on which the cursor is */
 		size_t                 cursorPos;     /* position of cursor within line */
 		long long              vertMovePos;   /* desired position of vertical movement (-1=unset) */

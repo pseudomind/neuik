@@ -131,6 +131,8 @@ NEUIK_TextEditConfig * NEUIK_GetDefaultTextEditConfig()
 		COLOR_DBLUE,              // SDL_Color       bgColorSelect
 		COLOR_GRAY,               // SDL_Color       borderColor
 		COLOR_DGRAY,              // SDL_Color       borderColorDark
+		COLOR_GRAY,               // SDL_Color       bgScrollColor
+		COLOR_DGRAY,              // SDL_Color       scrollSliderColor
 		NEUIK_VJUSTIFY_CENTER,    // int             textVJustify
 		NEUIK_HJUSTIFY_LEFT,      // int             textHJustify
 		15,                       // int             EmWidth
@@ -382,24 +384,26 @@ int NEUIK_TextEditConfig_Copy(
 		dst->restrict_str = NULL;
 	}
 
-	dst->fontSet         = src->fontSet;
-	dst->fontSetMS       = src->fontSetMS;
-	dst->fontSize        = src->fontSize;
-	dst->fontBold        = src->fontBold;
-	dst->fontItalic      = src->fontItalic;
-	dst->fontMono        = src->fontMono;
-	dst->bgColor         = src->bgColor;
-	dst->fgColor         = src->fgColor;
-	dst->bgColorHl       = src->bgColorHl;
-	dst->fgColorHl       = src->fgColorHl;
-	dst->bgColorSelect   = src->bgColorSelect;
-	dst->borderColor     = src->borderColor;
-	dst->borderColorDark = src->borderColorDark;
-	dst->textVJustify    = src->textVJustify;
-	dst->textHJustify    = src->textHJustify;
-	dst->fontEmWidth     = src->fontEmWidth;
-	dst->restriction     = src->restriction;
-	dst->emptySpaces     = src->emptySpaces;
+	dst->fontSet           = src->fontSet;
+	dst->fontSetMS         = src->fontSetMS;
+	dst->fontSize          = src->fontSize;
+	dst->fontBold          = src->fontBold;
+	dst->fontItalic        = src->fontItalic;
+	dst->fontMono          = src->fontMono;
+	dst->bgColor           = src->bgColor;
+	dst->fgColor           = src->fgColor;
+	dst->bgColorHl         = src->bgColorHl;
+	dst->fgColorHl         = src->fgColorHl;
+	dst->bgColorSelect     = src->bgColorSelect;
+	dst->borderColor       = src->borderColor;
+	dst->borderColorDark   = src->borderColorDark;
+	dst->bgScrollColor     = src->bgScrollColor;
+	dst->scrollSliderColor = src->scrollSliderColor;
+	dst->textVJustify      = src->textVJustify;
+	dst->textHJustify      = src->textHJustify;
+	dst->fontEmWidth       = src->fontEmWidth;
+	dst->restriction       = src->restriction;
+	dst->emptySpaces       = src->emptySpaces;
 out:
 	if (eNum > 0)
 	{

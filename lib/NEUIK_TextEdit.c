@@ -215,6 +215,8 @@ int neuik_Object_New__TextEdit(
 	/*------------------------------------------------------------------------*/
 	/* All allocations successful                                             */
 	/*------------------------------------------------------------------------*/
+	te->scrollPct          = 0.0;
+	te->viewPct            = 0.0;
 	te->cursorLine         = 0;
 	te->cursorPos          = 0;
 	te->vertMovePos        = UNDEFINED;
@@ -516,8 +518,8 @@ out:
  *
  ******************************************************************************/
 int NEUIK_TextEdit_SetText(
-		NEUIK_TextEdit * te,
-		const char     * text)
+	NEUIK_TextEdit * te,
+	const char     * text)
 {
 	int           eNum    = 0; /* which error to report (if any) */
 	RenderSize    rSize;
@@ -585,8 +587,8 @@ out:
  *
  ******************************************************************************/
 int NEUIK_TextEdit_GetText(
-		NEUIK_TextEdit  * te,
-		char           ** textPtr)
+	NEUIK_TextEdit  * te,
+	char           ** textPtr)
 {
 	int           eNum         = 0; /* which error to report (if any) */
 	size_t        nLines       = 0;
@@ -594,7 +596,6 @@ int NEUIK_TextEdit_GetText(
 	size_t        startLinePos = 0;
 	size_t        endLineNo    = 0;
 	size_t        endLinePos   = 0;
-	const char  * rvPtr        = NULL;
 	static char   funcName[] = "NEUIK_TextEdit_GetText";
 	static char * errMsgs[]  = {"", // [0] no error
 		"Argument `te` is not of TextEdit class.",       // [1]
@@ -1150,35 +1151,45 @@ int neuik_Element_Render__TextEdit(
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	char                   tempChar;          /* a temporary character */
-	int                    yPos       = 0;
-	int                    blankH     = 0;
-	int                    blankW     = 0;
-	int                    textW      = 0;
-	int                    textH      = 0;
-	int                    textWFull  = 0;
-	int                    textHFull  = 0;
-	int                    hlWidth    = 0;    /* highlight bg Width */
-	int                    eNum       = 0;    /* which error to report (if any) */
-	int                    hasText    = 1;
+	int                    yPos        = 0;
+	int                    blankH      = 0;
+	int                    blankW      = 0;
+	int                    textW       = 0;
+	int                    textH       = 0;
+	int                    textWFull   = 0;
+	int                    textHFull   = 0;
+	int                    hlWidth     = 0;    /* highlight bg Width */
+	int                    eNum        = 0;    /* which error to report (if any) */
+	int                    hasText     = 1;
+	int                    scrollHt    = 0;
+	int                    scrollX     = 0;
+	int                    scrollY     = 0;
+	int                    scrollDrawn = FALSE;
+	int                    borderX     = 0;
 	size_t                 lineLen;
 	size_t                 lineCtr;
 	size_t                 nLines;
-	char                 * lineBytes  = NULL;
+	double                 scrollFrac  = 0.0;
+	double                 scrollPct   = 0.0;
+	double                 viewFrac    = 0.0;
+	double                 viewPct     = 0.0;
+	char                 * lineBytes   = NULL;
 	RenderLoc              rl;
 	SDL_Rect               srcRect;
 	SDL_Rect               rect;
-	const NEUIK_Color    * fgClr      = NULL;
-	const NEUIK_Color    * bgClr      = NULL;
-	const NEUIK_Color    * bClr       = NULL; /* border color */
-	SDL_Renderer         * rend       = NULL;
-	SDL_Texture          * tTex       = NULL; /* text texture */
-	TTF_Font             * font       = NULL;
-	NEUIK_ElementBase    * eBase      = NULL;
-	neuik_MaskMap        * maskMap    = NULL;
-	NEUIK_TextEdit       * te         = NULL;
-	NEUIK_TextEditConfig * aCfg       = NULL; /* the active textEntry config */
-	static char            funcName[] = "neuik_Element_Render__TextEdit";
-	static char          * errMsgs[]  = {"",                             // [0] no error
+	SDL_Rect               scrollRect;
+	const NEUIK_Color    * fgClr       = NULL;
+	const NEUIK_Color    * bgClr       = NULL;
+	const NEUIK_Color    * bClr        = NULL; /* border color */
+	SDL_Renderer         * rend        = NULL;
+	SDL_Texture          * tTex        = NULL; /* text texture */
+	TTF_Font             * font        = NULL;
+	NEUIK_ElementBase    * eBase       = NULL;
+	neuik_MaskMap        * maskMap     = NULL;
+	NEUIK_TextEdit       * te          = NULL;
+	NEUIK_TextEditConfig * aCfg        = NULL; /* the active textEntry config */
+	static char            funcName[]  = "neuik_Element_Render__TextEdit";
+	static char          * errMsgs[]   = {"", // [0] no error
 		"Argument `elem` is not of TextEdit class.",                     // [1]
 		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"", // [3]
@@ -1660,6 +1671,71 @@ int neuik_Element_Render__TextEdit(
 		}
 	}
 
+	/*------------------------------------------------------------------------*/
+	/* Update the scroll and view percentages; used for the scrollbar.        */
+	/*------------------------------------------------------------------------*/
+	scrollPct = 100.0*((double)(te->vertPanLn)/(double)(nLines));
+	if (nLines == te->vertPanLn + 1)
+	{
+		scrollPct = 100.0;		
+	}
+	viewPct   = 100.0*(((double)(rSize->h - 2)/(double)(blankH))/(double)(nLines));
+	if (viewPct < 5.0)
+	{
+		viewPct = 5.0;
+	}
+
+	if (viewPct < 100.0)
+	{
+		/*--------------------------------------------------------------------*/
+		/* Draw the scrollbar on the right side of the TextEdit.              */
+		/*--------------------------------------------------------------------*/
+		bClr = &(aCfg->bgScrollColor);
+		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
+
+		/* Fill in the whole scrollbar area with its background color */
+		scrollX = rl.x + (rSize->w - 12);
+
+		scrollRect.x = scrollX;
+		scrollRect.y = rl.y + (1);
+		scrollRect.w = 10;
+		scrollRect.h = rSize->h - 2;
+
+		SDL_RenderFillRect(rend, &scrollRect); 
+
+		/* Draw the scrollbar slider */
+		bClr = &(aCfg->scrollSliderColor);
+		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
+
+		scrollFrac = scrollPct/100.0;
+		viewFrac   = viewPct/100.0;
+		scrollHt   = (rSize->h - 2) - (int)(viewFrac*(double)(rSize->h - 2));
+
+		/* Fill in the whole slider area */
+		scrollY = rl.y + (1 + scrollHt*scrollFrac);
+
+		scrollRect.x = scrollX;
+		scrollRect.y = scrollY;
+		scrollRect.w = 10;
+		scrollRect.h = (int)(viewFrac*(double)(rSize->h - 2));
+		SDL_RenderFillRect(rend, &scrollRect); 
+
+		bClr = &(aCfg->bgScrollColor);
+		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
+
+		/* Round off the top of the slider */
+		SDL_RenderDrawPoint(rend, scrollX, scrollY); 
+		SDL_RenderDrawPoint(rend, scrollX + 9, scrollY); 
+
+		/* Round off the bottom of the slider */
+		scrollY = rl.y + (1 + scrollHt*scrollFrac) + 
+			(int)(viewFrac*(double)(rSize->h - 2)) - 1;
+		SDL_RenderDrawPoint(rend, scrollX, scrollY); 
+		SDL_RenderDrawPoint(rend, scrollX + 9, scrollY);
+
+		scrollDrawn = TRUE;
+	}
+
 draw_border:
 	/*------------------------------------------------------------------------*/
 	/* Draw the border around the TextEdit.                                   */
@@ -1667,18 +1743,28 @@ draw_border:
 	bClr = &(aCfg->borderColor);
 	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
+	borderX = rl.x + (rSize->w - 2);
+	if (scrollDrawn)
+	{
+		borderX = scrollX;
+	}
+
 	/* upper border line */
 	SDL_RenderDrawLine(rend, 
-		rl.x + 1,              rl.y + 1, 
-		rl.x + (rSize->w - 2), rl.y + 1);
+		rl.x + 1, rl.y + 1, 
+		borderX,  rl.y + 1);
 	/* left border line */
 	SDL_RenderDrawLine(rend, 
 		rl.x + 1, rl.y + 1, 
 		rl.x + 1, rl.y + (rSize->h - 2));
-	/* right border line */
-	SDL_RenderDrawLine(rend, 
-		rl.x + (rSize->w - 2), rl.y + (1), 
-		rl.x + (rSize->w - 2), rl.y + (rSize->h - 2)); 
+
+	if (!scrollDrawn)
+	{
+		/* right border line */
+		SDL_RenderDrawLine(rend, 
+			rl.x + (rSize->w - 2), rl.y + (1), 
+			rl.x + (rSize->w - 2), rl.y + (rSize->h - 2)); 
+	}
 
 	/* lower border line */
 	bClr = &(aCfg->borderColorDark);
