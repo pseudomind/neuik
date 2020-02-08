@@ -1165,6 +1165,7 @@ int neuik_Element_Render__TextEdit(
 	int                    scrollX     = 0;
 	int                    scrollY     = 0;
 	int                    scrollDrawn = FALSE;
+	int                    partialDraw = FALSE;
 	int                    borderX     = 0;
 	size_t                 lineLen;
 	size_t                 lineCtr;
@@ -1364,6 +1365,7 @@ int neuik_Element_Render__TextEdit(
 	yPos = 2;
 	for (lineCtr = te->vertPanLn; lineCtr < nLines; lineCtr++)
 	{
+		partialDraw = FALSE;
 		if (yPos > rSize->h)
 		{
 			/*----------------------------------------------------------------*/
@@ -1371,6 +1373,15 @@ int neuik_Element_Render__TextEdit(
 			/* should be drawn to the window.                                 */
 			/*----------------------------------------------------------------*/
 			break;
+		}
+		if (te->vertPanLn > 0 && lineCtr == te->vertPanLn)
+		{
+			/*----------------------------------------------------------------*/
+			/* This line of text is the first line of text shown in a view    */
+			/* that is partially scrolled. The top of the line will need to   */
+			/* be cropped.                                                    */
+			/*----------------------------------------------------------------*/
+			partialDraw = TRUE;
 		}
 
 		if (neuik_TextBlock_GetLine(te->textBlk, lineCtr, &lineBytes))
@@ -1567,7 +1578,24 @@ int neuik_Element_Render__TextEdit(
 			rect.w = textWFull + blankW;
 			rect.h = textHFull;
 
-			if (yPos + textHFull <= rSize->h - 2)
+			if (partialDraw)
+			{
+				/*------------------------------------------------------------*/
+				/* This line of text is the first line of text shown in a     */
+				/* view that is partially scrolled. The top of the line will  */
+				/* need to be cropped.                                        */
+				/*------------------------------------------------------------*/
+				srcRect.x = 0;
+				srcRect.y = te->vertPanPx;
+				srcRect.w = textWFull + blankW;
+				srcRect.h = blankH - te->vertPanPx;
+
+				rect.h = srcRect.h;
+
+				SDL_RenderCopy(rend, te->textTex, &srcRect, &rect);
+				ConditionallyDestroyTexture(&tTex);
+			}
+			else if (yPos + textHFull <= rSize->h - 2)
 			{
 				/*------------------------------------------------------------*/
 				/* This line of text has enough vertical space to be fully    */
@@ -1648,6 +1676,10 @@ int neuik_Element_Render__TextEdit(
 		}
 
 		yPos += textHFull;
+		if (partialDraw)
+		{
+			yPos -= te->vertPanPx;
+		}
 
 		if (lineBytes != NULL)
 		{
@@ -1674,7 +1706,9 @@ int neuik_Element_Render__TextEdit(
 	/*------------------------------------------------------------------------*/
 	/* Update the scroll and view percentages; used for the scrollbar.        */
 	/*------------------------------------------------------------------------*/
-	scrollPct = 100.0*((double)(te->vertPanLn)/(double)(nLines));
+	scrollPct = 100.0*(
+		((double)(te->vertPanLn) + ((double)(te->vertPanPx) / (double)(blankH))) /
+			(double)(nLines));
 	if (nLines == te->vertPanLn + 1)
 	{
 		scrollPct = 100.0;		

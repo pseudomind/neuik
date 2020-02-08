@@ -697,75 +697,24 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 		/*--------------------------------------------------------------------*/
 		/* Handle a MouseWheel `Scroll-Up` event.                             */
 		/*--------------------------------------------------------------------*/
-		panDiff = VERT_PAN_PX;
-		if (panDiff > blankH)
+		for (;; te->vertPanLn--)
 		{
-			/*----------------------------------------------------------------*/
-			/* The number of pixels scrolled in a single event are larger     */
-			/* than the height of a single line of text.                      */
-			/*----------------------------------------------------------------*/
-			panLines = panDiff / blankH;
-			if (panLines > te->vertPanLn)
+			if (te->vertPanLn == 0)
 			{
-				/*------------------------------------------------------------*/
-				/* The user has scrolled all the way to the top of the text.  */
-				/*------------------------------------------------------------*/
-				te->vertPanLn = 0;
-				te->vertPanPx = 0;
-			}
-			else
-			{
-				/*------------------------------------------------------------*/
-				/* There is still some scrolling left to do before hitting    */
-				/* the top of the text.                                       */
-				/*------------------------------------------------------------*/
-				te->vertPanLn -= panLines;
-				panDiff = VERT_PAN_PX % blankH;
-				te->vertPanPx += panDiff;
-
-				if (te->vertPanPx > blankH)
+				if (te->vertPanPx < VERT_PAN_PX)
 				{
-					if (te->vertPanLn > 0)
-					{
-						te->vertPanLn -= 1;
-						te->vertPanPx -= blankH;
-					}
-				}
-			}
-		}
-		else
-		{
-			/*----------------------------------------------------------------*/
-			/* The number of pixels scrolled in a single event are less than  */
-			/* the height of a single line of text.                           */
-			/*----------------------------------------------------------------*/
-			if (panDiff > te->vertPanPx)
-			{
-				/*------------------------------------------------------------*/
-				/* The number of total panned pixels will exceeded the number */
-				/* required to equal a panned line.                           */
-				/*------------------------------------------------------------*/
-				if (te->vertPanLn > 0)
-				{
-					te->vertPanLn--;
-					te->vertPanPx += blankH - panDiff;
-				}
-				else
-				{
-					/*--------------------------------------------------------*/
-					/* The user has scrolled all the way to the top of text.  */
-					/*--------------------------------------------------------*/
-					te->vertPanLn = 0;
 					te->vertPanPx = 0;
 				}
+				break;
 			}
-			else
+			te->vertPanPx += blankH;
+			if (te->vertPanPx < VERT_PAN_PX)
 			{
-				te->vertPanPx -= panDiff;
+				continue;
 			}
+			te->vertPanPx -= VERT_PAN_PX;
+			break;
 		}
-		printf(" ... te->vertPanLn = %llu\n", te->vertPanLn);
-		printf(" ... te->vertPanPx = %u\n", te->vertPanPx);
 	}
 	else if (mWheelEv->y < 0)
 	{
@@ -799,9 +748,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 			te->vertPanLn = 0;
 			te->vertPanPx = 0;
 		}
-
-		printf(" ... te->vertPanLn = %llu\n", te->vertPanLn);
-		printf(" ... te->vertPanPx = %u\n", te->vertPanPx);
 	}
 
 	/*------------------------------------------------------------------------*/
