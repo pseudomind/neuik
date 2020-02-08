@@ -589,8 +589,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 	int                    textW        = 0;
 	int                    textH        = 0;
 	int                    blankH       = 0;
-	int                    panDiff      = 0;
-	int                    panLines     = 0;
 	unsigned long long     oldVertPanLn = 0;
 	unsigned int           oldVertPanPx = 0;
 	int                    eNum         = 0; /* which error to report (if any) */
@@ -697,7 +695,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 		/*--------------------------------------------------------------------*/
 		/* Handle a MouseWheel `Scroll-Up` event.                             */
 		/*--------------------------------------------------------------------*/
-		for (;; te->vertPanLn--)
+		for (;;)
 		{
 			if (te->vertPanLn == 0)
 			{
@@ -707,6 +705,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
 				}
 				break;
 			}
+			te->vertPanLn--;
 			te->vertPanPx += blankH;
 			if (te->vertPanPx < VERT_PAN_PX)
 			{
