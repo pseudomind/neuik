@@ -799,13 +799,14 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	int                    lastW        = 0; /* position of previous char */
 	int                    normWidth    = 0;
 	int                    yRel         = 0;
-	int                    yPos         = 0;
+	float                  yPos         = 0;
 	int                    shift_held   = FALSE;
 	int                    sel0         = 0; /* This stores the starting     */
 	                                         /* point of the selection group */
 	int                    selF         = 0; /* This stores the final point  */
 	                                         /* of the selection group       */
 	unsigned int           timeAtClick  = 0;
+	size_t                 lineCtr;
 	size_t                 lineLen      = 0;
 	size_t                 nLines       = 0;
 	size_t                 clickLine    = 0;
@@ -937,10 +938,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		/*--------------------------------------------------------------------*/
 		/* Determine the line of text in which the click occurred             */
 		/*--------------------------------------------------------------------*/
-		TTF_SizeText(font, " ", &textW, &textH);
-		textHFull = 1.1*(float)(textH);
+		textHFull = 1.1*(float)(TTF_FontHeight(font));
 
-		yPos = 2; /* <-- this is the offset from the top where text begins */
 		if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
 		{
 			eNum = 7;
@@ -948,7 +947,26 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 		}
 
 		yRel = mouseButEv->y - eBase->eSt.rLoc.y;
-		clickLine = (size_t)((float)(yRel - yPos)/textHFull);
+
+		yPos = 2.0;
+		for (lineCtr = te->vertPanLn; lineCtr < nLines; lineCtr++)
+		{
+			yPos += textHFull;
+			if (te->vertPanLn > 0 && lineCtr == te->vertPanLn)
+			{
+				/*------------------------------------------------------------*/
+				/* This line of text is the first line of text shown in a     */
+				/* view that is partially scrolled. The top of the line will  */
+				/* need to be cropped.                                        */
+				/*------------------------------------------------------------*/
+				yPos -= (float)(te->vertPanPx);
+			}
+			if (yRel < (int)(yPos) - 1)
+			{
+				clickLine = lineCtr;
+				break;
+			}
+		}
 
 		if (clickLine < nLines)
 		{
@@ -1305,10 +1323,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/*----------------------------------------------------------------*/
 			/* Determine the line of text in which the click occurred         */
 			/*----------------------------------------------------------------*/
-			TTF_SizeText(font, " ", &textW, &textH);
-			textHFull = 1.1*(float)(textH);
+			textHFull = 1.1*(float)(TTF_FontHeight(font));
 
-			yPos = 6; /* <-- this is the offset from the top where text begins */
 			if (neuik_TextBlock_GetLineCount(te->textBlk, &nLines))
 			{
 				eNum = 7;
@@ -1316,7 +1332,26 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 
 			yRel = mouseMotEv->y - eBase->eSt.rLoc.y;
-			clickLine = (size_t)((float)(yRel - yPos)/textHFull);
+
+			yPos = 2.0;
+			for (lineCtr = te->vertPanLn; lineCtr < nLines; lineCtr++)
+			{
+				yPos += textHFull;
+				if (te->vertPanLn > 0 && lineCtr == te->vertPanLn)
+				{
+					/*--------------------------------------------------------*/
+					/* This line of text is the first line of text shown in a */
+					/* view that is partially scrolled. The top of the line   */
+					/* will need to be cropped.                               */
+					/*--------------------------------------------------------*/
+					yPos -= (float)(te->vertPanPx);
+				}
+				if (yRel < (int)(yPos) - 1)
+				{
+					clickLine = lineCtr;
+					break;
+				}
+			}
 
 			/*----------------------------------------------------------------*/
 			/* If this is the start of text selection highlighting, then save */

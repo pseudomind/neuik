@@ -1151,13 +1151,13 @@ int neuik_Element_Render__TextEdit(
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	char                   tempChar;          /* a temporary character */
-	int                    yPos        = 0;
-	int                    blankH      = 0;
+	float                  yPos        = 0;
+	float                  blankH      = 0;
 	int                    blankW      = 0;
 	int                    textW       = 0;
 	int                    textH       = 0;
 	int                    textWFull   = 0;
-	int                    textHFull   = 0;
+	float                  textHFull   = 0;
 	int                    hlWidth     = 0;    /* highlight bg Width */
 	int                    eNum        = 0;    /* which error to report (if any) */
 	int                    hasText     = 1;
@@ -1356,17 +1356,17 @@ int neuik_Element_Render__TextEdit(
 
 	TTF_SizeText(font, " ", &textW, &textH);
 	blankW = (int)(0.65*(float)(textW));
-	blankH = (int)(1.1*textH);
+	blankH = 1.1*(float)(TTF_FontHeight(font));
 
 	/*------------------------------------------------------------------------*/
 	/* There appears to be one or more lines of valid text in the Block.      */
 	/* Place the lines one-at-a-time where they should go.                    */
 	/*------------------------------------------------------------------------*/
-	yPos = 2;
+	yPos = 2.0;
 	for (lineCtr = te->vertPanLn; lineCtr < nLines; lineCtr++)
 	{
 		partialDraw = FALSE;
-		if (yPos > rSize->h)
+		if ((int)(yPos) > rSize->h)
 		{
 			/*----------------------------------------------------------------*/
 			/* The next line of text exists at a position in excess of what   */
@@ -1399,9 +1399,9 @@ int neuik_Element_Render__TextEdit(
 			/*----------------------------------------------------------------*/
 			/* Create an SDL_Surface for the text within the element          */
 			/*----------------------------------------------------------------*/
-			textHFull = (int)(1.1*textH);
+			textHFull = 1.1*(float)(textH);
 			te->textSurf = SDL_CreateRGBSurface(
-				0, textW+blankW, textHFull, 32, 0, 0, 0, 0);
+				0, textW+blankW, (int)(textHFull), 32, 0, 0, 0, 0);
 			if (te->textSurf == NULL)
 			{
 				eNum = 8;
@@ -1443,7 +1443,7 @@ int neuik_Element_Render__TextEdit(
 				rect.x = 0;
 				rect.y = 0;
 				rect.w = textW + 1;
-				rect.h = textHFull;
+				rect.h = (int)(textHFull);
 
 				textW = 0;
 				textH = 0;
@@ -1527,7 +1527,7 @@ int neuik_Element_Render__TextEdit(
 			rect.x = 0;
 			rect.y = 0;
 			rect.w = textWFull + 1;
-			rect.h = textHFull;
+			rect.h = (int)(textHFull);
 
 			SDL_RenderCopy(te->textRend, tTex, NULL, &rect);
 
@@ -1574,9 +1574,9 @@ int neuik_Element_Render__TextEdit(
 			}
 
 			rect.x = rl.x + 6;
-			rect.y = rl.y + yPos;
+			rect.y = rl.y + (int)(yPos);
 			rect.w = textWFull + blankW;
-			rect.h = textHFull;
+			rect.h = (int)(textHFull);
 
 			if (partialDraw)
 			{
@@ -1588,14 +1588,14 @@ int neuik_Element_Render__TextEdit(
 				srcRect.x = 0;
 				srcRect.y = te->vertPanPx;
 				srcRect.w = textWFull + blankW;
-				srcRect.h = blankH - te->vertPanPx;
+				srcRect.h = (int)(blankH) - te->vertPanPx;
 
 				rect.h = srcRect.h;
 
 				SDL_RenderCopy(rend, te->textTex, &srcRect, &rect);
 				ConditionallyDestroyTexture(&tTex);
 			}
-			else if (yPos + textHFull <= rSize->h - 2)
+			else if ((int)(yPos) + (int)(textHFull) <= rSize->h - 2)
 			{
 				/*------------------------------------------------------------*/
 				/* This line of text has enough vertical space to be fully    */
@@ -1613,7 +1613,7 @@ int neuik_Element_Render__TextEdit(
 				srcRect.x = 0;
 				srcRect.y = 0;
 				srcRect.w = textWFull + blankW;
-				srcRect.h = rSize->h - (2 + yPos);
+				srcRect.h = rSize->h - (2 + (int)(yPos));
 
 				rect.h = srcRect.h;
 
@@ -1636,9 +1636,9 @@ int neuik_Element_Render__TextEdit(
 					 lineCtr < te->highlightEndLine))
 			{
 				rect.x = rl.x + 6;
-				rect.y = rl.y + yPos;
+				rect.y = rl.y + (int)(yPos);
 				rect.w = blankW + 1;
-				rect.h = blankH;
+				rect.h = (int)(blankH);
 
 				bgClr = &(aCfg->bgColorHl);
 				SDL_SetRenderDrawColor(
@@ -1651,7 +1651,7 @@ int neuik_Element_Render__TextEdit(
 			/* This is a blank line but the cursor may be present.            */
 			/*----------------------------------------------------------------*/
 			TTF_SizeText(font, " ", &textW, &textH);
-			textHFull = (int)(1.1*textH);
+			textHFull = 1.1*(float)(textH);
 
 			/*----------------------------------------------------------------*/
 			/* Conditionally draw the cursor line into the TextEdit.          */
@@ -1662,8 +1662,8 @@ int neuik_Element_Render__TextEdit(
 				/* Position the cursor at the start of the line.              */
 				/*------------------------------------------------------------*/
 				rect.x = rl.x + 6;
-				rect.y = rl.y + yPos;
-				rect.h = textHFull;
+				rect.y = rl.y + (int)(yPos);
+				rect.h = (int)(textHFull);
 
 				SDL_SetRenderDrawColor(rend, fgClr->r, fgClr->g, fgClr->b, 255);
 				SDL_RenderDrawLine(rend, 
@@ -1675,10 +1675,10 @@ int neuik_Element_Render__TextEdit(
 			}
 		}
 
-		yPos += textHFull;
+		yPos += blankH;
 		if (partialDraw)
 		{
-			yPos -= te->vertPanPx;
+			yPos -= (float)(te->vertPanPx);
 		}
 
 		if (lineBytes != NULL)
@@ -1716,6 +1716,10 @@ int neuik_Element_Render__TextEdit(
 	viewPct   = 100.0*(((double)(rSize->h - 2)/(double)(blankH))/(double)(nLines));
 	if (viewPct < 5.0)
 	{
+		/*--------------------------------------------------------------------*/
+		/* If the view percent is less than five percent, make the scroll     */
+		/* slider occupy 5%, otherwise it will be too small.                  */
+		/*--------------------------------------------------------------------*/
 		viewPct = 5.0;
 	}
 
