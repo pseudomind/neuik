@@ -631,7 +631,7 @@ int neuik_TextBlock_SetText(
 			/*----------------------------------------------------------------*/
 			for (writeCtr = 0; writeCtr <= maxInitBlockFill;)
 			{
-				if (writeBufferBytes > 0)
+				for (; writeBufferBytes > 0; writeBufferBytes--)
 				{
 					aBlock->data[writeCtr++] = writeBuffer[0];
 					if (writeBuffer[0] != '\0')
@@ -647,8 +647,6 @@ int neuik_TextBlock_SetText(
 						writeBuffer[0] = writeBuffer[1];
 						writeBuffer[1] = writeBuffer[2];
 					}
-					writeBufferBytes--;
-					continue;
 				}
 				if (charCtr >= textLen)
 				{
@@ -986,7 +984,7 @@ int neuik_TextBlock_GetPositionInLine__noErrChecks (
 		/* Once lineCtr == lineNo, we have found the start of the desired     */
 		/* line.                                                              */
 		/*--------------------------------------------------------------------*/
-		for (; position <= final; position++)
+		for (; position < final; position++)
 		{
 			if (byteCtr == byteNo)
 			{

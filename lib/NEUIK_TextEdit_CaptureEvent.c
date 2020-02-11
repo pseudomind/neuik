@@ -800,6 +800,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 	int                    normWidth    = 0;
 	int                    yRel         = 0;
 	float                  yPos         = 0;
+	int                    clickLnFound = FALSE;
 	int                    shift_held   = FALSE;
 	int                    sel0         = 0; /* This stores the starting     */
 	                                         /* point of the selection group */
@@ -963,12 +964,13 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 			if (yRel < (int)(yPos) - 1)
 			{
+				clickLnFound = TRUE;
 				clickLine = lineCtr;
 				break;
 			}
 		}
 
-		if (clickLine < nLines)
+		if (clickLnFound)
 		{
 			/*----------------------------------------------------------------*/
 			/* Get the overall location of the current text                   */
@@ -1348,6 +1350,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 				}
 				if (yRel < (int)(yPos) - 1)
 				{
+					clickLnFound = TRUE;
 					clickLine = lineCtr;
 					break;
 				}
@@ -1367,7 +1370,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			/*----------------------------------------------------------------*/
 			/* Determine the new cursor position.                             */
 			/*----------------------------------------------------------------*/
-			if (clickLine < nLines)
+			if (clickLnFound)
 			{
 				/*------------------------------------------------------------*/
 				/* Get the overall location of the current text               */
