@@ -208,6 +208,10 @@ int	neuik_TextBlock_debugDump(
 	/* TextBlock (exactly as they are stored in memory).                      */
 	/*------------------------------------------------------------------------*/
 	dbgFileA = fopen("dbg_TextBlockData_Params.txt", "w");
+	fprintf(dbgFileA, "[TextBlock]\n");
+	fprintf(dbgFileA, " ... length         = `%zu`\n", tblk->length);
+	fprintf(dbgFileA, " ... nLines         = `%zu`\n", tblk->nLines);
+	fprintf(dbgFileA, " ... nChapters      = `%zu`\n", tblk->nChapters);
 
 	aBlock = tblk->firstBlock;
 	for (blkCtr = 0;; blkCtr++)
@@ -417,11 +421,13 @@ int neuik_TextBlock_SetText(
 	size_t                dataLen          = 0;
 	size_t                textLen          = 0;
 	size_t                charCtr          = 0;
+	size_t                allByteCtr       = 0;
 	size_t                writeCtr         = 0;
 	size_t                blockLines       = 0;
 	size_t                lineCtr          = 1;
 	size_t                nBlocksRequried  = 0;
 	unsigned int          maxInitBlockFill = 0;
+	unsigned int          remainingBytes   = 0;
 	char                  writeBuffer[3];
 	neuik_TextBlockData * aBlock;
 	int                   eNum       = 0; /* which error to report (if any) */
@@ -487,7 +493,7 @@ int neuik_TextBlock_SetText(
 				lineCtr++;
 			}
 		}
-		if (text[charCtr] == '\r' || text[charCtr] == '\n')
+		if (text[charCtr-1] == '\n' || text[charCtr-1] == '\r')
 		{
 			/*----------------------------------------------------------------*/
 			/* This would be a final single character trailing newline        */
@@ -496,6 +502,7 @@ int neuik_TextBlock_SetText(
 		}
 	}
 	textLen += lineCtr;
+	remainingBytes = textLen;
 
 	/*------------------------------------------------------------------------*/
 	/* Calculate the size of a filled DataBlock (when overprovisioning is     */
@@ -608,12 +615,14 @@ int neuik_TextBlock_SetText(
 				eNum = 5;
 				goto out;
 			}
-			if (charCtr >= textLen)
+			if (allByteCtr >= textLen)
 			{
 				/*------------------------------------------------------------*/
 				/* There are no more characters which could be put into this  */
 				/* DataBlock.                                                 */
 				/*------------------------------------------------------------*/
+				aBlock->bytesInUse = textLen % maxInitBlockFill;
+				printf("[1]Setting final block bytesInUse to `%zu`\n", aBlock->bytesInUse);
 				break;
 			}
 			if (ctr > 0)
@@ -622,7 +631,6 @@ int neuik_TextBlock_SetText(
 				/* Set the first line number for the data block.              */
 				/*------------------------------------------------------------*/
 				aBlock->firstLineNo = firstLineNo;
-
 			}
 
 			/*----------------------------------------------------------------*/
@@ -634,6 +642,7 @@ int neuik_TextBlock_SetText(
 				for (; writeBufferBytes > 0; writeBufferBytes--)
 				{
 					aBlock->data[writeCtr++] = writeBuffer[0];
+					allByteCtr++;
 					if (writeBuffer[0] != '\0')
 					{
 						charCtr++;
@@ -648,11 +657,13 @@ int neuik_TextBlock_SetText(
 						writeBuffer[1] = writeBuffer[2];
 					}
 				}
-				if (charCtr >= textLen)
+
+				if (allByteCtr == textLen)
 				{
 					/*--------------------------------------------------------*/
 					/* This means that we have hit the end of the src data.   */
 					/*--------------------------------------------------------*/
+					aBlock->bytesInUse = remainingBytes;
 					break;
 				}
 				if (text[charCtr-1] == '\r' && text[charCtr] == '\n')
@@ -692,6 +703,7 @@ int neuik_TextBlock_SetText(
 			aBlock->bytesInUse = writeCtr;
 			aBlock->nLines     = blockLines;
 			firstLineNo += blockLines;
+			remainingBytes -= writeCtr;
 
 			aBlock = aBlock->nextBlock;
 		}
@@ -699,8 +711,6 @@ int neuik_TextBlock_SetText(
 		tblk->nLines = lineCtr;
 	}
 	tblk->length = dataLen;
-
-	// neuik_TextBlock_debugDump(tblk);
 
 out:
 	if (eNum > 0)
@@ -1136,6 +1146,15 @@ int neuik_TextBlock_GetLineLength__noErrChecks(
 				if (*length > 0) (*length)--;
 				goto out;
 			}
+		}
+
+		if (lineNo == tblk->nLines - 1 && *length == 1 && 
+			data->data[position] == 0)
+		{
+			/*----------------------------------------------------------------*/
+			/* This indicates a final line which contains nothing.            */
+			/*----------------------------------------------------------------*/
+			*length = 0;
 		}
 
 		data = data->nextBlock;
@@ -2319,7 +2338,7 @@ int neuik_TextBlock_MergeLines(
 	/* Make sure that the user isn't attempting to merge the final line of    */
 	/* the text block.                                                        */
 	/*------------------------------------------------------------------------*/
-	if (lineNo == tblk->nLines)
+	if (lineNo == tblk->nLines - 1)
 	{
 		/*--------------------------------------------------------------------*/
 		/* The final line of text data cannot be merged. Do nothing.          */
@@ -2513,21 +2532,42 @@ int neuik_TextBlock_DeleteSection(
 			}
 		}
 
-		endOfCopy  = startBlock->bytesInUse - copyOffset;
-
-		/*--------------------------------------------------------------------*/
-		/* Simply shift over the bytes by one                                 */
-		/*--------------------------------------------------------------------*/
-		for (copyCtr = startPosition; copyCtr < endOfCopy; copyCtr++)
+		if (startBlock->nextBlock == NULL && checkCtr == startBlock->bytesInUse 
+			&& startBlock->data[checkCtr] == '\0')
 		{
 			/*----------------------------------------------------------------*/
-			/* First store the value of the deleted character.                */
+			/* This section is ended with an empty line (no trailing newline) */
 			/*----------------------------------------------------------------*/
-			remChar = startBlock->data[copyCtr];
-			startBlock->data[copyCtr] = startBlock->data[copyCtr+copyOffset];
+			tblk->nLines++;
+			nLineMod++;
+			startBlock->nLines++;
+			startBlock->bytesInUse = startPosition;
+
+			for (zeroCtr = startPosition; 
+				 zeroCtr <= startBlock->bytesAllocated; 
+				 zeroCtr++)
+			{
+				startBlock->data[zeroCtr] = '\0';
+			}
 		}
-		startBlock->bytesInUse -= copyOffset;
-		startBlock->data[startBlock->bytesInUse] = '\0';
+		else
+		{
+			endOfCopy  = startBlock->bytesInUse - copyOffset;
+
+			/*----------------------------------------------------------------*/
+			/* Simply shift over the bytes by one at a time.                  */
+			/*----------------------------------------------------------------*/
+			for (copyCtr = startPosition; copyCtr < endOfCopy; copyCtr++)
+			{
+				/*------------------------------------------------------------*/
+				/* First store the value of the deleted character.            */
+				/*------------------------------------------------------------*/
+				remChar = startBlock->data[copyCtr];
+				startBlock->data[copyCtr] = startBlock->data[copyCtr+copyOffset];
+			}
+			startBlock->bytesInUse -= copyOffset;
+			startBlock->data[startBlock->bytesInUse] = '\0';
+		}
 	}
 	else
 	{
@@ -2554,26 +2594,50 @@ int neuik_TextBlock_DeleteSection(
 				endBlock->nLines--;
 			}
 		}
-		copyOffset = endPosition;
-		endOfCopy  = endBlock->bytesInUse - copyOffset;
 
-		/*--------------------------------------------------------------------*/
-		/* Simply shift over the bytes by one                                 */
-		/*--------------------------------------------------------------------*/
-		for (copyCtr = 0; copyCtr <= endOfCopy; copyCtr++)
+		if (endBlock->nextBlock == NULL && checkCtr == endBlock->bytesInUse 
+			&& endBlock->data[checkCtr] == '\0')
 		{
 			/*----------------------------------------------------------------*/
-			/* First store the value of the deleted character.                */
+			/* All content from the final block should be deleted. So delete  */
+			/* the block entirely.                                            */
 			/*----------------------------------------------------------------*/
-			endBlock->data[copyCtr] = endBlock->data[copyCtr+copyOffset];
+			printf("Deletion of a final block!\n");
+
+			tblk->nLines++;
+			nLineMod++;
+			aBlock = endBlock->previousBlock;
+			aBlock->nextBlock = NULL;
+			tblk->nChapters--;
+			tblk->lastBlock = aBlock;
+
+			printf("TODO: Free TextBlockData!!!!\n");
+			#pragma message("[TODO] `neuik_TextBlock_DeleteSection` Free TextBlockData!!!!")
+
 		}
-
-		endBlock->bytesInUse -= copyOffset;
-		for (zeroCtr = 1 + endBlock->bytesInUse; 
-			 zeroCtr <= endBlock->bytesAllocated; 
-			 zeroCtr++)
+		else
 		{
-			endBlock->data[zeroCtr] = '\0';
+			copyOffset = endPosition;
+			endOfCopy  = endBlock->bytesInUse - copyOffset;
+
+			/*----------------------------------------------------------------*/
+			/* Simply shift over the bytes by one at a time.                  */
+			/*----------------------------------------------------------------*/
+			for (copyCtr = 0; copyCtr <= endOfCopy; copyCtr++)
+			{
+				/*------------------------------------------------------------*/
+				/* First store the value of the deleted character.            */
+				/*------------------------------------------------------------*/
+				endBlock->data[copyCtr] = endBlock->data[copyCtr+copyOffset];
+			}
+
+			endBlock->bytesInUse -= copyOffset;
+			for (zeroCtr = 1 + endBlock->bytesInUse; 
+				 zeroCtr <= endBlock->bytesAllocated; 
+				 zeroCtr++)
+			{
+				endBlock->data[zeroCtr] = '\0';
+			}
 		}
 
 		/*--------------------------------------------------------------------*/

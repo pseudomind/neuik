@@ -1419,6 +1419,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseEvent(
 			}
 			else
 			{
+				/*------------------------------------------------------------*/
+				/* The mouse motion was in an area below the final text line. */
+				/*------------------------------------------------------------*/
 				te->cursorLine = nLines - 1;
 
 				if (neuik_TextBlock_GetLineLength(te->textBlk,
@@ -1945,7 +1948,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 						doRedraw = 1;
 					}
 					else if (te->cursorPos == lineLen && 
-							te->cursorLine < te->textBlk->nLines)
+							te->cursorLine < te->textBlk->nLines - 1)
 					{
 						/*----------------------------------------------------*/
 						/* For lines before the final line, attempting to     */
@@ -2005,7 +2008,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 					}
 				}
 				else if (te->cursorPos == lineLen && 
-						te->cursorLine < te->textBlk->nLines)
+						te->cursorLine < te->textBlk->nLines - 1)
 				{
 					/*--------------------------------------------------------*/
 					/* For lines before the final line, attempting to move    */
