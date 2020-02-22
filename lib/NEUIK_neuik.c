@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -120,6 +120,7 @@ int NEUIK_Init()
 		neuik_RegisterClass_Transformer();
 		neuik_RegisterClass_Plot();
 		neuik_RegisterClass_Plot2D();
+		neuik_RegisterClass_PlotData();
 		neuik_RegisterClass_ProgressBarConfig();
 		neuik_RegisterClass_ProgressBar();
 		neuik_RegisterClass_Stack();

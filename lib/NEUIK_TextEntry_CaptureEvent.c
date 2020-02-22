@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1085,7 +1085,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 					te->cursorPos--;
 				}
 				doRedraw        = 1;
-				evCaptured      = NEUIK_EVENTSTATE_CAPTURED;
 				te->clickOrigin = -1;
 			}
 			else
@@ -1139,7 +1138,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 					te->cursorPos++;
 				}
 				doRedraw        = 1;
-				evCaptured      = NEUIK_EVENTSTATE_CAPTURED;
 				te->clickOrigin = -1;
 			}
 			else

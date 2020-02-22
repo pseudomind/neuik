@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1632,7 +1632,7 @@ int neuik_Element_Render__GridLayout(
 	int                  * elemsShown    = NULL; // Free upon returning.
 	RenderSize           * elemsMinSz    = NULL; // Free upon returning.
 	NEUIK_ElementConfig ** elemsCfg      = NULL; // Free upon returning.
-	RenderLoc              rl            = {0, 0};
+	RenderLoc              rl;
 	RenderLoc              rlRel         = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect               rect          = {0, 0, 0, 0};
 	static RenderSize      rsZero        = {0, 0};
@@ -2351,7 +2351,10 @@ int neuik_Element_Render__GridLayout(
 		}
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (elemsCfg   != NULL) free(elemsCfg);

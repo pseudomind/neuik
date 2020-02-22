@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1268,7 +1268,10 @@ int neuik_Element_Render__Button(
 		SDL_RenderCopy(rend, tTex, NULL, &rect);
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 
 	ConditionallyDestroyTexture(&tTex);
 	if (maskMap != NULL) neuik_Object_Free(maskMap);

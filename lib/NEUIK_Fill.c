@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -486,7 +486,10 @@ int neuik_Element_Render__Fill(
 	}
 
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 
 	if (eNum > 0)
 	{
@@ -496,3 +499,4 @@ out:
 
 	return eNum;
 }
+

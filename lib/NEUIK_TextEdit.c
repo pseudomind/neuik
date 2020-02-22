@@ -1243,7 +1243,6 @@ int neuik_Element_Render__TextEdit(
 	}
 
 	/* extract the current fg/bg colors */
-	bgClr = &(aCfg->bgColor);
 	fgClr = &(aCfg->fgColor);
 
 	/*------------------------------------------------------------------------*/
@@ -1811,7 +1810,10 @@ draw_border:
 		rl.x + 2,              rl.y + (rSize->h - 2),
 		rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 
 	ConditionallyDestroyTexture(&tTex);
 	if (maskMap != NULL) neuik_Object_Free(maskMap);

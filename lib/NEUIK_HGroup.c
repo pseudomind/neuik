@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -663,8 +663,6 @@ int neuik_Element_Render__HGroup(
 		eNum = 3;
 		goto out;
 	}
-	xFree = (float)(rSize->w); 
-	/* ^^^ free X-px: start with the full width and deduct as used */
 
 	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
@@ -1083,7 +1081,10 @@ int neuik_Element_Render__HGroup(
 		}
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (elemsCfg   != NULL) free(elemsCfg);

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -35,6 +35,7 @@ neuik_Class * neuik__Class_Fill               = NULL;
 neuik_Class * neuik__Class_Line               = NULL;
 neuik_Class * neuik__Class_Plot               = NULL;
 neuik_Class * neuik__Class_Plot2D             = NULL;
+neuik_Class * neuik__Class_PlotData           = NULL;
 neuik_Class * neuik__Class_ProgressBar        = NULL;
 neuik_Class * neuik__Class_ProgressBarConfig  = NULL;
 neuik_Class * neuik__Class_TextEdit           = NULL;

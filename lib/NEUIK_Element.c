@@ -1243,12 +1243,9 @@ int neuik_Element_RenderRotate(
 		/* -   to : "right-to-left, top-to-bottom"                            */
 		/*--------------------------------------------------------------------*/
 		destX = rSize->h - 1;
-		destY = 0;
-		destOffset = 0;
 		srcOffset  = 0;
 		for (srcY = 0; srcY < rSize->h; srcY++)
 		{
-			destY      = 0;
 			destOffset = destX;
 			for (srcX = 0; srcX < rSize->w; srcX++)
 			{
@@ -1277,9 +1274,7 @@ int neuik_Element_RenderRotate(
 		}
 		destPixels = imSurf->pixels;
 
-		destX = rSize->w - 1;
 		destY = rSize->h - 1;
-		destOffset = 0;
 		srcOffset  = 0;
 		for (srcY = 0; srcY < rSize->h; srcY++)
 		{
@@ -1321,7 +1316,6 @@ int neuik_Element_RenderRotate(
 		/*--------------------------------------------------------------------*/
 		destX = 0;
 		destY = rSize->w - 1;
-		destOffset = 0;
 		srcOffset  = 0;
 		for (srcY = 0; srcY < rSize->h; srcY++)
 		{
@@ -1585,7 +1579,10 @@ int NEUIK_Element_SetBackgroundColorGradient(
 	{
 		if (cs_str == NULL)
 		{
-			(*cstops)[ctr] = NULL;
+			if (*cstops != NULL)
+			{
+				(*cstops)[ctr] = NULL;
+			}
 			break;
 		}
 

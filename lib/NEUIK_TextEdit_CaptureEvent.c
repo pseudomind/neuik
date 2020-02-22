@@ -2786,7 +2786,6 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 		rSize = eBase->eSt.rSize;
 		rLoc  = eBase->eSt.rLoc;
 		neuik_Element_RequestRedraw(te, rLoc, rSize);
-		evCaptured = NEUIK_EVENTSTATE_CAPTURED;
 	}
 	else if (neuik_KeyShortcut_SelectAll(keyEv, keyMod))
 	{

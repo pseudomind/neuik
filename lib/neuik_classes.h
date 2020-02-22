@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -45,6 +45,7 @@ extern neuik_Class * neuik__Class_Fill;
 extern neuik_Class * neuik__Class_Line;
 extern neuik_Class * neuik__Class_Plot;
 extern neuik_Class * neuik__Class_Plot2D;
+extern neuik_Class * neuik__Class_PlotData;
 extern neuik_Class * neuik__Class_ProgressBar;
 extern neuik_Class * neuik__Class_ProgressBarConfig;
 extern neuik_Class * neuik__Class_TextEdit;
@@ -100,6 +101,7 @@ int neuik_RegisterClass_Fill();
 int neuik_RegisterClass_Line();
 int neuik_RegisterClass_Plot();
 int neuik_RegisterClass_Plot2D();
+int neuik_RegisterClass_PlotData();
 int neuik_RegisterClass_ProgressBar();
 int neuik_RegisterClass_ProgressBarConfig();
 int neuik_RegisterClass_TextEdit();

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1127,7 +1127,10 @@ int neuik_Element_Render__Transformer(
 		}
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	ConditionallyDestroyTexture(&tex);
@@ -1346,16 +1349,17 @@ neuik_EventState neuik_Element_CaptureEvent__Transformer(
 
 			if (!NEUIK_Element_IsShown(elem)) continue;
 
-			if (neuik_Object_GetClassObject_NoError(
-				elem, neuik__Class_Element, (void**)&childEBase)) goto out;
-			eLoc = childEBase->eSt.rLoc;
-			eSz  = childEBase->eSt.rSize;
 
-			// if (neuik__Report_Debug)
-			// {
-			// 	printf("childELoc = [%d, %d]\n", eLoc.x, eLoc.y);
-			// 	printf("childESz = [%d, %d]\n", eSz.w, eSz.h);
-			// }
+			if (neuik__Report_Debug)
+			{
+				if (neuik_Object_GetClassObject_NoError(
+					elem, neuik__Class_Element, (void**)&childEBase)) goto out;
+				eLoc = childEBase->eSt.rLoc;
+				eSz  = childEBase->eSt.rSize;
+
+				printf("childELoc = [%d, %d]\n", eLoc.x, eLoc.y);
+				printf("childESz = [%d, %d]\n", eSz.w, eSz.h);
+			}
 
 			evCaputred = neuik_Element_CaptureEvent(elem, evActive);
 			if (evCaputred == NEUIK_EVENTSTATE_OBJECT_FREED)

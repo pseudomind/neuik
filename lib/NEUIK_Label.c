@@ -769,7 +769,10 @@ int neuik_Element_Render__Label(
 		}
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 
 	ConditionallyDestroyTexture(&tTex);
 

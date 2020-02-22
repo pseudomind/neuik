@@ -166,10 +166,15 @@ int	neuik_TextBlock_debugDump(
 	dbgFileB = fopen("dbg_TextBlock_lineNos.txt", "w");
 	for (dbgCtr = 0; dbgCtr < tblk->nLines; dbgCtr++)
 	{
-		if (dbgLine != NULL) free(dbgLine);
+		if (dbgLine != NULL)
+		{
+			free(dbgLine);
+			dbgLine = NULL;
+		}
 		if (neuik_TextBlock_GetLine(tblk, dbgCtr, &dbgLine))
 		{
 			printf("DBG_ERROR: Write out every line of the TextBlock to a file.\n");
+			if (dbgLine != NULL) free(dbgLine);
 			return 1;
 		}
 
@@ -2562,7 +2567,6 @@ int neuik_TextBlock_DeleteSection(
 				/*------------------------------------------------------------*/
 				/* First store the value of the deleted character.            */
 				/*------------------------------------------------------------*/
-				remChar = startBlock->data[copyCtr];
 				startBlock->data[copyCtr] = startBlock->data[copyCtr+copyOffset];
 			}
 			startBlock->bytesInUse -= copyOffset;
@@ -2774,7 +2778,7 @@ int neuik_TextBlock_ReplaceChar(
 	size_t            byteNo,
 	char              newChar)
 {
-	neuik_TextBlockData * aBlock;
+	neuik_TextBlockData * aBlock = NULL;
 	size_t                copyCtr;
 	size_t                lineLen;
 	size_t                lineBreakByte = 0;

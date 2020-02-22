@@ -13,39 +13,16 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef NEUIK_PLOT2D_H
-#define NEUIK_PLOT2D_H
+#ifndef NEUIK_PLOTDATA_INTERNAL_H
+#define NEUIK_PLOTDATA_INTERNAL_H
 
-#include "NEUIK_Event.h"
-#include "NEUIK_Element.h"
-#include "NEUIK_Canvas.h"
-#include "NEUIK_PlotData.h"
 
-typedef struct {
-		neuik_Object   objBase;   /* this structure is requied to be an neuik object */
-		NEUIK_Canvas * drawing_background;
-		NEUIK_Canvas * drawing_ticmarks;
-} NEUIK_Plot2D;
+/*----------------------------------------------------------------------------*/
+/* Internal Function Prototypes                                               */
+/*----------------------------------------------------------------------------*/
+int neuik_Object_New__PlotData(void ** ptr);
+int neuik_Object_Copy__PlotData(void * dst, const void * src);
+int neuik_Object_Free__PlotData(void * ptr);
 
-int 
-	NEUIK_NewPlot2D(
-			NEUIK_Plot2D ** plt);
 
-int 
-	NEUIK_Plot2D_AddPlotData(
-			NEUIK_Plot2D   * plt,
-			NEUIK_PlotData * data,
-			const char     * label);
-
-int 
-	NEUIK_Plot2D_RemovePlotData(
-			NEUIK_Plot2D * plt,
-			const char   * uniqueName);
-
-int 
-	NEUIK_Plot2D_SetPlotDataLabel(
-			NEUIK_Plot2D * plt,
-			const char   * uniqueName,
-			const char   * label);
-
-#endif /* NEUIK_PLOT2D_H */
+#endif /* NEUIK_PLOTDATA_INTERNAL_H */

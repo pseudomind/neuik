@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -372,7 +372,7 @@ int neuik_Object_Free__Plot(
 		goto out;
 	}
 
-	plot->data_sets   = NULL;
+	plot->data_sets = NULL;
 
 	/*------------------------------------------------------------------------*/
 	/* Free the typical plot elements (if still allocated                     */

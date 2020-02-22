@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -680,7 +680,6 @@ int neuik_MaskMap_Resize(
 			pos = oldW*rowCtr + colCtr;
 			oldVal = oldData[pos];
 
-			pos = width*rowCtr + colCtr;
 			map->mapData[ctr] = oldVal;
 		}
 	}
@@ -1653,7 +1652,6 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 			/*----------------------------------------------------------------*/
 			/* An active region stopped on the previous point.                */
 			/*----------------------------------------------------------------*/
-			xf = ctr -1;
 			inRegion = 0;
 			regCount++;
 		}
@@ -1663,7 +1661,6 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 		/*--------------------------------------------------------------------*/
 		/* The current active region stopped at the end of the map.           */
 		/*--------------------------------------------------------------------*/
-		xf = ctr -1;
 		inRegion = 0;
 		regCount++;
 	}
@@ -1724,7 +1721,6 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 		/* The current active region stopped at the end of the map.           */
 		/*--------------------------------------------------------------------*/
 		xf = ctr -1;
-		inRegion = 0;
 
 		map->regStart[regCount] = x0;
 		map->regEnd[regCount]   = xf;

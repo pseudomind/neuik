@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -659,7 +659,7 @@ int neuik_Element_Render__Image(
 	int                 imW        = 0;
 	int                 imH        = 0;
 	int                 eNum       = 0; /* which error to report (if any) */
-	RenderLoc           rl         = {0, 0};
+	RenderLoc           rl;
 	NEUIK_Image       * img        = NULL;
 	NEUIK_ElementBase * eBase      = NULL;
 	static char         funcName[] = "neuik_Element_Render__Image";
@@ -750,7 +750,10 @@ int neuik_Element_Render__Image(
 		SDL_RenderCopy(rend, imgTex, NULL, &rect);
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 
 	ConditionallyDestroyTexture(&imgTex);
 

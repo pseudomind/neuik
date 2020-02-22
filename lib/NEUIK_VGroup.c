@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -666,8 +666,6 @@ int neuik_Element_Render__VGroup(
 		eNum = 3;
 		goto out;
 	}
-	yFree = (float)(rSize->h); 
-	/* ^^^ free Y-px: start with the full ht. and deduct as used */
 
 	eBase->eSt.rend = xRend;
 	rend = eBase->eSt.rend;
@@ -760,6 +758,7 @@ int neuik_Element_Render__VGroup(
 		allHFill[ctr]   = 0;
 		allMaxMinH[ctr] = 0;
 		allVFill[ctr]   = 0;
+		rendRowH[ctr]   = 0;
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -957,21 +956,35 @@ int neuik_Element_Render__VGroup(
 		/*--------------------------------------------------------------------*/
 		/* Evenly divide the remaining vSpace between the vFill rows.         */
 		/*--------------------------------------------------------------------*/
-		while (yFree > 0)
+		if (yFree == 0)
 		{
 			/*----------------------------------------------------------------*/
-			/* Distribute the remaining vSpace to the vFill one pixel at a    */
-			/* time (starting from the top row and moving down).              */
+			/* There isn't enough space for any resizing.                     */
 			/*----------------------------------------------------------------*/
 			for (ctr = 0; ctr < nAlloc; ctr++)
 			{
-				if (allVFill[ctr] && rendRowH[ctr] < vfillMaxMinH)
+				rendRowH[ctr] = allMaxMinH[ctr];
+			}
+
+		}
+		else
+		{
+			while (yFree > 0)
+			{
+				/*------------------------------------------------------------*/
+				/* Distribute the remaining vSpace to the vFill one pixel at  */
+				/* a time (starting from the top row and moving down).        */
+				/*------------------------------------------------------------*/
+				for (ctr = 0; ctr < nAlloc; ctr++)
 				{
-					rendRowH[ctr] += 1;
-					yFree -= 1;
-					if (yFree == 0)
+					if (allVFill[ctr] && rendRowH[ctr] < vfillMaxMinH)
 					{
-						break;
+						rendRowH[ctr] += 1;
+						yFree -= 1;
+						if (yFree == 0)
+						{
+							break;
+						}
 					}
 				}
 			}
@@ -1087,7 +1100,10 @@ int neuik_Element_Render__VGroup(
 		}
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (elemsCfg   != NULL) free(elemsCfg);
@@ -1106,3 +1122,4 @@ out:
 
 	return eNum;
 }
+

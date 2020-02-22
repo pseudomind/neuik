@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -422,7 +422,7 @@ int neuik_Element_Render__Frame(
 	int                   offRight   = 0;
 	int                   offTop     = 0;
 	int                   offBottom  = 0;
-	RenderLoc             rl         = {0, 0};
+	RenderLoc             rl;
 	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	const NEUIK_Color   * bClr       = NULL; /* border color */
 	SDL_Renderer        * rend       = NULL;
@@ -673,7 +673,10 @@ int neuik_Element_Render__Frame(
 		goto out;
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)

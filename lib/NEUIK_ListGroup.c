@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -657,7 +657,10 @@ int neuik_Element_Render__ListGroup(
 	/* Present all changes and create a texture from this surface             */
 	/*------------------------------------------------------------------------*/
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
@@ -936,6 +939,14 @@ neuik_EventState neuik_Element_CaptureEvent__ListGroup(
 				goto out;
 			}
 		}
+	}
+	else
+	{
+		/*--------------------------------------------------------------------*/
+		/* If there are no contained elements, there is probably no possible  */
+		/* outcome to handling the event.                                     */
+		/*--------------------------------------------------------------------*/
+		goto out;
 	}
 
 	/*------------------------------------------------------------------------*/

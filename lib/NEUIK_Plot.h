@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,7 +37,7 @@ typedef struct {
 		NEUIK_Element         * drawing_ticmarks;
 		NEUIK_Element         * drawing;
 		NEUIK_Element         * legend;
-		NEUIK_Element         * data_sets;   /* data_set of this plot */
+		NEUIK_Object          * data_sets;   /* data_set of this plot */
 		NEUIK_Element         * visual;
 		unsigned int            n_allocated; /* number of data_set slots allocated */
 		unsigned int            n_used;      /* number of data_set slots in use */

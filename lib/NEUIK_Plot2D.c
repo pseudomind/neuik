@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -388,7 +388,7 @@ int neuik_Element_Render__Plot2D(
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
-	RenderLoc             rl         = {0, 0};
+	RenderLoc             rl;
 	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	SDL_Rect              rect       = {0, 0, 0, 0};
 	RenderSize            rs         = {0, 0};
@@ -630,7 +630,10 @@ int neuik_Element_Render__Plot2D(
 		}
 	}
 out:
-	if (!mock) eBase->eSt.doRedraw = 0;
+	if (eBase != NULL)
+	{
+		if (!mock) eBase->eSt.doRedraw = 0;
+	}
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
 	if (eNum > 0)
