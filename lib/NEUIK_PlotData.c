@@ -468,9 +468,9 @@ out:
  *
  ******************************************************************************/
 int neuik_GetFloatArrayFromFields(
-	float      ** arrayPtr, /* (out) The resulting allocated float array. */
-	int         * arrayLen, /* (out) length of the resulting array */
-	const char  * srcStr)   /* whitespace separated value string */
+	float        ** arrayPtr, /* (out) The resulting allocated float array. */
+	unsigned int  * arrayLen, /* (out) length of the resulting array */
+	const char    * srcStr)   /* whitespace separated value string */
 {
 	int     ctr       = 0;
 	int     isWS      = FALSE; /* current active char is whitespace */
@@ -683,11 +683,11 @@ int NEUIK_PlotData_SetValuesFromString(
 	NEUIK_PlotData * pd,
 	const char     * valStr)
 {
-	int     ctr        = 0;
-	int     isXval     = FALSE;
-	int     arrayLen   = 0;
-	float   nextVal    = 0.0;  /* the next value in the array */
-	float * floatArray = NULL; /* free value before returning */
+	int            isXval     = FALSE;
+	unsigned int   ctr        = 0;
+	unsigned int   arrayLen   = 0;
+	float          nextVal    = 0.0;  /* the next value in the array */
+	float        * floatArray = NULL; /* free value before returning */
 	/*------------------------------------------------------------------------*/
 	int           eNum       = 0;
 	static char   funcName[] = "NEUIK_PlotData_SetValuesFromString";
@@ -853,6 +853,158 @@ out:
 	{
 		if (floatArray != NULL) free(floatArray);
 
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_PlotData_WriteValuesToASCIIFile
+ *
+ *  Description:   Write out the values contained within a PlotData object.
+ *                 Optionally this data file can include additional header 
+ *                 information.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_PlotData_WriteValuesToASCIIFile(
+	NEUIK_PlotData * pd,
+	const char     * fileName,
+	int              writeHeader) /* If a PlotData header should be written. */
+{
+	int    ctr     = 0;
+	int    posCtr  = 0;
+	FILE * outFile = NULL;
+	static char cmtBarLn[] =
+		"#------------------------------------------------------------------------------#\n";
+
+	/*------------------------------------------------------------------------*/
+	int           eNum       = 0;
+	static char   funcName[] = "NEUIK_PlotData_WriteValuesToASCIIFile";
+	static char * errMsgs[]  = {"", // [0] no error 
+		"Argument `pd` is NULL.",                        // [1]
+		"Argument `pd` is not of PlotData class.",       // [2]
+		"Argument `fileName` is NULL.",                  // [3]
+		"Argument `fileName` supplied an empty string.", // [4]
+		"Failed to open file for writing.",              // [5]
+		"Internal 32-bit float data array is NULL.",     // [6]
+		"Internal 64-bit float data array is NULL.",     // [7]
+	};
+
+	/*------------------------------------------------------------------------*/
+	/* Check for errors before continuing.                                    */
+	/*------------------------------------------------------------------------*/
+	if (pd == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (!neuik_Object_IsClass(pd, neuik__Class_PlotData))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (fileName == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+	if (strlen(fileName) == 0)
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Attempt to open the file for writing.                                  */
+	/*------------------------------------------------------------------------*/
+	outFile = fopen(fileName, "w");
+	if (outFile == NULL)
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	if (writeHeader)
+	{
+		fprintf(outFile, cmtBarLn);
+		fprintf(outFile, "# NEUIK_PlotData -- ASCII\n");
+		fprintf(outFile, "# uniqueName : `%s`\n", pd->uniqueName);
+		fprintf(outFile, "# precision  : %d\n", pd->precision);
+		fprintf(outFile, "# nPoints    : %d\n", pd->nPoints);
+	}
+
+
+	switch (pd->precision)
+	{
+		case 32:
+			if (pd->data_32 == NULL)
+			{
+				eNum = 6;
+				goto out;
+			}
+			if (writeHeader)
+			{
+				fprintf(outFile, "# x_min      : % 16.10e\n",
+					pd->bounds_32.x_min);
+				fprintf(outFile, "# x_max      : % 16.10e\n",
+					pd->bounds_32.x_max);
+				fprintf(outFile, "# y_min      : % 16.10e\n",
+					pd->bounds_32.y_min);
+				fprintf(outFile, "# y_max      : % 16.10e\n",
+					pd->bounds_32.y_max);
+				fprintf(outFile, cmtBarLn);
+			}
+
+			for (ctr = 0; ctr < pd->nPoints; ctr++)
+			{
+				fprintf(outFile, "% 16.10e % 16.10e\n", 
+					pd->data_32[posCtr],
+					pd->data_32[posCtr+1]);
+				posCtr += 2;
+			}
+			break;
+		case 64:
+			if (pd->data_64 == NULL)
+			{
+				eNum = 7;
+				goto out;
+			}
+			if (writeHeader)
+			{
+				fprintf(outFile, "# x_min      : % 18.12e\n",
+					pd->bounds_32.x_min);
+				fprintf(outFile, "# x_max      : % 18.12e\n",
+					pd->bounds_32.x_max);
+				fprintf(outFile, "# y_min      : % 18.12e\n",
+					pd->bounds_32.y_min);
+				fprintf(outFile, "# y_max      : % 18.12e\n",
+					pd->bounds_32.y_max);
+				fprintf(outFile, cmtBarLn);
+			}
+
+			for (ctr = 0; ctr < pd->nPoints; ctr++)
+			{
+				fprintf(outFile, "% 18.12e % 18.12e\n", 
+					pd->data_32[posCtr],
+					pd->data_32[posCtr+1]);
+				posCtr += 2;
+			}
+			break;
+		default:
+			fprintf(outFile, cmtBarLn);
+			break;
+	}
+	fflush(outFile);
+	fclose(outFile);
+out:
+	if (eNum > 0)
+	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
 	}

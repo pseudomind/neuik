@@ -22,9 +22,9 @@
 typedef struct {
 		neuik_Object   objBase;    /* this structure is requied to be an neuik object */
 		char         * uniqueName; /* unique name for this plot data. */
-		int            nAlloc;     /* Number of allocated data slots */
-		int            nPoints;    /* Number of X,Y datapoint pairs */
-		int            nUsed;      /* Number of data slots in use */
+		unsigned int   nAlloc;     /* Number of allocated data slots */
+		unsigned int   nPoints;    /* Number of X,Y datapoint pairs */
+		unsigned int   nUsed;      /* Number of data slots in use */
 		int            precision;  /* 32bit (32) or 64bit (64) */
 		int            boundsSet;  /*  */
 		float        * data_32;    /* Used for storing 32bit float values */
@@ -69,5 +69,10 @@ int
 			NEUIK_PlotData * pd,
 			const char     * valStr);
 
+int
+	NEUIK_PlotData_WriteValuesToASCIIFile(
+			NEUIK_PlotData * pd,
+			const char     * fileName,
+			int              writeHeader);
 
 #endif /* NEUIK_PLOTDATA_H */
