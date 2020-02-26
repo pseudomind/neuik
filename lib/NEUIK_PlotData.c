@@ -140,6 +140,7 @@ int neuik_Object_New__PlotData(
 	/* Initialize values within the new PlotData                              */
 	/*------------------------------------------------------------------------*/
 	pd->uniqueName = NULL;
+	pd->stateMod   = 0;
 	pd->nAlloc     = 0;
 	pd->nPoints    = 0;
 	pd->nUsed      = 0;
@@ -843,6 +844,7 @@ int NEUIK_PlotData_SetValuesFromString(
 	/*------------------------------------------------------------------------*/
 	/* Set the values within the PlotData object.                             */
 	/*------------------------------------------------------------------------*/
+	pd->stateMod++;
 	pd->nAlloc    = arrayLen;
 	pd->nPoints   = arrayLen/2;
 	pd->nUsed     = arrayLen;

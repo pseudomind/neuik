@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@
 #include "NEUIK_Event.h"
 #include "NEUIK_Element.h"
 #include "NEUIK_Canvas.h"
+#include "NEUIK_PlotData.h"
 
 typedef struct {
 		neuik_Object   objBase;   /* this structure is requied to be an neuik object */
@@ -29,5 +30,22 @@ typedef struct {
 int 
 	NEUIK_NewPlot2D(
 			NEUIK_Plot2D ** plt);
+
+int 
+	NEUIK_Plot2D_AddPlotData(
+			NEUIK_Plot2D   * plt,
+			NEUIK_PlotData * data,
+			const char     * label);
+
+int 
+	NEUIK_Plot2D_RemovePlotData(
+			NEUIK_Plot2D * plt,
+			const char   * uniqueName);
+
+int 
+	NEUIK_Plot2D_SetPlotDataLabel(
+			NEUIK_Plot2D * plt,
+			const char   * uniqueName,
+			const char   * label);
 
 #endif /* NEUIK_PLOT2D_H */

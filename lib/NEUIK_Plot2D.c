@@ -136,12 +136,14 @@ out:
 int neuik_Object_New__Plot2D(
 	void ** pltPtr)
 {
-	int             eNum       = 0;
-	NEUIK_Plot    * plot       = NULL;
-	NEUIK_Plot2D  * plot2d     = NULL;
-	NEUIK_Element * sClassPtr  = NULL;
-	static char     funcName[] = "neuik_Object_New__Plot2D";
-	static char   * errMsgs[]  = {"",                                      // [0] no error
+	int                    eNum       = 0;
+	int                    ctr        = 0;
+	NEUIK_Plot           * plot       = NULL;
+	NEUIK_Plot2D         * plot2d     = NULL;
+	neuik_PlotDataConfig * dataCfg    = NULL;
+	NEUIK_Element        * sClassPtr  = NULL;
+	static char            funcName[] = "neuik_Object_New__Plot2D";
+	static char          * errMsgs[]  = {"", // [0] no error
 		"Output Argument `pltPtr` is NULL.",                               // [1]
 		"Failure to allocate memory.",                                     // [2]
 		"Failure in `neuik_GetObjectBaseOfClass`.",                        // [3]
@@ -231,6 +233,31 @@ int neuik_Object_New__Plot2D(
 	{
 		eNum = 7;
 		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory for tracking DataSets.                                 */
+	/*------------------------------------------------------------------------*/
+	plot->data_sets = malloc(5*sizeof(NEUIK_Object));
+	if (plot->data_sets == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	plot->data_configs = malloc(5*sizeof(neuik_PlotDataConfig));
+	if (plot->data_configs == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	plot->n_allocated = 5;
+	plot->n_used = 0;
+
+	for (ctr = plot->n_used; ctr < plot->n_allocated; ctr++)
+	{
+		dataCfg = &(plot->data_configs[ctr]);
+		dataCfg->uniqueName = NULL;
+		dataCfg->label      = NULL;
 	}
 out:
 	if (eNum > 0)
@@ -636,6 +663,166 @@ out:
 	}
 	if (maskMap != NULL) neuik_Object_Free(maskMap);
 
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Plot2D_AddPlotData
+ *
+ *  Description:   Add the specified PlotData to this plot.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Plot2D_AddPlotData(
+	NEUIK_Plot2D   * plot2d,
+	NEUIK_PlotData * data,
+	const char     * label)
+{
+	int                   eNum = 0; /* which error to report (if any) */
+	int                   sLen = 0;
+	unsigned int          uCtr = 0;
+	neuik_PlotDataConfig * dataCfg    = NULL;
+	NEUIK_Plot           * plot       = NULL;
+	RenderSize             rSize;
+	RenderLoc              rLoc;
+	static char            funcName[] = "NEUIK_Plot2D_AddPlotData";
+	static char          * errMsgs[]  = {"", // [0] no error
+		"Argument `plot2d` is not of Plot2D class.",                       // [1]
+		"Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.", // [2]
+		"Argument `data` is not of PlotData class.",                       // [3]
+		"Failure to reallocate memory.",                                   // [4]
+		"PlotData `uniqueName` already in use within this Plot.",          // [5]
+		"Failure to allocate memory.",                                     // [6]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",                // [7]
+	};
+
+	/*------------------------------------------------------------------------*/
+	/* Check for errors before continuing.                                    */
+	/*------------------------------------------------------------------------*/
+	if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (neuik_Object_GetClassObject(plot2d, neuik__Class_Plot, (void**)&plot))
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	if (!neuik_Object_IsClass(data, neuik__Class_PlotData))
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Check to see if the DataSet slots need to be reallocated.              */
+	/*------------------------------------------------------------------------*/
+	if (plot->n_used >= plot->n_allocated)
+	{
+		/*--------------------------------------------------------------------*/
+		/* More space will be needed for tracking DataSets; reallocate.       */
+		/*--------------------------------------------------------------------*/
+		plot->data_sets = realloc(plot->data_sets, 
+			(plot->n_allocated+5)*sizeof(NEUIK_Object));
+		if (plot->data_sets == NULL)
+		{
+			eNum = 4;
+			goto out;
+		}
+		plot->data_configs = realloc(plot->data_configs,
+			(plot->n_allocated+5)*sizeof(neuik_PlotDataConfig));
+		if (plot->data_configs == NULL)
+		{
+			eNum = 4;
+			goto out;
+		}
+		plot->n_allocated += 5;
+
+		for (uCtr = plot->n_used; uCtr < plot->n_allocated; uCtr++)
+		{
+			dataCfg = &(plot->data_configs[uCtr]);
+			dataCfg->uniqueName = NULL;
+			dataCfg->label      = NULL;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Make sure the uniqueName for this PlotData isn't already in use within */
+	/* this Plot.                                                             */
+	/*------------------------------------------------------------------------*/
+	for (uCtr = 0; uCtr < plot->n_used; uCtr++)
+	{
+		if (!strcmp(plot->data_configs[uCtr].uniqueName, data->uniqueName))
+		{
+			eNum = 5;
+			goto out;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Add the PlotData to the first available slot.                          */
+	/*------------------------------------------------------------------------*/
+	plot->data_sets[plot->n_used] = data;
+
+	dataCfg = &(plot->data_configs[plot->n_used]);
+	if (dataCfg->uniqueName != NULL)
+	{
+		free(dataCfg->uniqueName);
+		dataCfg->uniqueName = NULL;
+	}
+	if (dataCfg->label != NULL)
+	{
+		free(dataCfg->label);
+		dataCfg->label = NULL;
+	}
+
+	sLen = strlen(data->uniqueName);
+	dataCfg->uniqueName = malloc((1+sLen)*sizeof(char));
+	if (dataCfg->uniqueName == NULL)
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	sLen = strlen(label);
+	dataCfg->label = malloc((1+sLen)*sizeof(char));
+	if (dataCfg->label == NULL)
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Request a redraw of the old size at old location. This will make sure  */
+	/* the content is erased (in case the new content is smaller).            */
+	/*------------------------------------------------------------------------*/
+	if (neuik_Element_GetSizeAndLocation(plot2d, &rSize, &rLoc))
+	{
+		eNum = 7;
+		goto out;
+	}
+	neuik_Element_RequestRedraw(plot2d, rLoc, rSize);
+
+	/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+	#pragma message("There should be double-linkage between Plot2D and PlotData.")
+	/*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
+	/* This is so changes in plot data can trigger redraws of the Plot2D and  */
+	/* also, so removal of the PlotData from curve, can remove the linkage    */
+	/* from the PlotData side.                                                */
+	/*^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^*/
+out:
 	if (eNum > 0)
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);

@@ -59,6 +59,8 @@ int main()
 	NEUIK_PlotData_SetValuesFromString(pd, SAMPLE_SINE_FUNC);
 	NEUIK_PlotData_WriteValuesToASCIIFile(pd, "sampleSineFunc.pltdat", TRUE);
 
+	NEUIK_Plot2D_AddPlotData(plt, pd, "sineFunc");
+
 	NEUIK_Window_SetElement(mw, plt);
 
 	NEUIK_Window_Create(mw);

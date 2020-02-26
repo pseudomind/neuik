@@ -284,15 +284,16 @@ int neuik_Object_New__Plot(
 		goto out;
 	}
 
-	plot->data_sets   = NULL;
-	plot->n_allocated = 0;
-	plot->n_used      = 0;
-	plot->x_range_cfg = NEUIK_PLOTRANGECONFIG_AUTO;
-	plot->x_range_min = 0;
-	plot->x_range_max = 0;
-	plot->y_range_cfg = NEUIK_PLOTRANGECONFIG_AUTO;
-	plot->y_range_min = 0;
-	plot->y_range_max = 0;
+	plot->data_sets    = NULL;
+	plot->data_configs = NULL;
+	plot->n_allocated  = 0;
+	plot->n_used       = 0;
+	plot->x_range_cfg  = NEUIK_PLOTRANGECONFIG_AUTO;
+	plot->x_range_min  = 0;
+	plot->x_range_max  = 0;
+	plot->y_range_cfg  = NEUIK_PLOTRANGECONFIG_AUTO;
+	plot->y_range_min  = 0;
+	plot->y_range_max  = 0;
 
 	/*------------------------------------------------------------------------*/
 	/* Create first level Base SuperClass Object                              */
@@ -333,12 +334,12 @@ out:
 int neuik_Object_Free__Plot(
 	void * plotPtr)
 {
-	int             ctr;
-	int             eNum       = 0;    /* which error to report (if any) */
-	NEUIK_Element   elem       = NULL;
-	NEUIK_Plot    * plot       = NULL;
-	static char     funcName[] = "neuik_Object_Free__Plot";
-	static char   * errMsgs[]  = {"",                            // [0] no error
+	int                    eNum    = 0;    /* which error to report (if any) */
+	unsigned int           uCtr    = 0;
+	NEUIK_Plot           * plot    = NULL;
+	neuik_PlotDataConfig * dataCfg = NULL;
+	static char   funcName[] = "neuik_Object_Free__Plot";
+	static char * errMsgs[]  = {"", // [0] no error
 		"Argument `plotPtr` is NULL.",                           // [1]
 		"Argument `plotPtr` is not of Plot class.",              // [2]
 		"Failure in function `neuik_Object_Free` (superclass).", // [3]
@@ -347,7 +348,6 @@ int neuik_Object_Free__Plot(
 		"Failure in function `neuik_Object_Free` (y_label).",    // [6]
 		"Failure in function `neuik_Object_Free` (legend).",     // [7]
 		"Failure in function `neuik_Object_Free` (visual).",     // [8]
-		"Failure in function `neuik_Object_Free` (data_set).",   // [9]
 	};
 
 	if (plotPtr == NULL)
@@ -371,8 +371,6 @@ int neuik_Object_Free__Plot(
 		eNum = 3;
 		goto out;
 	}
-
-	plot->data_sets = NULL;
 
 	/*------------------------------------------------------------------------*/
 	/* Free the typical plot elements (if still allocated                     */
@@ -426,22 +424,16 @@ int neuik_Object_Free__Plot(
 		}
 	}
 
-	if (plot->data_sets != NULL)
+	if (plot->data_configs != NULL)
 	{
-		/*--------------------------------------------------------------------*/
-		/* Free all of the contained data sets.                               */
-		/*--------------------------------------------------------------------*/
-		for (ctr = 0;; ctr++)
+		for (uCtr = plot->n_used; uCtr < plot->n_allocated; uCtr++)
 		{
-			elem = plot->data_sets[ctr];
-			if (elem == NULL) break; /* end of NULL-ptr terminated array */
-
-			if(neuik_Object_Free(elem))
-			{
-				eNum = 9;
-				goto out;
-			}
+			dataCfg = &(plot->data_configs[uCtr]);
+			if (dataCfg->uniqueName != NULL) free(dataCfg->uniqueName);
+			if (dataCfg->label      != NULL) free(dataCfg->label);
 		}
+
+		free(plot->data_configs);
 	}
 
 	free(plot);
@@ -520,8 +512,6 @@ int neuik_Element_SetWindowPointer__Plot (
 	void          * win)
 {
 	int                 eNum     = 0;
-	int                 ctr      = 0;
-	NEUIK_Element       elem     = NULL; 
 	NEUIK_ElementBase * eBase    = NULL;
 	NEUIK_Plot        * plot     = NULL;
 	static int          nRecurse = 0; /* number of times recursively called */
@@ -591,24 +581,6 @@ int neuik_Element_SetWindowPointer__Plot (
 		{
 			eNum = 2;
 			goto out;
-		}
-	}
-
-	if (plot->data_sets != NULL)
-	{
-		/*--------------------------------------------------------------------*/
-		/* Propagate this information to contained UI Elements                */
-		/*--------------------------------------------------------------------*/
-		for (ctr = 0;; ctr++)
-		{
-			elem = plot->data_sets[ctr];
-			if (elem == NULL) break;
-
-			if (neuik_Element_SetWindowPointer(elem, win))
-			{
-				eNum = 2;
-				goto out;
-			}
 		}
 	}
 
