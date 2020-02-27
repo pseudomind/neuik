@@ -675,6 +675,238 @@ out:
 
 /*******************************************************************************
  *
+ *  Name:          neuik_Plot2D_UpdateAxesRanges
+ *
+ *  Description:   Update the stored X/Y-Axis ranges.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Plot2D_UpdateAxesRanges(
+	NEUIK_Plot2D * plot2d)
+{
+	int             eNum       = 0; /* which error to report (if any) */
+	int             boundsSet  = FALSE;
+	unsigned int    uCtr       = 0;
+	double          xMin       = 0.0;
+	double          xMax       = 0.0;
+	double          yMin       = 0.0;
+	double          yMax       = 0.0;
+	double          xMin64     = 0.0;
+	double          xMax64     = 0.0;
+	double          yMin64     = 0.0;
+	double          yMax64     = 0.0;
+	double          xRangeMin  = 0.0;
+	double          xRangeMax  = 0.0;
+	double          yRangeMin  = 0.0;
+	double          yRangeMax  = 0.0;
+	double          xAxisRange = 0.0;
+	double          yAxisRange = 0.0;
+	NEUIK_Plot     * plot      = NULL;
+	NEUIK_PlotData * data      = NULL;
+	static char      funcName[] = "neuik_Plot2D_UpdateAxesRanges";
+	static char    * errMsgs[]  = {"", // [0] no error
+		"Argument `plot2d` is not of Plot2D class.",                       // [1]
+		"Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.", // [2]
+		"Unsupported `precision` used within included PlotData.",          // [3]
+	};
+
+	/*------------------------------------------------------------------------*/
+	/* Check for errors before continuing.                                    */
+	/*------------------------------------------------------------------------*/
+	if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (neuik_Object_GetClassObject(plot2d, neuik__Class_Plot, (void**)&plot))
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	if (plot->x_range_cfg == NEUIK_PLOTRANGECONFIG_SPECIFIED &&
+		plot->y_range_cfg == NEUIK_PLOTRANGECONFIG_SPECIFIED)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The plot range for both axes has been manuallys specified. There   */
+		/* is no need to autocalculate a range here; return now.              */
+		/*--------------------------------------------------------------------*/
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the maximum X-Y range of values from all data sets.          */
+	/*------------------------------------------------------------------------*/
+	for (uCtr = 0; uCtr < plot->n_used; uCtr++)
+	{
+		data = (NEUIK_PlotData*)(plot->data_sets[uCtr]);
+		if (!data->boundsSet) continue;
+
+		/*--------------------------------------------------------------------*/
+		/* Extract the bounds for a particular PlotData set as doubles.       */
+		/*--------------------------------------------------------------------*/
+		switch (data->precision)
+		{
+			case 32:
+				xMin64 = (double)(data->bounds_32.x_min);
+				xMax64 = (double)(data->bounds_32.x_max);
+				yMin64 = (double)(data->bounds_32.y_min);
+				yMax64 = (double)(data->bounds_32.y_max);
+				break;
+			case 64:
+				xMin64 = data->bounds_64.x_min;
+				xMax64 = data->bounds_64.x_max;
+				yMin64 = data->bounds_64.y_min;
+				yMax64 = data->bounds_64.y_max;
+				break;
+			default:
+				/*------------------------------------------------------------*/
+				/* Unsupported floating point precision.                      */
+				/*------------------------------------------------------------*/
+				eNum = 3;
+				goto out;
+				break;
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Update the overall X-Y ranges of values from all data sets.        */
+		/*--------------------------------------------------------------------*/
+		if (!boundsSet)
+		{
+			xMin = xMin64;
+			xMax = xMax64;
+			yMin = yMin64;
+			yMax = yMax64;
+		}
+		else
+		{
+			if (xMin64 < xMin)
+			{
+				xMin = xMin64;
+			}
+			if (xMax64 > xMax)
+			{
+				xMax = xMax64;
+			}
+			if (yMin64 < yMin)
+			{
+				yMin = yMin64;
+			}
+			if (yMax64 > yMax)
+			{
+				yMax = yMax64;
+			}
+		}
+
+		boundsSet = TRUE;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the X bounds to use for the overall plot.                    */
+	/*------------------------------------------------------------------------*/
+	xAxisRange = xMax - xMin;
+
+	if (xAxisRange == 0.0)
+	{
+		xRangeMin = xMin - 1;
+		xRangeMax = xMin + 1;
+	}
+	else if (xAxisRange < 0.5)
+	{
+		xRangeMin = floor(xMin);
+		xRangeMax = xRangeMin + 1;
+	}
+	else if (xAxisRange < 1.0)
+	{
+		xRangeMin = floor(xMin);
+		xRangeMax = xRangeMin + 2;
+	}
+	else if (xAxisRange < 10.0)
+	{
+		xRangeMin = floor(xMin - fmod(xMin, 10));
+		if (xMax < xRangeMin + 10)
+		{
+			xRangeMax = xRangeMin + 10;
+		}
+		xRangeMax = xRangeMin + 12;
+	}
+	else if (xAxisRange < 100.0)
+	{
+		xRangeMin = floor(xMin - fmod(xMin, 100));
+		if (xMax < xRangeMin + 100)
+		{
+			xRangeMax = xRangeMin + 100;
+		}
+		xRangeMax = xRangeMin + 120;
+	}
+	else
+	{
+		printf("neuik_Plot2D_UpdateAxesRanges(): xAxisRange unhandled!!!\n");
+		#pragma message ("[TODO] Improve calculation of xAxisRange")
+	}
+	plot->x_range_min = xRangeMin;
+	plot->x_range_max = xRangeMax;
+
+
+	/*------------------------------------------------------------------------*/
+	/* Calculate the Y bounds to use for the overall plot.                    */
+	/*------------------------------------------------------------------------*/
+	yAxisRange = yMax - yMin;
+
+	if (yAxisRange == 0.0)
+	{
+		yRangeMin = yMin - 1;
+		yRangeMax = yMin + 1;
+	}
+	else if (yAxisRange < 0.5)
+	{
+		yRangeMin = floor(yMin);
+		yRangeMax = yRangeMin + 1;
+	}
+	else if (yAxisRange < 1.0)
+	{
+		yRangeMin = floor(yMin);
+		yRangeMax = yRangeMin + 2;
+	}
+	else if (yAxisRange < 10.0)
+	{
+		yRangeMin = floor(yMin - fmod(yMin, 10));
+		if (yMax < yRangeMin + 10)
+		{
+			yRangeMax = yRangeMin + 10;
+		}
+		yRangeMax = yRangeMin + 12;
+	}
+	else if (yAxisRange < 100.0)
+	{
+		yRangeMin = floor(yMin - fmod(yMin, 100));
+		if (yMax < yRangeMin + 100)
+		{
+			yRangeMax = yRangeMin + 100;
+		}
+		yRangeMax = yRangeMin + 120;
+	}
+	else
+	{
+		printf("neuik_Plot2D_UpdateAxesRanges(): yAxisRange unhandled!!!\n");
+		#pragma message ("[TODO] Improve calculation of yAxisRange")
+	}
+	plot->x_range_min = yRangeMin;
+	plot->x_range_max = yRangeMax;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+/*******************************************************************************
+ *
  *  Name:          NEUIK_Plot2D_AddPlotData
  *
  *  Description:   Add the specified PlotData to this plot.
@@ -702,7 +934,8 @@ int NEUIK_Plot2D_AddPlotData(
 		"Failure to reallocate memory.",                                   // [4]
 		"PlotData `uniqueName` already in use within this Plot.",          // [5]
 		"Failure to allocate memory.",                                     // [6]
-		"Failure in `neuik_Element_GetSizeAndLocation()`.",                // [7]
+		"Failure in `neuik_Plot2D_UpdateAxesRanges()`.",                   // [7]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",                // [8]
 	};
 
 	/*------------------------------------------------------------------------*/
@@ -804,13 +1037,19 @@ int NEUIK_Plot2D_AddPlotData(
 		goto out;
 	}
 
+	if (neuik_Plot2D_UpdateAxesRanges(plot2d))
+	{
+		eNum = 7;
+		goto out;
+	}
+
 	/*------------------------------------------------------------------------*/
 	/* Request a redraw of the old size at old location. This will make sure  */
 	/* the content is erased (in case the new content is smaller).            */
 	/*------------------------------------------------------------------------*/
 	if (neuik_Element_GetSizeAndLocation(plot2d, &rSize, &rLoc))
 	{
-		eNum = 7;
+		eNum = 8;
 		goto out;
 	}
 	neuik_Element_RequestRedraw(plot2d, rLoc, rSize);
