@@ -627,3 +627,282 @@ out:
 	return eNum;
 }
 
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Line_Configure
+ *
+ *  Description:   Allows the user to set a number of configurable parameters.
+ *
+ *                 NOTE: This list of named sets must be terminated by a NULL 
+ *                 pointer
+ *
+ *  Returns:       Non-zero if an error occurs.
+ *
+ ******************************************************************************/
+int NEUIK_Line_Configure(
+	NEUIK_Line * line,
+	const char * set0,
+	...)
+{
+	int                  ns; /* number of items from sscanf */
+	int                  ctr;
+	int                  nCtr;
+	int                  eNum      = 0; /* which error to report (if any) */
+	int                  doRedraw  = FALSE;
+	int                  isBool    = FALSE;
+	int                  boolVal   = FALSE;
+	int                  typeMixup;
+	char                 buf[4096];
+	RenderSize           rSize;
+	RenderLoc            rLoc;
+	va_list              args;
+	char               * strPtr    = NULL;
+	char               * name      = NULL;
+	char               * value     = NULL;
+	const char         * set       = NULL;
+	NEUIK_Color          clr;
+	/*------------------------------------------------------------------------*/
+	/* If a `name=value` string with an unsupported name is found, check to   */
+	/* see if a boolName was mistakenly used instead.                         */
+	/*------------------------------------------------------------------------*/
+	static char * boolNames[] = {
+		NULL,
+	};
+	/*------------------------------------------------------------------------*/
+	/* If a boolName string with an unsupported name is found, check to see   */
+	/* if a supported nameValue type was mistakenly used instead.             */
+	/*------------------------------------------------------------------------*/
+	static char * valueNames[] = {
+		"Color",
+		NULL,
+	};
+	static char   funcName[] = "NEUIK_Line_Configure";
+	static char * errMsgs[]  = {"",                               // [ 0] no error
+		"Argument `line` does not implement Label class.",                 // [ 1]
+		"`name=value` string is too long.",                               // [ 2]
+		"Invalid `name=value` string.",                                   // [ 3]
+		"ValueType name used as BoolType, skipping.",                     // [ 4]
+		"BoolType name unknown, skipping.",                               // [ 5]
+		"NamedSet.name is NULL, skipping..",                              // [ 6]
+		"NamedSet.name is blank, skipping..",                             // [ 7]
+		"FontColor value invalid; should be comma separated RGBA.",       // [ 8]
+		"FontColor value invalid; RGBA value range is 0-255.",            // [ 9]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [10]
+		"BoolType name used as ValueType, skipping.",                     // [11]
+		"NamedSet.name type unknown, skipping.",                          // [12]
+	};
+
+	if (!neuik_Object_IsClass(line, neuik__Class_Line))
+	{
+		eNum = 1;
+		goto out;
+	}
+	set = set0;
+
+	va_start(args, set0);
+
+	for (ctr = 0;; ctr++)
+	{
+		if (ctr > 0)
+		{
+			/* before starting */
+			set = va_arg(args, const char *);
+		}
+
+		isBool = FALSE;
+		name   = NULL;
+		value  = NULL;
+
+		if (set == NULL) break;
+
+		if (strlen(set) > 4095)
+		{
+			NEUIK_RaiseError(funcName, errMsgs[2]);
+			set = va_arg(args, const char *);
+			continue;
+		}
+		else
+		{
+			strcpy(buf, set);
+			/* Find the equals and set it to '\0' */
+			strPtr = strchr(buf, '=');
+			if (strPtr == NULL)
+			{
+				/*------------------------------------------------------------*/
+				/* Bool type configuration (or a mistake)                     */
+				/*------------------------------------------------------------*/
+				if (buf[0] == 0)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[3]);
+				}
+
+				isBool  = TRUE;
+				boolVal = TRUE;
+				name    = buf;
+				if (buf[0] == '!')
+				{
+					boolVal = FALSE;
+					name    = buf + 1;
+				}
+				if (boolVal)
+				{
+					/*--------------------------------------------------------*/
+					/* Do nothing; this is to resolve an unused var warning.  */
+					/*--------------------------------------------------------*/
+				}
+			}
+			else
+			{
+				*strPtr = 0;
+				strPtr++;
+				if (*strPtr == 0)
+				{
+					/* `name=value` string is missing a value */
+					NEUIK_RaiseError(funcName, errMsgs[3]);
+					set = va_arg(args, const char *);
+					continue;
+				}
+				name  = buf;
+				value = strPtr;
+			}
+		}
+
+		if (isBool)
+		{
+			/*----------------------------------------------------------------*/
+			/* Check for boolean parameter setting.                           */
+			/*----------------------------------------------------------------*/
+			/* Bool parameter not found; may be mixup or mistake.             */
+			/*----------------------------------------------------------------*/
+			typeMixup = FALSE;
+			for (nCtr = 0;; nCtr++)
+			{
+				if (valueNames[nCtr] == NULL) break;
+
+				if (!strcmp(valueNames[nCtr], name))
+				{
+					typeMixup = TRUE;
+					break;
+				}
+			}
+
+			if (typeMixup)
+			{
+				/* A value type was mistakenly used as a bool type */
+				NEUIK_RaiseError(funcName, errMsgs[4]);
+			}
+			else
+			{
+				/* An unsupported name was used as a bool type */
+				NEUIK_RaiseError(funcName, errMsgs[5]);
+			}
+		}
+		else
+		{
+			if (name == NULL)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[6]);
+			}
+			else if (name[0] == 0)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[7]);
+			}
+			else if (!strcmp("Color", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+					continue;
+				}
+
+				ns = sscanf(value, "%d,%d,%d,%d", &clr.r, &clr.g, &clr.b, &clr.a);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 4)
+			#else
+				if (ns < 4)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+					continue;
+				}
+
+				if (clr.r < 0 || clr.r > 255 ||
+					clr.g < 0 || clr.g > 255 ||
+					clr.b < 0 || clr.b > 255 ||
+					clr.a < 0 || clr.a > 255)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[9]);
+					continue;
+				}
+				if (line->color.r == clr.r &&
+					line->color.g == clr.g &&
+					line->color.b == clr.b &&
+					line->color.a == clr.a) continue;
+
+				/* else: The previous setting was changed */
+				line->color = clr;
+				doRedraw = TRUE;
+			}
+			else
+			{
+				typeMixup = FALSE;
+				for (nCtr = 0;; nCtr++)
+				{
+					if (boolNames[nCtr] == NULL) break;
+
+					if (!strcmp(boolNames[nCtr], name))
+					{
+						typeMixup = TRUE;
+						break;
+					}
+				}
+
+				if (typeMixup)
+				{
+					/* A bool type was mistakenly used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[11]);
+				}
+				else
+				{
+					/* An unsupported name was used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[12]);
+				}
+			}
+		}
+	}
+	va_end(args);
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	if (doRedraw)
+	{
+		if (neuik_Element_GetSizeAndLocation(line, &rSize, &rLoc))
+		{
+			eNum = 10;
+			NEUIK_RaiseError(funcName, errMsgs[eNum]);
+			eNum = 1;
+		}
+		else
+		{
+			neuik_Element_RequestRedraw(line, rLoc, rSize);
+		}
+	}
+
+	return eNum;
+}
+

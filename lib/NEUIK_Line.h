@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,12 @@ int
 int 
 	NEUIK_NewVLine(
 			NEUIK_Line ** linePtr);
+
+int
+	NEUIK_Line_Configure(
+			NEUIK_Line * line,
+			const char * set0,
+			...);
 
 int 
 	NEUIK_Line_SetThickness(

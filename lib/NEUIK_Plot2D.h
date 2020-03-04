@@ -19,12 +19,18 @@
 #include "NEUIK_Event.h"
 #include "NEUIK_Element.h"
 #include "NEUIK_Canvas.h"
+#include "NEUIK_GridLayout.h"
+#include "NEUIK_HGroup.h"
 #include "NEUIK_PlotData.h"
+#include "NEUIK_VGroup.h"
 
 typedef struct {
-		neuik_Object   objBase;   /* this structure is requied to be an neuik object */
-		NEUIK_Canvas * drawing_background;
-		NEUIK_Canvas * drawing_ticmarks;
+		neuik_Object       objBase;   /* this structure is requied to be an neuik object */
+		NEUIK_Canvas     * drawing_background;
+		NEUIK_GridLayout * drawing_ticmarks;        /* A 2x2 gridlayout. */
+		NEUIK_Canvas     * drawing_ticmarks_plot_area;
+		NEUIK_VGroup     * drawing_y_axis_ticmarks; /* The y-axis ticmark labels */
+		NEUIK_HGroup     * drawing_x_axis_ticmarks; /* The x-axis ticmark labels */
 } NEUIK_Plot2D;
 
 int 

@@ -20,6 +20,8 @@
 #include "NEUIK_render.h"
 #include "NEUIK_structs_basic.h"
 #include "NEUIK_colors.h"
+#include "NEUIK_Fill.h"
+#include "NEUIK_Label.h"
 #include "NEUIK_Plot.h"
 #include "NEUIK_Plot2D.h"
 #include "NEUIK_Element_internal.h"
@@ -153,6 +155,14 @@ int neuik_Object_New__Plot2D(
 		"Failure in function `NEUIK_Container_AddElement()`.",             // [7]
 		"Failure in function `NEUIK_NewCanvas()`.",                        // [8]
 		"Failure in function `NEUIK_Element_Configure()`.",                // [9]
+		"Failure in function `NEUIK_NewGridLayout()`.",                    // [10]
+		"Failure in function `NEUIK_GridLayout_SetDimensions()`.",         // [11]
+		"Failure in function `NEUIK_GridLayout_SetSpacing()`.",            // [12]
+		"Failure in function `NEUIK_NewHGroup()`.",                        // [13]
+		"Failure in function `NEUIK_NewVGroup()`.",                        // [14]
+		"Failure in function `NEUIK_GridLayout_SetElementAt()`.",          // [15]
+		"Failure in function `NEUIK_HGroup_SetHSpacing()`.",               // [16]
+		"Failure in function `NEUIK_VGroup_SetVSpacing()`.",               // [17]
 	};
 
 	if (pltPtr == NULL)
@@ -193,12 +203,75 @@ int neuik_Object_New__Plot2D(
 		goto out;
 	}
 
-	if (NEUIK_NewCanvas(&plot2d->drawing_ticmarks))
+	if (NEUIK_NewGridLayout(&plot2d->drawing_ticmarks))
+	{
+		eNum = 10;
+		goto out;
+	}
+	if (NEUIK_GridLayout_SetDimensions(plot2d->drawing_ticmarks, 2, 2))
+	{
+		eNum = 11;
+		goto out;
+	}
+	if (NEUIK_Element_Configure(plot2d->drawing_ticmarks, "FillAll", NULL))
+	{
+		eNum = 9;
+		goto out;
+	}
+	if (NEUIK_GridLayout_SetSpacing(plot2d->drawing_ticmarks, 0))
+	{
+		eNum = 12;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Create the Y-axis ticmarks.                                            */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_NewVGroup(&plot2d->drawing_y_axis_ticmarks))
+	{
+		eNum = 14;
+		goto out;
+	}
+	if (NEUIK_VGroup_SetVSpacing(plot2d->drawing_y_axis_ticmarks, 0))
+	{
+		eNum = 17;
+		goto out;
+	}
+	if (NEUIK_Element_Configure(plot2d->drawing_y_axis_ticmarks, "VFill", NULL))
+	{
+		eNum = 9;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Create the X-axis ticmarks.                                            */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_NewHGroup(&plot2d->drawing_x_axis_ticmarks))
+	{
+		eNum = 13;
+		goto out;
+	}
+	if (NEUIK_HGroup_SetHSpacing(plot2d->drawing_x_axis_ticmarks, 0))
+	{
+		eNum = 16;
+		goto out;
+	}
+	if (NEUIK_Element_Configure(plot2d->drawing_x_axis_ticmarks, "HFill", NULL))
+	{
+		eNum = 9;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Create the plot area ticmark drawing canvas.                           */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_NewCanvas(&plot2d->drawing_ticmarks_plot_area))
 	{
 		eNum = 8;
 		goto out;
 	}
-	if (NEUIK_Element_Configure(plot2d->drawing_ticmarks, "FillAll", NULL))
+	if (NEUIK_Element_Configure(
+		plot2d->drawing_ticmarks_plot_area, "FillAll", NULL))
 	{
 		eNum = 9;
 		goto out;
@@ -232,6 +305,35 @@ int neuik_Object_New__Plot2D(
 	if (NEUIK_Container_AddElement(plot->drawing, plot2d->drawing_ticmarks))
 	{
 		eNum = 7;
+		goto out;
+	}
+	/*------------------------------------------------------------------------*/
+	/* Add the Y-Axis elements.                                               */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_GridLayout_SetElementAt(
+		plot2d->drawing_ticmarks, 0, 0, plot2d->drawing_y_axis_ticmarks))
+	{
+		eNum = 15;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Add the X-Axis elements.                                               */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_GridLayout_SetElementAt(
+		plot2d->drawing_ticmarks, 1, 1, plot2d->drawing_x_axis_ticmarks))
+	{
+		eNum = 15;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Add the plot area element.                                             */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_GridLayout_SetElementAt(
+		plot2d->drawing_ticmarks, 1, 0, plot2d->drawing_ticmarks_plot_area))
+	{
+		eNum = 15;
 		goto out;
 	}
 
@@ -415,15 +517,22 @@ int neuik_Element_Render__Plot2D(
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
 	int                   eNum       = 0; /* which error to report (if any) */
+	int                   tic_xmin   = 0;
+	int                   tic_xmax   = 0;
+	int                   tic_ymin   = 0;
+	int                   tic_ymax   = 0;
 	RenderLoc             rl;
 	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
+	RenderLoc             dwg_loc;
+	RenderLoc             tic_loc;
 	SDL_Rect              rect       = {0, 0, 0, 0};
 	RenderSize            rs         = {0, 0};
 	RenderSize            dwg_rs;
+	RenderSize            tic_rs;
+	NEUIK_Element         ticElem    = NULL;
 	SDL_Renderer        * rend       = NULL;
 	NEUIK_Plot          * plot       = NULL;
 	NEUIK_ElementBase   * eBase      = NULL;
-	NEUIK_ElementBase   * dwg_eBase  = NULL;
 	NEUIK_ElementConfig * eCfg       = NULL;
 	NEUIK_Plot2D        * plt        = NULL;
 	NEUIK_Canvas        * dwg;               /* pointer to active drawing (don't free) */
@@ -441,6 +550,9 @@ int neuik_Element_Render__Plot2D(
 		"Argument `pltElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
 		"Failure in neuik_Element_RedrawBackground().",                     // [9]
 		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",                // [10]
+		"Failure in `NEUIK_Container_GetFirstElement()`",                   // [11]
+		"Failure in `NEUIK_Container_GetLastElement()`",                    // [12]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",                 // [13]
 	};
 
 	if (!neuik_Object_IsClass(pltElem, neuik__Class_Plot2D))
@@ -597,35 +709,119 @@ int neuik_Element_Render__Plot2D(
 	/* superclass plot element.                                               */
 	/*------------------------------------------------------------------------*/
 	dwg = plt->drawing_background;
-	if (neuik_Object_GetClassObject(dwg, neuik__Class_Element, (void**)&dwg_eBase))
+	if (neuik_Element_GetSizeAndLocation(dwg, &dwg_rs, &dwg_loc))
 	{
-		eNum = 8;
+		eNum = 13;
 		goto out;
 	}
-	dwg_rs = dwg_eBase->eSt.rSize;
-	if (neuik__Report_Debug)
+
+	/*========================================================================*/
+	/* Draw in the y-axis/x-axis tic marks.                                   */
+	/*========================================================================*/
+	dwg = plt->drawing_ticmarks_plot_area;
+	if (neuik_Element_GetSizeAndLocation(dwg, &dwg_rs, &dwg_loc))
 	{
-		printf("Drawing rs [w:%d, h:%d]\n", dwg_rs.w, dwg_rs.h);
+		eNum = 13;
+		goto out;
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Draw in the labels for the y-axis/x-axis tic marks                     */
+	/* Get the size and location information for the x_min ticmark label.     */
 	/*------------------------------------------------------------------------*/
-	dwg = plt->drawing_ticmarks;
-	NEUIK_Canvas_Clear(dwg);
-	NEUIK_Canvas_SetDrawColor(dwg, 0, 0, 0, 255); /* dwg ticmark label color */
-	NEUIK_Canvas_SetTextSize(dwg, 10);        /* set size of drawn text */
+	if (NEUIK_Container_GetFirstElement(plt->drawing_x_axis_ticmarks, &ticElem))
+	{
+		eNum = 11;
+		goto out;
+	}
+	if (neuik_Element_GetSizeAndLocation(ticElem, &tic_rs, &tic_loc))
+	{
+		eNum = 13;
+		goto out;
+	}
+	tic_xmin = (tic_loc.x - dwg_loc.x) + (tic_rs.w/2);
 
-	NEUIK_Canvas_MoveTo(dwg, 2, 2);
-	NEUIK_Canvas_DrawText(dwg, "100.0"); /* draw text at location */
-	NEUIK_Canvas_MoveTo(dwg, 2, 150);
-	NEUIK_Canvas_DrawText(dwg, "50.0");  /* draw text at location */
-	NEUIK_Canvas_MoveTo(dwg, 2, 300);
-	NEUIK_Canvas_DrawText(dwg, "0.0");   /* draw text at location */
+	/*------------------------------------------------------------------------*/
+	/* Get the size and location information for the x_max ticmark label.     */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Container_GetLastElement(plt->drawing_x_axis_ticmarks, &ticElem))
+	{
+		eNum = 12;
+		goto out;
+	}
+	if (neuik_Element_GetSizeAndLocation(ticElem, &tic_rs, &tic_loc))
+	{
+		eNum = 13;
+		goto out;
+	}
+	tic_xmax = (tic_loc.x - dwg_loc.x) + (tic_rs.w/2);
+
+	/*------------------------------------------------------------------------*/
+	/* Get the size and location information for the y_max ticmark label.     */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Container_GetFirstElement(plt->drawing_y_axis_ticmarks, &ticElem))
+	{
+		eNum = 11;
+		goto out;
+	}
+	if (neuik_Element_GetSizeAndLocation(ticElem, &tic_rs, &tic_loc))
+	{
+		eNum = 13;
+		goto out;
+	}
+	tic_ymax = (tic_loc.y - dwg_loc.y) + (tic_rs.h/2);
+
+
+	/*------------------------------------------------------------------------*/
+	/* Get the size and location information for the y_min ticmark label.     */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Container_GetLastElement(plt->drawing_y_axis_ticmarks, &ticElem))
+	{
+		eNum = 12;
+		goto out;
+	}
+	if (neuik_Element_GetSizeAndLocation(ticElem, &tic_rs, &tic_loc))
+	{
+		eNum = 13;
+		goto out;
+	}
+	tic_ymin = (tic_loc.y - dwg_loc.y) + (tic_rs.h/2);
+
+	NEUIK_Canvas_Clear(dwg);
+	NEUIK_Canvas_SetDrawColor(dwg, 130, 130, 130, 255); /* dwg ticmark label color */
 
 	/* draw y-axis vert line */
-	NEUIK_Canvas_MoveTo(dwg, 40, 5);
-	NEUIK_Canvas_DrawLine(dwg, 40, (dwg_rs.h-(1+5)));
+	NEUIK_Canvas_MoveTo(dwg,   tic_xmin,   tic_ymin);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmin,   tic_ymax);
+	NEUIK_Canvas_MoveTo(dwg,   tic_xmin+1, tic_ymin);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmin+1, tic_ymax);
+
+	/* draw y-axis horizontal ticmark line (y-min ticmark)*/
+	NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_ymin);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmax,     tic_ymin);
+	NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_ymin-1);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmax,     tic_ymin-1);
+
+	/* draw y-axis horizontal ticmark line (y-max ticmark)*/
+	NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_ymax);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmax,     tic_ymax);
+	NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_ymax+1);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmax,     tic_ymax+1);
+
+	/* draw x-axis horizontal line */
+	NEUIK_Canvas_MoveTo(dwg,   tic_xmin, tic_ymax);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmax, tic_ymax);
+
+	/* draw x-axis horizontal ticmark line (x-min ticmark)*/
+	NEUIK_Canvas_MoveTo(dwg,   tic_xmin,   tic_ymax);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmin,   tic_ymin + 5);
+	NEUIK_Canvas_MoveTo(dwg,   tic_xmin+1, tic_ymax);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmin+1, tic_ymin + 5);
+
+	/* draw x-axis horizontal ticmark line (x-max ticmark)*/
+	NEUIK_Canvas_MoveTo(dwg,   tic_xmax,   tic_ymax);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmax,   tic_ymin + 5);
+	NEUIK_Canvas_MoveTo(dwg,   tic_xmax-1, tic_ymax);
+	NEUIK_Canvas_DrawLine(dwg, tic_xmax-1, tic_ymin + 5);
 
 	#pragma message("Draw in the labels for the y-axis tic marks")
 	#pragma message("Draw in the labels for the x-axis tic marks")
@@ -634,6 +830,12 @@ int neuik_Element_Render__Plot2D(
 	/* Fill the background with white and draw the outside border             */
 	/*------------------------------------------------------------------------*/
 	dwg = plt->drawing_background;
+	if (neuik_Element_GetSizeAndLocation(dwg, &dwg_rs, &dwg_loc))
+	{
+		eNum = 13;
+		goto out;
+	}
+
 	NEUIK_Canvas_Clear(dwg);
 	NEUIK_Canvas_SetDrawColor(dwg, 255, 255, 255, 255); /* dwg bg color */
 	NEUIK_Canvas_Fill(dwg);
@@ -685,30 +887,38 @@ out:
 int neuik_Plot2D_UpdateAxesRanges(
 	NEUIK_Plot2D * plot2d)
 {
-	int             eNum       = 0; /* which error to report (if any) */
-	int             boundsSet  = FALSE;
-	unsigned int    uCtr       = 0;
-	double          xMin       = 0.0;
-	double          xMax       = 0.0;
-	double          yMin       = 0.0;
-	double          yMax       = 0.0;
-	double          xMin64     = 0.0;
-	double          xMax64     = 0.0;
-	double          yMin64     = 0.0;
-	double          yMax64     = 0.0;
-	double          xRangeMin  = 0.0;
-	double          xRangeMax  = 0.0;
-	double          yRangeMin  = 0.0;
-	double          yRangeMax  = 0.0;
-	double          xAxisRange = 0.0;
-	double          yAxisRange = 0.0;
-	NEUIK_Plot     * plot      = NULL;
-	NEUIK_PlotData * data      = NULL;
+	int              eNum       = 0; /* which error to report (if any) */
+	int              boundsSet  = FALSE;
+	unsigned int     uCtr       = 0;
+	double           xMin       = 0.0;
+	double           xMax       = 0.0;
+	double           yMin       = 0.0;
+	double           yMax       = 0.0;
+	double           xMin64     = 0.0;
+	double           xMax64     = 0.0;
+	double           yMin64     = 0.0;
+	double           yMax64     = 0.0;
+	double           xRangeMin  = 0.0;
+	double           xRangeMax  = 0.0;
+	double           yRangeMin  = 0.0;
+	double           yRangeMax  = 0.0;
+	double           xAxisRange = 0.0;
+	double           yAxisRange = 0.0;
+	NEUIK_Label    * newTicLbl  = NULL;
+	NEUIK_Fill     * newFill    = NULL;
+	NEUIK_Plot     * plot       = NULL;
+	NEUIK_PlotData * data       = NULL;
+	char             ticMarkLbl[100]; 
 	static char      funcName[] = "neuik_Plot2D_UpdateAxesRanges";
 	static char    * errMsgs[]  = {"", // [0] no error
 		"Argument `plot2d` is not of Plot2D class.",                       // [1]
 		"Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"Unsupported `precision` used within included PlotData.",          // [3]
+		"Failure in function `NEUIK_Container_DeleteElements()`.",         // [4]
+		"Failure in function `NEUIK_MakeLabel()`.",                        // [5]
+		"Failure in function `NEUIK_Container_AddElement()`.",             // [6]
+		"Failure in function `NEUIK_NewVFill()`.",                         // [7]
+		"Failure in function `NEUIK_Element_Configure()`.",                // [8]
 	};
 
 	/*------------------------------------------------------------------------*/
@@ -813,33 +1023,44 @@ int neuik_Plot2D_UpdateAxesRanges(
 		xRangeMin = xMin - 1;
 		xRangeMax = xMin + 1;
 	}
-	else if (xAxisRange < 0.5)
+	else if (xAxisRange <= 0.5)
 	{
 		xRangeMin = floor(xMin);
 		xRangeMax = xRangeMin + 1;
 	}
-	else if (xAxisRange < 1.0)
+	else if (xAxisRange <= 1.0)
 	{
 		xRangeMin = floor(xMin);
 		xRangeMax = xRangeMin + 2;
 	}
-	else if (xAxisRange < 10.0)
+	else if (xAxisRange <= 10.0)
 	{
-		xRangeMin = floor(xMin - fmod(xMin, 10));
-		if (xMax < xRangeMin + 10)
+		xRangeMin = xMin;
+		// xRangeMin = floor(xMin - fmod(xMin, 10));
+		xRangeMax = xRangeMin + 12;
+		if (xMax <= xRangeMin + 10)
 		{
 			xRangeMax = xRangeMin + 10;
 		}
-		xRangeMax = xRangeMin + 12;
 	}
-	else if (xAxisRange < 100.0)
+	else if (xAxisRange <= 50.0)
+	{
+		xRangeMin = xMin;
+		// xRangeMin = floor(xMin - fmod(xMin, 10));
+		xRangeMax = xRangeMin + 60;
+		if (xMax <= xRangeMin + 50)
+		{
+			xRangeMax = xRangeMin + 50;
+		}
+	}
+	else if (xAxisRange <= 100.0)
 	{
 		xRangeMin = floor(xMin - fmod(xMin, 100));
-		if (xMax < xRangeMin + 100)
+		xRangeMax = xRangeMin + 120;
+		if (xMax <= xRangeMin + 100)
 		{
 			xRangeMax = xRangeMin + 100;
 		}
-		xRangeMax = xRangeMin + 120;
 	}
 	else
 	{
@@ -854,13 +1075,15 @@ int neuik_Plot2D_UpdateAxesRanges(
 	/* Calculate the Y bounds to use for the overall plot.                    */
 	/*------------------------------------------------------------------------*/
 	yAxisRange = yMax - yMin;
+	printf("yAxisRange = `%f`, yMin = `%f`, yMax = `%f`\n", 
+		yAxisRange, yMin, yMax);
 
 	if (yAxisRange == 0.0)
 	{
 		yRangeMin = yMin - 1;
 		yRangeMax = yMin + 1;
 	}
-	else if (yAxisRange < 0.5)
+	else if (yAxisRange <= 0.5)
 	{
 		yRangeMin = floor(yMin);
 		yRangeMax = yRangeMin + 1;
@@ -870,31 +1093,159 @@ int neuik_Plot2D_UpdateAxesRanges(
 		yRangeMin = floor(yMin);
 		yRangeMax = yRangeMin + 2;
 	}
-	else if (yAxisRange < 10.0)
+	else if (yAxisRange <= 10.0)
 	{
-		yRangeMin = floor(yMin - fmod(yMin, 10));
-		if (yMax < yRangeMin + 10)
+		yRangeMin = yMin;
+		// yRangeMin = floor(yMin - fmod(yMin, 10));
+		yRangeMax = yRangeMin + 12;
+		if (yMax <= yRangeMin + 10)
 		{
 			yRangeMax = yRangeMin + 10;
 		}
-		yRangeMax = yRangeMin + 12;
 	}
-	else if (yAxisRange < 100.0)
+	else if (yAxisRange <= 100.0)
 	{
 		yRangeMin = floor(yMin - fmod(yMin, 100));
-		if (yMax < yRangeMin + 100)
+		yRangeMax = yRangeMin + 120;
+		if (yMax <= yRangeMin + 100)
 		{
 			yRangeMax = yRangeMin + 100;
 		}
-		yRangeMax = yRangeMin + 120;
 	}
 	else
 	{
 		printf("neuik_Plot2D_UpdateAxesRanges(): yAxisRange unhandled!!!\n");
 		#pragma message ("[TODO] Improve calculation of yAxisRange")
 	}
-	plot->x_range_min = yRangeMin;
-	plot->x_range_max = yRangeMax;
+	plot->y_range_min = yRangeMin;
+	plot->y_range_max = yRangeMax;
+
+	/*------------------------------------------------------------------------*/
+	/* Remove all existing X/Y Axis ticmark labels before adding new ones.    */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_Container_DeleteElements(plot2d->drawing_y_axis_ticmarks))
+	{
+		eNum = 4;
+		goto out;
+	}
+	if (NEUIK_Container_DeleteElements(plot2d->drawing_x_axis_ticmarks))
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*========================================================================*/
+	/* Generate the Y-Axis Ticmark Labels.                                    */
+	/*========================================================================*/
+	/* Create and add the Y Axis maximum value ticmark label.                 */
+	/*------------------------------------------------------------------------*/
+	sprintf(ticMarkLbl, "%g", plot->y_range_max);
+	if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (NEUIK_Element_Configure(newTicLbl, "HFill", "HJustify=right", NULL))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Container_AddElement(plot2d->drawing_y_axis_ticmarks, newTicLbl))
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Create and add a Y Axis ticmark label spacer.                          */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_NewVFill(&newFill))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Container_AddElement(plot2d->drawing_y_axis_ticmarks, newFill))
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Create and add the Y Axis minimum value ticmark label.                 */
+	/*------------------------------------------------------------------------*/
+	sprintf(ticMarkLbl, "%g", plot->y_range_min);
+	if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (NEUIK_Element_Configure(newTicLbl, "HFill", "HJustify=right", NULL))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Container_AddElement(plot2d->drawing_y_axis_ticmarks, newTicLbl))
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	/*========================================================================*/
+	/* Generate the X-Axis Ticmark Labels.                                    */
+	/*========================================================================*/
+	/* Create and add the X-Axis minimum value ticmark label.                 */
+	/*------------------------------------------------------------------------*/
+	sprintf(ticMarkLbl, "%g", plot->x_range_min);
+	if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (NEUIK_Element_Configure(newTicLbl, "VFill", "VJustify=top", NULL))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Container_AddElement(plot2d->drawing_x_axis_ticmarks, newTicLbl))
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Create and add a X-Axis ticmark label spacer.                          */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_NewHFill(&newFill))
+	{
+		eNum = 7;
+		goto out;
+	}
+	if (NEUIK_Container_AddElement(plot2d->drawing_x_axis_ticmarks, newFill))
+	{
+		eNum = 6;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Create and add the X-Axis maximum value ticmark label.                 */
+	/*------------------------------------------------------------------------*/
+	sprintf(ticMarkLbl, "%g", plot->x_range_max);
+	if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+	{
+		eNum = 5;
+		goto out;
+	}
+	if (NEUIK_Element_Configure(newTicLbl, "VFill", "VJustify=top", NULL))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Container_AddElement(plot2d->drawing_x_axis_ticmarks, newTicLbl))
+	{
+		eNum = 6;
+		goto out;
+	}
+
 out:
 	if (eNum > 0)
 	{
@@ -1036,6 +1387,7 @@ int NEUIK_Plot2D_AddPlotData(
 		eNum = 6;
 		goto out;
 	}
+	plot->n_used++;
 
 	if (neuik_Plot2D_UpdateAxesRanges(plot2d))
 	{

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1071,6 +1071,124 @@ out:
 
 /*******************************************************************************
  *
+ *  Name:          NEUIK_Container_GetFirstElement
+ *
+ *  Description:   Returns the pointer to the first stored element of a 
+ *                 multi-element container, or NULL if the container doesn't 
+ *                 currently contain any elements.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Container_GetFirstElement(
+	NEUIK_Element   cont,
+	NEUIK_Element * elem) 
+{
+	int               ctr;
+	int               eNum   = 0; /* which error to report (if any) */
+ 	NEUIK_Element     nextElem; 
+	NEUIK_Container * cBase = NULL;
+	static char       funcName[] = "NEUIK_Container_GetFirstElement";
+	static char     * errMsgs[] = {"", // [0] no error
+		"Argument `cont` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Output argument `elem` is NULL.",                               // [2]
+	};
+
+	if (neuik_Object_GetClassObject(cont, neuik__Class_Container, (void**)&cBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (elem == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	*elem = NULL;
+
+	if (cBase->elems != NULL)
+	{
+		for (ctr = 0;; ctr++)
+		{
+			nextElem = cBase->elems[ctr];
+			if (nextElem != NULL)
+			{
+				*elem = nextElem;
+				break;
+			}
+		}
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Container_GetLastElement
+ *
+ *  Description:   Returns the pointer to the last stored element of a 
+ *                 multi-element container, or NULL if the container doesn't 
+ *                 currently contain any elements.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Container_GetLastElement(
+	NEUIK_Element   cont,
+	NEUIK_Element * elem) 
+{
+	int               ctr;
+	int               eNum   = 0; /* which error to report (if any) */
+ 	NEUIK_Element     nextElem; 
+	NEUIK_Container * cBase = NULL;
+	static char       funcName[] = "NEUIK_Container_GetLastElement";
+	static char     * errMsgs[] = {"", // [0] no error
+		"Argument `cont` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Output argument `elem` is NULL.",                               // [2]
+	};
+
+	if (neuik_Object_GetClassObject(cont, neuik__Class_Container, (void**)&cBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (elem == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	*elem = NULL;
+
+	if (cBase->elems != NULL)
+	{
+		for (ctr = 0;; ctr++)
+		{
+			nextElem = cBase->elems[ctr];
+			if (nextElem == NULL) break;
+
+			*elem = nextElem;
+		}
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+/*******************************************************************************
+ *
  *  Name:          NEUIK_Container_RemoveElement
  *
  *  Description:   Remove an element from a container. NOTE; This does not free
@@ -1090,7 +1208,7 @@ int NEUIK_Container_RemoveElement(
 	RenderSize          rSize;
 	RenderLoc           rLoc;
 	static char         funcName[] = "NEUIK_Container_RemoveElement";
-	static char       * errMsgs[]  = {"",                                 // [0] no error
+	static char       * errMsgs[]  = {"", // [0] no error
 		"Argument `cont` does not implement Container class.",            // [1]
 		"Argument `cont` caused `neuik_Object_GetClassObject` to fail.",  // [2]
 		"Argument `elem` does not implement Element class.",              // [3]

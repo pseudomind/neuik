@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -61,6 +61,16 @@ int
 	NEUIK_Container_GetElementCount(
 			NEUIK_Element   cont,
 			int           * elemCount);
+
+int 
+	NEUIK_Container_GetFirstElement(
+			NEUIK_Element   cont,
+			NEUIK_Element * elem);
+
+int 
+	NEUIK_Container_GetLastElement(
+			NEUIK_Element   cont,
+			NEUIK_Element * elem);
 
 int
 	NEUIK_Container_RemoveElement(
