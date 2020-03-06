@@ -378,6 +378,16 @@ int neuik_Object_New__Plot2D(
 	plot2d->colorGridline.g = 130;
 	plot2d->colorGridline.b = 130;
 	plot2d->colorGridline.a = 255;
+	/*------------------------------------------------------------------------*/
+	plot2d->xAxisCfg.colorGridline.r = 175;
+	plot2d->xAxisCfg.colorGridline.g = 175;
+	plot2d->xAxisCfg.colorGridline.b = 175;
+	plot2d->xAxisCfg.colorGridline.a = 255;
+	/*------------------------------------------------------------------------*/
+	plot2d->yAxisCfg.colorGridline.r = 175;
+	plot2d->yAxisCfg.colorGridline.g = 175;
+	plot2d->yAxisCfg.colorGridline.b = 175;
+	plot2d->yAxisCfg.colorGridline.a = 255;
 
 out:
 	if (eNum > 0)
@@ -812,7 +822,102 @@ int neuik_Element_Render__Plot2D(
 	}
 	tic_ymin = (tic_loc.y - dwg_loc.y) + (tic_rs.h/2);
 
+
+	/*------------------------------------------------------------------------*/
+	/* Start off with a clean slate.                                          */
+	/*------------------------------------------------------------------------*/
 	NEUIK_Canvas_Clear(dwg);
+
+	/*------------------------------------------------------------------------*/
+	/* Draw the inner ticmarks/gridlines first; afterwards, the outer         */
+	/* gridlines will be drawn.                                               */
+	/*------------------------------------------------------------------------*/
+	if (plt->yAxisCfg.nTicmarks > 2)
+	{
+		/*--------------------------------------------------------------------*/
+		/* One or more internal ticmarks was specified for this axis.         */
+		/*--------------------------------------------------------------------*/
+		NEUIK_Canvas_SetDrawColor(dwg, 
+			plt->yAxisCfg.colorGridline.r, 
+			plt->yAxisCfg.colorGridline.g, 
+			plt->yAxisCfg.colorGridline.b,
+			plt->yAxisCfg.colorGridline.a); /* dwg ticmark label color */
+
+		tic_y_offset = (double)(tic_ymax);
+		tic_y_adj    = ((double)(tic_ymin - tic_ymax))/
+			((double)(plt->yAxisCfg.nTicmarks - 1));
+
+		ticMarkPos = 2;
+		for (ctr = 1; ctr < plt->yAxisCfg.nTicmarks - 1; ctr++)
+		{
+			tic_y_offset += tic_y_adj;
+			tic_y_cl = (int)(tic_y_offset);
+
+			if (plt->yAxisCfg.showGridlines)
+			{
+				/*------------------------------------------------------------*/
+				/* Draw a full width y-axis gridline.                         */
+				/*------------------------------------------------------------*/
+				NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_y_cl);
+				NEUIK_Canvas_DrawLine(dwg, tic_xmax,     tic_y_cl);
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* Draw a small ticmark along the y-axis.                     */
+				/*------------------------------------------------------------*/
+				NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_y_cl);
+				NEUIK_Canvas_DrawLine(dwg, (tic_xmin+6), tic_y_cl);
+			}
+
+			ticMarkPos += 2;
+		}
+	}
+
+	if (plt->xAxisCfg.nTicmarks > 2)
+	{
+		/*--------------------------------------------------------------------*/
+		/* One or more internal ticmarks was specified for this axis.         */
+		/*--------------------------------------------------------------------*/
+		NEUIK_Canvas_SetDrawColor(dwg, 
+			plt->xAxisCfg.colorGridline.r, 
+			plt->xAxisCfg.colorGridline.g, 
+			plt->xAxisCfg.colorGridline.b,
+			plt->xAxisCfg.colorGridline.a); /* dwg ticmark label color */
+
+		tic_x_offset = (double)(tic_xmin);
+		tic_x_adj    = ((double)(tic_xmax - tic_xmin))/
+			((double)(plt->xAxisCfg.nTicmarks - 1));
+
+		for (ctr = 1; ctr < plt->xAxisCfg.nTicmarks - 1; ctr++)
+		{
+			tic_x_offset += tic_x_adj;
+			tic_x_cl = (int)(tic_x_offset);
+
+			if (plt->xAxisCfg.showGridlines)
+			{
+				/*------------------------------------------------------------*/
+				/* Draw a full width y-axis gridline.                         */
+				/*------------------------------------------------------------*/
+				NEUIK_Canvas_MoveTo(dwg,   tic_x_cl, tic_ymax);
+				NEUIK_Canvas_DrawLine(dwg, tic_x_cl, tic_ymin + 5);
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* Draw a small ticmark along the y-axis.                     */
+				/*------------------------------------------------------------*/
+				NEUIK_Canvas_MoveTo(dwg,   tic_x_cl, tic_ymin - 6);
+				NEUIK_Canvas_DrawLine(dwg, tic_x_cl, tic_ymin + 5);
+			}
+
+			ticMarkPos += 2;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Draw the outer (bounding) X/Y axis gridlines.                          */
+	/*------------------------------------------------------------------------*/
 	NEUIK_Canvas_SetDrawColor(dwg, 
 		plt->colorGridline.r, 
 		plt->colorGridline.g, 
@@ -852,77 +957,6 @@ int neuik_Element_Render__Plot2D(
 	NEUIK_Canvas_DrawLine(dwg, tic_xmax,   tic_ymin + 5);
 	NEUIK_Canvas_MoveTo(dwg,   tic_xmax-1, tic_ymax);
 	NEUIK_Canvas_DrawLine(dwg, tic_xmax-1, tic_ymin + 5);
-
-	if (plt->yAxisCfg.nTicmarks > 2)
-	{
-		/*--------------------------------------------------------------------*/
-		/* One or more internal ticmarks was specified for this axis.         */
-		/*--------------------------------------------------------------------*/
-		tic_y_offset = (double)(tic_ymax);
-		tic_y_adj    = ((double)(tic_ymin - tic_ymax))/
-			((double)(plt->yAxisCfg.nTicmarks - 1));
-
-		ticMarkPos = 2;
-		for (ctr = 1; ctr < plt->yAxisCfg.nTicmarks - 1; ctr++)
-		{
-			tic_y_offset += tic_y_adj;
-			tic_y_cl = (int)(tic_y_offset);
-
-			if (plt->yAxisCfg.showGridlines)
-			{
-				/*------------------------------------------------------------*/
-				/* Draw a full width y-axis gridline.                         */
-				/*------------------------------------------------------------*/
-				NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_y_cl);
-				NEUIK_Canvas_DrawLine(dwg, tic_xmax,     tic_y_cl);
-			}
-			else
-			{
-				/*------------------------------------------------------------*/
-				/* Draw a small ticmark along the y-axis.                     */
-				/*------------------------------------------------------------*/
-				NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_y_cl);
-				NEUIK_Canvas_DrawLine(dwg, (tic_xmin+6), tic_y_cl);
-			}
-
-			ticMarkPos += 2;
-		}
-	}
-
-	if (plt->xAxisCfg.nTicmarks > 2)
-	{
-		/*--------------------------------------------------------------------*/
-		/* One or more internal ticmarks was specified for this axis.         */
-		/*--------------------------------------------------------------------*/
-		tic_x_offset = (double)(tic_xmin);
-		tic_x_adj    = ((double)(tic_xmax - tic_xmin))/
-			((double)(plt->xAxisCfg.nTicmarks - 1));
-
-		for (ctr = 1; ctr < plt->xAxisCfg.nTicmarks - 1; ctr++)
-		{
-			tic_x_offset += tic_x_adj;
-			tic_x_cl = (int)(tic_x_offset);
-
-			if (plt->xAxisCfg.showGridlines)
-			{
-				/*------------------------------------------------------------*/
-				/* Draw a full width y-axis gridline.                         */
-				/*------------------------------------------------------------*/
-				NEUIK_Canvas_MoveTo(dwg,   tic_x_cl, tic_ymax);
-				NEUIK_Canvas_DrawLine(dwg, tic_x_cl, tic_ymin + 5);
-			}
-			else
-			{
-				/*------------------------------------------------------------*/
-				/* Draw a small ticmark along the y-axis.                     */
-				/*------------------------------------------------------------*/
-				NEUIK_Canvas_MoveTo(dwg,   tic_x_cl, tic_ymin - 6);
-				NEUIK_Canvas_DrawLine(dwg, tic_x_cl, tic_ymin + 5);
-			}
-
-			ticMarkPos += 2;
-		}
-	}
 
 	/*------------------------------------------------------------------------*/
 	/* Fill the background with white and draw the outside border             */
@@ -1768,26 +1802,32 @@ int NEUIK_Plot2D_Configure(
 		"GridlineColor",
 		"xAxisNumTics",
 		"yAxisNumTics",
+		"xAxisGridlineColor",
+		"yAxisGridlineColor",
 		NULL,
 	};
 	static char   funcName[] = "NEUIK_Plot2D_Configure";
 	static char * errMsgs[]  = {"", // [ 0] no error
-		"Argument `plot2d` does not implement Label class.",               // [ 1]
-		"`name=value` string is too long.",                                // [ 2]
-		"Invalid `name=value` string.",                                    // [ 3]
-		"ValueType name used as BoolType, skipping.",                      // [ 4]
-		"BoolType name unknown, skipping.",                                // [ 5]
-		"NamedSet.name is NULL, skipping..",                               // [ 6]
-		"NamedSet.name is blank, skipping..",                              // [ 7]
-		"GridlineColor value invalid; should be comma separated RGBA.",    // [ 8]
-		"GridlineColor value invalid; RGBA value range is 0-255.",         // [ 9]
-		"Failure in `neuik_Element_GetSizeAndLocation()`.",                // [10]
-		"BoolType name used as ValueType, skipping.",                      // [11]
-		"NamedSet.name type unknown, skipping.",                           // [12]
-		"xAxisNumTics value invalid; must be an integer value.",           // [13]
-		"xAxisNumTics value invalid; Valid integer values are -1 or >=2.", // [14]
-		"yAxisNumTics value invalid; must be an integer value.",           // [15]
-		"yAxisNumTics value invalid; Valid integer values are -1 or >=2.", // [16]
+		"Argument `plot2d` does not implement Label class.",                 // [ 1]
+		"`name=value` string is too long.",                                  // [ 2]
+		"Invalid `name=value` string.",                                      // [ 3]
+		"ValueType name used as BoolType, skipping.",                        // [ 4]
+		"BoolType name unknown, skipping.",                                  // [ 5]
+		"NamedSet.name is NULL, skipping..",                                 // [ 6]
+		"NamedSet.name is blank, skipping..",                                // [ 7]
+		"GridlineColor value invalid; should be comma separated RGBA.",      // [ 8]
+		"GridlineColor value invalid; RGBA value range is 0-255.",           // [ 9]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",                  // [10]
+		"BoolType name used as ValueType, skipping.",                        // [11]
+		"NamedSet.name type unknown, skipping.",                             // [12]
+		"xAxisNumTics value invalid; must be an integer value.",             // [13]
+		"xAxisNumTics value invalid; Valid integer values are -1 or >=2.",   // [14]
+		"yAxisNumTics value invalid; must be an integer value.",             // [15]
+		"yAxisNumTics value invalid; Valid integer values are -1 or >=2.",   // [16]
+		"xAxisGridlineColor value invalid; should be comma separated RGBA.", // [17]
+		"xAxisGridlineColor value invalid; RGBA value range is 0-255.",      // [18]
+		"yAxisGridlineColor value invalid; should be comma separated RGBA.", // [19]
+		"yAxisGridlineColor value invalid; RGBA value range is 0-255.",      // [20]
 	};
 
 	if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
@@ -1986,6 +2026,100 @@ int NEUIK_Plot2D_Configure(
 
 				/* else: The previous setting was changed */
 				plot2d->colorGridline = clr;
+				doRedraw = TRUE;
+			}
+			else if (!strcmp("xAxisGridlineColor", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[17]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[17]);
+					continue;
+				}
+
+				ns = sscanf(value, "%d,%d,%d,%d", &clr.r, &clr.g, &clr.b, &clr.a);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 4)
+			#else
+				if (ns < 4)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[17]);
+					continue;
+				}
+
+				if (clr.r < 0 || clr.r > 255 ||
+					clr.g < 0 || clr.g > 255 ||
+					clr.b < 0 || clr.b > 255 ||
+					clr.a < 0 || clr.a > 255)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[18]);
+					continue;
+				}
+				if (plot2d->xAxisCfg.colorGridline.r == clr.r &&
+					plot2d->xAxisCfg.colorGridline.g == clr.g &&
+					plot2d->xAxisCfg.colorGridline.b == clr.b &&
+					plot2d->xAxisCfg.colorGridline.a == clr.a) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->xAxisCfg.colorGridline = clr;
+				doRedraw = TRUE;
+			}
+			else if (!strcmp("yAxisGridlineColor", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[19]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[19]);
+					continue;
+				}
+
+				ns = sscanf(value, "%d,%d,%d,%d", &clr.r, &clr.g, &clr.b, &clr.a);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 4)
+			#else
+				if (ns < 4)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[19]);
+					continue;
+				}
+
+				if (clr.r < 0 || clr.r > 255 ||
+					clr.g < 0 || clr.g > 255 ||
+					clr.b < 0 || clr.b > 255 ||
+					clr.a < 0 || clr.a > 255)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[20]);
+					continue;
+				}
+				if (plot2d->yAxisCfg.colorGridline.r == clr.r &&
+					plot2d->yAxisCfg.colorGridline.g == clr.g &&
+					plot2d->yAxisCfg.colorGridline.b == clr.b &&
+					plot2d->yAxisCfg.colorGridline.a == clr.a) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->yAxisCfg.colorGridline = clr;
 				doRedraw = TRUE;
 			}
 			else if (!strcmp("xAxisNumTics", name))

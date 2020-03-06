@@ -25,9 +25,10 @@
 #include "NEUIK_VGroup.h"
 
 typedef struct {
-	int nTicmarks;     /* -1 = AUTO; else: >=2 is valid. */
-	int showGridlines; /* Draw inner ticmark gridlines in plot? */
-	int showTicLabels; /* Populate the axis timark groups with labels? */
+	int         nTicmarks;     /* -1 = AUTO; else: >=2 is valid. */
+	int         showGridlines; /* Draw inner ticmark gridlines in plot? */
+	int         showTicLabels; /* Populate the axis timark groups with labels? */
+	NEUIK_Color colorGridline; /* Color to use for the internal ticmarks/gridlines */
 } neuik_Plot2DAxisCfg;
 
 typedef struct {
