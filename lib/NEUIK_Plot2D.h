@@ -25,12 +25,21 @@
 #include "NEUIK_VGroup.h"
 
 typedef struct {
-		neuik_Object       objBase;   /* this structure is requied to be an neuik object */
-		NEUIK_Canvas     * drawing_background;
-		NEUIK_GridLayout * drawing_ticmarks;        /* A 2x2 gridlayout. */
-		NEUIK_Canvas     * drawing_ticmarks_plot_area;
-		NEUIK_VGroup     * drawing_y_axis_ticmarks; /* The y-axis ticmark labels */
-		NEUIK_HGroup     * drawing_x_axis_ticmarks; /* The x-axis ticmark labels */
+	int nTicmarks;     /* -1 = AUTO; else: >=2 is valid. */
+	int showGridlines; /* Draw inner ticmark gridlines in plot? */
+	int showTicLabels; /* Populate the axis timark groups with labels? */
+} neuik_Plot2DAxisCfg;
+
+typedef struct {
+		neuik_Object          objBase;   /* this structure is requied to be an neuik object */
+		NEUIK_Canvas        * drawing_background;
+		NEUIK_GridLayout    * drawing_ticmarks;        /* A 2x2 gridlayout. */
+		NEUIK_Canvas        * drawing_ticmarks_plot_area;
+		NEUIK_VGroup        * drawing_y_axis_ticmarks; /* The y-axis ticmark labels */
+		NEUIK_HGroup        * drawing_x_axis_ticmarks; /* The x-axis ticmark labels */
+		neuik_Plot2DAxisCfg   xAxisCfg;      /* Configuration of x axis for plot */
+		neuik_Plot2DAxisCfg   yAxisCfg;      /* Configuration of y axis for plot */
+		NEUIK_Color           colorGridline; /* Color to use for the gridlines */
 } NEUIK_Plot2D;
 
 int 
@@ -53,5 +62,11 @@ int
 			NEUIK_Plot2D * plt,
 			const char   * uniqueName,
 			const char   * label);
+
+int
+	NEUIK_Plot2D_Configure(
+			NEUIK_Plot2D * plot2d,
+			const char   * set0,
+			...);
 
 #endif /* NEUIK_PLOT2D_H */

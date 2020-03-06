@@ -52,6 +52,10 @@ int main()
 	NEUIK_Window_Configure(mw, "Resizable", NULL);
 
 	NEUIK_NewPlot2D(&plt);
+	NEUIK_Plot2D_Configure(plt, 
+		"xAxisNumTics=6",
+		"yAxisNumTics=6",
+		NULL);
 	NEUIK_Plot_SetTitle(plt, "New Title");
 	NEUIK_Element_Configure(plt, "FillAll", "PadAll=10", NULL);
 

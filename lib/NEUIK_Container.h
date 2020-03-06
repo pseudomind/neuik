@@ -72,6 +72,12 @@ int
 			NEUIK_Element   cont,
 			NEUIK_Element * elem);
 
+int 
+	NEUIK_Container_GetNthElement(
+			NEUIK_Element   cont,
+			int             n,
+			NEUIK_Element * elem);
+
 int
 	NEUIK_Container_RemoveElement(
 			NEUIK_Element cont,

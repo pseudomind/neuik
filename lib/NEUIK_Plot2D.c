@@ -361,6 +361,24 @@ int neuik_Object_New__Plot2D(
 		dataCfg->uniqueName = NULL;
 		dataCfg->label      = NULL;
 	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set the initial states for the configurable parameters.                */
+	/*------------------------------------------------------------------------*/
+	plot2d->xAxisCfg.nTicmarks = UNDEFINED;
+	plot2d->yAxisCfg.nTicmarks = UNDEFINED;
+	/*------------------------------------------------------------------------*/
+	plot2d->xAxisCfg.showGridlines = TRUE;
+	plot2d->yAxisCfg.showGridlines = TRUE;
+	/*------------------------------------------------------------------------*/
+	plot2d->xAxisCfg.showTicLabels = TRUE;
+	plot2d->yAxisCfg.showTicLabels = TRUE;
+
+	plot2d->colorGridline.r = 130;
+	plot2d->colorGridline.g = 130;
+	plot2d->colorGridline.b = 130;
+	plot2d->colorGridline.a = 255;
+
 out:
 	if (eNum > 0)
 	{
@@ -516,11 +534,19 @@ int neuik_Element_Render__Plot2D(
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-	int                   eNum       = 0; /* which error to report (if any) */
-	int                   tic_xmin   = 0;
-	int                   tic_xmax   = 0;
-	int                   tic_ymin   = 0;
-	int                   tic_ymax   = 0;
+	int                   ctr          = 0;
+	int                   eNum         = 0; /* which error to report (if any) */
+	int                   tic_x_cl     = 0;
+	int                   tic_xmin     = 0;
+	int                   tic_xmax     = 0;
+	int                   tic_y_cl     = 0;
+	int                   tic_ymin     = 0;
+	int                   tic_ymax     = 0;
+	int                   ticMarkPos   = 0;
+	double                tic_x_offset = 0.0;
+	double                tic_x_adj    = 0.0;
+	double                tic_y_offset = 0.0;
+	double                tic_y_adj    = 0.0;
 	RenderLoc             rl;
 	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
 	RenderLoc             dwg_loc;
@@ -787,7 +813,11 @@ int neuik_Element_Render__Plot2D(
 	tic_ymin = (tic_loc.y - dwg_loc.y) + (tic_rs.h/2);
 
 	NEUIK_Canvas_Clear(dwg);
-	NEUIK_Canvas_SetDrawColor(dwg, 130, 130, 130, 255); /* dwg ticmark label color */
+	NEUIK_Canvas_SetDrawColor(dwg, 
+		plt->colorGridline.r, 
+		plt->colorGridline.g, 
+		plt->colorGridline.b,
+		plt->colorGridline.a); /* dwg ticmark label color */
 
 	/* draw y-axis vert line */
 	NEUIK_Canvas_MoveTo(dwg,   tic_xmin,   tic_ymin);
@@ -823,8 +853,76 @@ int neuik_Element_Render__Plot2D(
 	NEUIK_Canvas_MoveTo(dwg,   tic_xmax-1, tic_ymax);
 	NEUIK_Canvas_DrawLine(dwg, tic_xmax-1, tic_ymin + 5);
 
-	#pragma message("Draw in the labels for the y-axis tic marks")
-	#pragma message("Draw in the labels for the x-axis tic marks")
+	if (plt->yAxisCfg.nTicmarks > 2)
+	{
+		/*--------------------------------------------------------------------*/
+		/* One or more internal ticmarks was specified for this axis.         */
+		/*--------------------------------------------------------------------*/
+		tic_y_offset = (double)(tic_ymax);
+		tic_y_adj    = ((double)(tic_ymin - tic_ymax))/
+			((double)(plt->yAxisCfg.nTicmarks - 1));
+
+		ticMarkPos = 2;
+		for (ctr = 1; ctr < plt->yAxisCfg.nTicmarks - 1; ctr++)
+		{
+			tic_y_offset += tic_y_adj;
+			tic_y_cl = (int)(tic_y_offset);
+
+			if (plt->yAxisCfg.showGridlines)
+			{
+				/*------------------------------------------------------------*/
+				/* Draw a full width y-axis gridline.                         */
+				/*------------------------------------------------------------*/
+				NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_y_cl);
+				NEUIK_Canvas_DrawLine(dwg, tic_xmax,     tic_y_cl);
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* Draw a small ticmark along the y-axis.                     */
+				/*------------------------------------------------------------*/
+				NEUIK_Canvas_MoveTo(dwg,   (tic_xmin-5), tic_y_cl);
+				NEUIK_Canvas_DrawLine(dwg, (tic_xmin+6), tic_y_cl);
+			}
+
+			ticMarkPos += 2;
+		}
+	}
+
+	if (plt->xAxisCfg.nTicmarks > 2)
+	{
+		/*--------------------------------------------------------------------*/
+		/* One or more internal ticmarks was specified for this axis.         */
+		/*--------------------------------------------------------------------*/
+		tic_x_offset = (double)(tic_xmin);
+		tic_x_adj    = ((double)(tic_xmax - tic_xmin))/
+			((double)(plt->xAxisCfg.nTicmarks - 1));
+
+		for (ctr = 1; ctr < plt->xAxisCfg.nTicmarks - 1; ctr++)
+		{
+			tic_x_offset += tic_x_adj;
+			tic_x_cl = (int)(tic_x_offset);
+
+			if (plt->xAxisCfg.showGridlines)
+			{
+				/*------------------------------------------------------------*/
+				/* Draw a full width y-axis gridline.                         */
+				/*------------------------------------------------------------*/
+				NEUIK_Canvas_MoveTo(dwg,   tic_x_cl, tic_ymax);
+				NEUIK_Canvas_DrawLine(dwg, tic_x_cl, tic_ymin + 5);
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* Draw a small ticmark along the y-axis.                     */
+				/*------------------------------------------------------------*/
+				NEUIK_Canvas_MoveTo(dwg,   tic_x_cl, tic_ymin - 6);
+				NEUIK_Canvas_DrawLine(dwg, tic_x_cl, tic_ymin + 5);
+			}
+
+			ticMarkPos += 2;
+		}
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Fill the background with white and draw the outside border             */
@@ -887,6 +985,7 @@ out:
 int neuik_Plot2D_UpdateAxesRanges(
 	NEUIK_Plot2D * plot2d)
 {
+	int              ctr        = 0;
 	int              eNum       = 0; /* which error to report (if any) */
 	int              boundsSet  = FALSE;
 	unsigned int     uCtr       = 0;
@@ -904,6 +1003,8 @@ int neuik_Plot2D_UpdateAxesRanges(
 	double           yRangeMax  = 0.0;
 	double           xAxisRange = 0.0;
 	double           yAxisRange = 0.0;
+	double           ticSize    = 0.0;
+	double           ticVal     = 0.0;
 	NEUIK_Label    * newTicLbl  = NULL;
 	NEUIK_Fill     * newFill    = NULL;
 	NEUIK_Plot     * plot       = NULL;
@@ -919,6 +1020,7 @@ int neuik_Plot2D_UpdateAxesRanges(
 		"Failure in function `NEUIK_Container_AddElement()`.",             // [6]
 		"Failure in function `NEUIK_NewVFill()`.",                         // [7]
 		"Failure in function `NEUIK_Element_Configure()`.",                // [8]
+		"Failure in function `NEUIK_NewHFill()`.",                         // [9]
 	};
 
 	/*------------------------------------------------------------------------*/
@@ -1070,13 +1172,10 @@ int neuik_Plot2D_UpdateAxesRanges(
 	plot->x_range_min = xRangeMin;
 	plot->x_range_max = xRangeMax;
 
-
 	/*------------------------------------------------------------------------*/
 	/* Calculate the Y bounds to use for the overall plot.                    */
 	/*------------------------------------------------------------------------*/
 	yAxisRange = yMax - yMin;
-	printf("yAxisRange = `%f`, yMin = `%f`, yMax = `%f`\n", 
-		yAxisRange, yMin, yMax);
 
 	if (yAxisRange == 0.0)
 	{
@@ -1139,21 +1238,44 @@ int neuik_Plot2D_UpdateAxesRanges(
 	/*========================================================================*/
 	/* Create and add the Y Axis maximum value ticmark label.                 */
 	/*------------------------------------------------------------------------*/
-	sprintf(ticMarkLbl, "%g", plot->y_range_max);
-	if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+	if (plot2d->yAxisCfg.showTicLabels)
 	{
-		eNum = 5;
-		goto out;
+		sprintf(ticMarkLbl, "%g", plot->y_range_max);
+		if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+		{
+			eNum = 5;
+			goto out;
+		}
+		if (NEUIK_Element_Configure(newTicLbl, "HFill", "HJustify=right", NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
+		if (NEUIK_Container_AddElement(
+			plot2d->drawing_y_axis_ticmarks, newTicLbl))
+		{
+			eNum = 6;
+			goto out;
+		}
 	}
-	if (NEUIK_Element_Configure(newTicLbl, "HFill", "HJustify=right", NULL))
+	else
 	{
-		eNum = 8;
-		goto out;
-	}
-	if (NEUIK_Container_AddElement(plot2d->drawing_y_axis_ticmarks, newTicLbl))
-	{
-		eNum = 6;
-		goto out;
+		if (NEUIK_NewHFill(&newFill))
+		{
+			eNum = 9;
+			goto out;
+		}
+		if (NEUIK_Element_Configure(newFill, "PadAll=2", "PadRight=0", NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
+		if (NEUIK_Container_AddElement(
+			plot2d->drawing_y_axis_ticmarks, newFill))
+		{
+			eNum = 6;
+			goto out;
+		}
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -1171,23 +1293,96 @@ int neuik_Plot2D_UpdateAxesRanges(
 	}
 
 	/*------------------------------------------------------------------------*/
+	/* Create and add the internal Y Axis ticmark labels and spacers.         */
+	/*------------------------------------------------------------------------*/
+	if (plot2d->yAxisCfg.showTicLabels)
+	{
+		if (plot2d->yAxisCfg.nTicmarks > 2)
+		{
+			ticVal = plot->y_range_max;
+			ticSize = (yRangeMax - yRangeMin) / 
+				((double)(plot2d->yAxisCfg.nTicmarks - 1));
+			for (ctr = 1; ctr < plot2d->yAxisCfg.nTicmarks - 1; ctr++)
+			{
+				ticVal -= ticSize;
+				sprintf(ticMarkLbl, "%g", ticVal);
+				if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+				{
+					eNum = 5;
+					goto out;
+				}
+				if (NEUIK_Element_Configure(
+					newTicLbl, "HFill", "HJustify=right", NULL))
+				{
+					eNum = 8;
+					goto out;
+				}
+				if (NEUIK_Container_AddElement(
+					plot2d->drawing_y_axis_ticmarks, newTicLbl))
+				{
+					eNum = 6;
+					goto out;
+				}
+
+				/*------------------------------------------------------------*/
+				/* Create and add a Y Axis ticmark label spacer.              */
+				/*------------------------------------------------------------*/
+				if (NEUIK_NewVFill(&newFill))
+				{
+					eNum = 7;
+					goto out;
+				}
+				if (NEUIK_Container_AddElement(
+					plot2d->drawing_y_axis_ticmarks, newFill))
+				{
+					eNum = 6;
+					goto out;
+				}
+			}
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
 	/* Create and add the Y Axis minimum value ticmark label.                 */
 	/*------------------------------------------------------------------------*/
-	sprintf(ticMarkLbl, "%g", plot->y_range_min);
-	if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+	if (plot2d->yAxisCfg.showTicLabels)
 	{
-		eNum = 5;
-		goto out;
+		sprintf(ticMarkLbl, "%g", plot->y_range_min);
+		if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+		{
+			eNum = 5;
+			goto out;
+		}
+		if (NEUIK_Element_Configure(newTicLbl, "HFill", "HJustify=right", NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
+		if (NEUIK_Container_AddElement(
+			plot2d->drawing_y_axis_ticmarks, newTicLbl))
+		{
+			eNum = 6;
+			goto out;
+		}
 	}
-	if (NEUIK_Element_Configure(newTicLbl, "HFill", "HJustify=right", NULL))
+	else
 	{
-		eNum = 8;
-		goto out;
-	}
-	if (NEUIK_Container_AddElement(plot2d->drawing_y_axis_ticmarks, newTicLbl))
-	{
-		eNum = 6;
-		goto out;
+		if (NEUIK_NewHFill(&newFill))
+		{
+			eNum = 9;
+			goto out;
+		}
+		if (NEUIK_Element_Configure(newFill, "PadAll=2", "PadRight=0", NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
+		if (NEUIK_Container_AddElement(
+			plot2d->drawing_y_axis_ticmarks, newFill))
+		{
+			eNum = 6;
+			goto out;
+		}
 	}
 
 	/*========================================================================*/
@@ -1195,21 +1390,44 @@ int neuik_Plot2D_UpdateAxesRanges(
 	/*========================================================================*/
 	/* Create and add the X-Axis minimum value ticmark label.                 */
 	/*------------------------------------------------------------------------*/
-	sprintf(ticMarkLbl, "%g", plot->x_range_min);
-	if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+	if (plot2d->xAxisCfg.showTicLabels)
 	{
-		eNum = 5;
-		goto out;
+		sprintf(ticMarkLbl, "%g", plot->x_range_min);
+		if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+		{
+			eNum = 5;
+			goto out;
+		}
+		if (NEUIK_Element_Configure(newTicLbl, "VFill", "VJustify=top", NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
+		if (NEUIK_Container_AddElement(
+			plot2d->drawing_x_axis_ticmarks, newTicLbl))
+		{
+			eNum = 6;
+			goto out;
+		}
 	}
-	if (NEUIK_Element_Configure(newTicLbl, "VFill", "VJustify=top", NULL))
+	else
 	{
-		eNum = 8;
-		goto out;
-	}
-	if (NEUIK_Container_AddElement(plot2d->drawing_x_axis_ticmarks, newTicLbl))
-	{
-		eNum = 6;
-		goto out;
+		if (NEUIK_NewVFill(&newFill))
+		{
+			eNum = 7;
+			goto out;
+		}
+		if (NEUIK_Element_Configure(newFill, "PadAll=2", "PadTop=0", NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
+		if (NEUIK_Container_AddElement(
+			plot2d->drawing_x_axis_ticmarks, newFill))
+		{
+			eNum = 6;
+			goto out;
+		}
 	}
 
 	/*------------------------------------------------------------------------*/
@@ -1217,7 +1435,7 @@ int neuik_Plot2D_UpdateAxesRanges(
 	/*------------------------------------------------------------------------*/
 	if (NEUIK_NewHFill(&newFill))
 	{
-		eNum = 7;
+		eNum = 9;
 		goto out;
 	}
 	if (NEUIK_Container_AddElement(plot2d->drawing_x_axis_ticmarks, newFill))
@@ -1227,25 +1445,97 @@ int neuik_Plot2D_UpdateAxesRanges(
 	}
 
 	/*------------------------------------------------------------------------*/
-	/* Create and add the X-Axis maximum value ticmark label.                 */
+	/* Create and add the internal X Axis ticmark labels and spacers.         */
 	/*------------------------------------------------------------------------*/
-	sprintf(ticMarkLbl, "%g", plot->x_range_max);
-	if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+	if (plot2d->xAxisCfg.showTicLabels)
 	{
-		eNum = 5;
-		goto out;
-	}
-	if (NEUIK_Element_Configure(newTicLbl, "VFill", "VJustify=top", NULL))
-	{
-		eNum = 8;
-		goto out;
-	}
-	if (NEUIK_Container_AddElement(plot2d->drawing_x_axis_ticmarks, newTicLbl))
-	{
-		eNum = 6;
-		goto out;
+		if (plot2d->xAxisCfg.nTicmarks > 2)
+		{
+			ticVal = plot->x_range_min;
+			ticSize = (xRangeMax - xRangeMin) /
+				((double)(plot2d->xAxisCfg.nTicmarks - 1));
+			for (ctr = 1; ctr < plot2d->xAxisCfg.nTicmarks - 1; ctr++)
+			{
+				ticVal += ticSize;
+				sprintf(ticMarkLbl, "%g", ticVal);
+				if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+				{
+					eNum = 5;
+					goto out;
+				}
+				if (NEUIK_Element_Configure(
+					newTicLbl, "VFill", "VJustify=top", NULL))
+				{
+					eNum = 8;
+					goto out;
+				}
+				if (NEUIK_Container_AddElement(
+					plot2d->drawing_x_axis_ticmarks, newTicLbl))
+				{
+					eNum = 6;
+					goto out;
+				}
+
+				/*------------------------------------------------------------*/
+				/* Create and add a Y Axis ticmark label spacer.              */
+				/*------------------------------------------------------------*/
+				if (NEUIK_NewHFill(&newFill))
+				{
+					eNum = 9;
+					goto out;
+				}
+				if (NEUIK_Container_AddElement(
+					plot2d->drawing_x_axis_ticmarks, newFill))
+				{
+					eNum = 6;
+					goto out;
+				}
+			}
+		}
 	}
 
+	/*------------------------------------------------------------------------*/
+	/* Create and add the X-Axis maximum value ticmark label.                 */
+	/*------------------------------------------------------------------------*/
+	if (plot2d->xAxisCfg.showTicLabels)
+	{
+		sprintf(ticMarkLbl, "%g", plot->x_range_max);
+		if (NEUIK_MakeLabel(&newTicLbl, ticMarkLbl))
+		{
+			eNum = 5;
+			goto out;
+		}
+		if (NEUIK_Element_Configure(newTicLbl, "VFill", "VJustify=top", NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
+		if (NEUIK_Container_AddElement(
+			plot2d->drawing_x_axis_ticmarks, newTicLbl))
+		{
+			eNum = 6;
+			goto out;
+		}
+	}
+	else
+	{
+		if (NEUIK_NewVFill(&newFill))
+		{
+			eNum = 7;
+			goto out;
+		}
+		if (NEUIK_Element_Configure(newFill, "PadAll=2", "PadTop=0", NULL))
+		{
+			eNum = 8;
+			goto out;
+		}
+		if (NEUIK_Container_AddElement(
+			plot2d->drawing_x_axis_ticmarks, newFill))
+		{
+			eNum = 6;
+			goto out;
+		}
+	}
 out:
 	if (eNum > 0)
 	{
@@ -1418,6 +1708,416 @@ out:
 	{
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Plot2D_Configure
+ *
+ *  Description:   Allows the user to set a number of configurable parameters.
+ *
+ *                 NOTE: This list of named sets must be terminated by a NULL 
+ *                 pointer
+ *
+ *  Returns:       Non-zero if an error occurs.
+ *
+ ******************************************************************************/
+int NEUIK_Plot2D_Configure(
+	NEUIK_Plot2D * plot2d,
+	const char   * set0,
+	...)
+{
+	int                  ns; /* number of items from sscanf */
+	int                  ctr;
+	int                  nCtr;
+	int                  eNum      = 0; /* which error to report (if any) */
+	int                  doRedraw  = FALSE;
+	int                  isBool    = FALSE;
+	int                  boolVal   = FALSE;
+	int                  typeMixup;
+	int                  valInt    = 0;
+	char                 buf[4096];
+	RenderSize           rSize;
+	RenderLoc            rLoc;
+	va_list              args;
+	char               * strPtr    = NULL;
+	char               * name      = NULL;
+	char               * value     = NULL;
+	const char         * set       = NULL;
+	NEUIK_Color          clr;
+	/*------------------------------------------------------------------------*/
+	/* If a `name=value` string with an unsupported name is found, check to   */
+	/* see if a boolName was mistakenly used instead.                         */
+	/*------------------------------------------------------------------------*/
+	static char * boolNames[] = {
+		"xAxisGridlines",
+		"yAxisGridlines",
+		"xAxisTicLabels",
+		"yAxisTicLabels",
+		NULL,
+	};
+	/*------------------------------------------------------------------------*/
+	/* If a boolName string with an unsupported name is found, check to see   */
+	/* if a supported nameValue type was mistakenly used instead.             */
+	/*------------------------------------------------------------------------*/
+	static char * valueNames[] = {
+		"GridlineColor",
+		"xAxisNumTics",
+		"yAxisNumTics",
+		NULL,
+	};
+	static char   funcName[] = "NEUIK_Plot2D_Configure";
+	static char * errMsgs[]  = {"", // [ 0] no error
+		"Argument `plot2d` does not implement Label class.",               // [ 1]
+		"`name=value` string is too long.",                                // [ 2]
+		"Invalid `name=value` string.",                                    // [ 3]
+		"ValueType name used as BoolType, skipping.",                      // [ 4]
+		"BoolType name unknown, skipping.",                                // [ 5]
+		"NamedSet.name is NULL, skipping..",                               // [ 6]
+		"NamedSet.name is blank, skipping..",                              // [ 7]
+		"GridlineColor value invalid; should be comma separated RGBA.",    // [ 8]
+		"GridlineColor value invalid; RGBA value range is 0-255.",         // [ 9]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",                // [10]
+		"BoolType name used as ValueType, skipping.",                      // [11]
+		"NamedSet.name type unknown, skipping.",                           // [12]
+		"xAxisNumTics value invalid; must be an integer value.",           // [13]
+		"xAxisNumTics value invalid; Valid integer values are -1 or >=2.", // [14]
+		"yAxisNumTics value invalid; must be an integer value.",           // [15]
+		"yAxisNumTics value invalid; Valid integer values are -1 or >=2.", // [16]
+	};
+
+	if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
+	{
+		eNum = 1;
+		goto out;
+	}
+	set = set0;
+
+	va_start(args, set0);
+
+	for (ctr = 0;; ctr++)
+	{
+		if (ctr > 0)
+		{
+			/* before starting */
+			set = va_arg(args, const char *);
+		}
+
+		isBool = FALSE;
+		name   = NULL;
+		value  = NULL;
+
+		if (set == NULL) break;
+
+		if (strlen(set) > 4095)
+		{
+			NEUIK_RaiseError(funcName, errMsgs[2]);
+			set = va_arg(args, const char *);
+			continue;
+		}
+		else
+		{
+			strcpy(buf, set);
+			/* Find the equals and set it to '\0' */
+			strPtr = strchr(buf, '=');
+			if (strPtr == NULL)
+			{
+				/*------------------------------------------------------------*/
+				/* Bool type configuration (or a mistake)                     */
+				/*------------------------------------------------------------*/
+				if (buf[0] == 0)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[3]);
+				}
+
+				isBool  = TRUE;
+				boolVal = TRUE;
+				name    = buf;
+				if (buf[0] == '!')
+				{
+					boolVal = FALSE;
+					name    = buf + 1;
+				}
+				if (boolVal)
+				{
+					/*--------------------------------------------------------*/
+					/* Do nothing; this is to resolve an unused var warning.  */
+					/*--------------------------------------------------------*/
+				}
+			}
+			else
+			{
+				*strPtr = 0;
+				strPtr++;
+				if (*strPtr == 0)
+				{
+					/* `name=value` string is missing a value */
+					NEUIK_RaiseError(funcName, errMsgs[3]);
+					set = va_arg(args, const char *);
+					continue;
+				}
+				name  = buf;
+				value = strPtr;
+			}
+		}
+
+		if (isBool)
+		{
+			/*----------------------------------------------------------------*/
+			/* Check for boolean parameter setting.                           */
+			/*----------------------------------------------------------------*/
+			if (!strcmp("xAxisGridlines", name))
+			{
+				if (plot2d->xAxisCfg.showGridlines == boolVal) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->xAxisCfg.showGridlines = boolVal;
+				doRedraw = 1;
+			}
+			else if (!strcmp("yAxisGridlines", name))
+			{
+				if (plot2d->yAxisCfg.showGridlines == boolVal) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->yAxisCfg.showGridlines = boolVal;
+				doRedraw = 1;
+			}
+			else if (!strcmp("xAxisTicLabels", name))
+			{
+				if (plot2d->xAxisCfg.showTicLabels == boolVal) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->xAxisCfg.showTicLabels = boolVal;
+				doRedraw = 1;
+			}
+			else if (!strcmp("yAxisTicLabels", name))
+			{
+				if (plot2d->yAxisCfg.showTicLabels == boolVal) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->yAxisCfg.showTicLabels = boolVal;
+				doRedraw = 1;
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* Bool parameter not found; may be mixup or mistake.         */
+				/*------------------------------------------------------------*/
+				typeMixup = FALSE;
+				for (nCtr = 0;; nCtr++)
+				{
+					if (valueNames[nCtr] == NULL) break;
+
+					if (!strcmp(valueNames[nCtr], name))
+					{
+						typeMixup = TRUE;
+						break;
+					}
+				}
+
+				if (typeMixup)
+				{
+					/* A value type was mistakenly used as a bool type */
+					NEUIK_RaiseError(funcName, errMsgs[4]);
+				}
+				else
+				{
+					/* An unsupported name was used as a bool type */
+					NEUIK_RaiseError(funcName, errMsgs[5]);
+				}
+			}
+		}
+		else
+		{
+			if (name == NULL)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[6]);
+			}
+			else if (name[0] == 0)
+			{
+				NEUIK_RaiseError(funcName, errMsgs[7]);
+			}
+			else if (!strcmp("GridlineColor", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+					continue;
+				}
+
+				ns = sscanf(value, "%d,%d,%d,%d", &clr.r, &clr.g, &clr.b, &clr.a);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 4)
+			#else
+				if (ns < 4)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[8]);
+					continue;
+				}
+
+				if (clr.r < 0 || clr.r > 255 ||
+					clr.g < 0 || clr.g > 255 ||
+					clr.b < 0 || clr.b > 255 ||
+					clr.a < 0 || clr.a > 255)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[9]);
+					continue;
+				}
+				if (plot2d->colorGridline.r == clr.r &&
+					plot2d->colorGridline.g == clr.g &&
+					plot2d->colorGridline.b == clr.b &&
+					plot2d->colorGridline.a == clr.a) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->colorGridline = clr;
+				doRedraw = TRUE;
+			}
+			else if (!strcmp("xAxisNumTics", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[13]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[13]);
+					continue;
+				}
+
+				ns = sscanf(value, "%d", &valInt);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 1)
+			#else
+				if (ns < 1)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[13]);
+					continue;
+				}
+
+				if (valInt != -1 && valInt < 2)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[14]);
+					continue;
+				}
+
+				if (plot2d->xAxisCfg.nTicmarks == valInt) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->xAxisCfg.nTicmarks = valInt;
+				doRedraw = TRUE;
+			}
+			else if (!strcmp("yAxisNumTics", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[15]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[15]);
+					continue;
+				}
+
+				ns = sscanf(value, "%d", &valInt);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+			#ifndef WIN32
+				if (ns == EOF || ns < 1)
+			#else
+				if (ns < 1)
+			#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[15]);
+					continue;
+				}
+
+				if (valInt != -1 && valInt < 2)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[16]);
+					continue;
+				}
+
+				if (plot2d->yAxisCfg.nTicmarks == valInt) continue;
+
+				/* else: The previous setting was changed */
+				plot2d->yAxisCfg.nTicmarks = valInt;
+				doRedraw = TRUE;
+			}
+			else
+			{
+				typeMixup = FALSE;
+				for (nCtr = 0;; nCtr++)
+				{
+					if (boolNames[nCtr] == NULL) break;
+
+					if (!strcmp(boolNames[nCtr], name))
+					{
+						typeMixup = TRUE;
+						break;
+					}
+				}
+
+				if (typeMixup)
+				{
+					/* A bool type was mistakenly used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[11]);
+				}
+				else
+				{
+					/* An unsupported name was used as a value type */
+					NEUIK_RaiseError(funcName, errMsgs[12]);
+				}
+			}
+		}
+	}
+	va_end(args);
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+	if (doRedraw)
+	{
+		if (neuik_Element_GetSizeAndLocation(plot2d, &rSize, &rLoc))
+		{
+			eNum = 10;
+			NEUIK_RaiseError(funcName, errMsgs[eNum]);
+			eNum = 1;
+		}
+		else
+		{
+			neuik_Element_RequestRedraw(plot2d, rLoc, rSize);
+		}
 	}
 
 	return eNum;

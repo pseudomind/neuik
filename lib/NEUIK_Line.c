@@ -678,19 +678,19 @@ int NEUIK_Line_Configure(
 		NULL,
 	};
 	static char   funcName[] = "NEUIK_Line_Configure";
-	static char * errMsgs[]  = {"",                               // [ 0] no error
-		"Argument `line` does not implement Label class.",                 // [ 1]
-		"`name=value` string is too long.",                               // [ 2]
-		"Invalid `name=value` string.",                                   // [ 3]
-		"ValueType name used as BoolType, skipping.",                     // [ 4]
-		"BoolType name unknown, skipping.",                               // [ 5]
-		"NamedSet.name is NULL, skipping..",                              // [ 6]
-		"NamedSet.name is blank, skipping..",                             // [ 7]
-		"FontColor value invalid; should be comma separated RGBA.",       // [ 8]
-		"FontColor value invalid; RGBA value range is 0-255.",            // [ 9]
-		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [10]
-		"BoolType name used as ValueType, skipping.",                     // [11]
-		"NamedSet.name type unknown, skipping.",                          // [12]
+	static char * errMsgs[]  = {"", // [ 0] no error
+		"Argument `line` does not implement Label class.",      // [ 1]
+		"`name=value` string is too long.",                     // [ 2]
+		"Invalid `name=value` string.",                         // [ 3]
+		"ValueType name used as BoolType, skipping.",           // [ 4]
+		"BoolType name unknown, skipping.",                     // [ 5]
+		"NamedSet.name is NULL, skipping..",                    // [ 6]
+		"NamedSet.name is blank, skipping..",                   // [ 7]
+		"Color value invalid; should be comma separated RGBA.", // [ 8]
+		"Color value invalid; RGBA value range is 0-255.",      // [ 9]
+		"Failure in `neuik_Element_GetSizeAndLocation()`.",     // [10]
+		"BoolType name used as ValueType, skipping.",           // [11]
+		"NamedSet.name type unknown, skipping.",                // [12]
 	};
 
 	if (!neuik_Object_IsClass(line, neuik__Class_Line))

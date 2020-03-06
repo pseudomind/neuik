@@ -1187,6 +1187,69 @@ out:
 	return eNum;
 }
 
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Container_GetNthElement
+ *
+ *  Description:   Returns the pointer to the N'th stored element of a 
+ *                 multi-element container, or NULL if the container doesn't 
+ *                 currently contain the specfied N'th element.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Container_GetNthElement(
+	NEUIK_Element   cont,
+	int             n,
+	NEUIK_Element * elem) 
+{
+	int               ctr;
+	int               eNum   = 0; /* which error to report (if any) */
+ 	NEUIK_Element     nextElem; 
+	NEUIK_Container * cBase = NULL;
+	static char       funcName[] = "NEUIK_Container_GetNthElement";
+	static char     * errMsgs[] = {"", // [0] no error
+		"Argument `cont` caused `neuik_Object_GetClassObject` to fail.", // [1]
+		"Output argument `elem` is NULL.",                               // [2]
+	};
+
+	if (neuik_Object_GetClassObject(cont, neuik__Class_Container, (void**)&cBase))
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (elem == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	*elem = NULL;
+
+	if (cBase->elems != NULL)
+	{
+		for (ctr = 0;; ctr++)
+		{
+			nextElem = cBase->elems[ctr];
+			if (nextElem == NULL) break;
+			if (ctr == n)
+			{
+				*elem = nextElem;
+				break;
+			}
+		}
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
 /*******************************************************************************
  *
  *  Name:          NEUIK_Container_RemoveElement
