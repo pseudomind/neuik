@@ -534,7 +534,7 @@ int neuik_Element_Render__Canvas(
 					break;
 				case NEUIK_CANVAS_OP_DRAWLINE:
 					if (SDL_RenderDrawLine(rend,
-						rl.x + cnvs->draw_x, rl.y + cnvs->draw_y,
+						rl.x + cnvs->draw_x,      rl.y + cnvs->draw_y,
 						rl.x + op->op_drawline.x, rl.y + op->op_drawline.y))
 					{
 						eNum = 9;

@@ -27,8 +27,9 @@ typedef enum {
 neuik_PlotRangeConfig;
 
 typedef struct {
-	char * uniqueName;
-	char * label;
+	char  * uniqueName;
+	char  * label;
+	float   lineThickness;
 } neuik_PlotDataConfig;
 
 typedef struct {

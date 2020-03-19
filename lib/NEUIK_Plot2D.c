@@ -192,6 +192,9 @@ int neuik_Object_New__Plot2D(
 		goto out;
 	}
 
+	/*------------------------------------------------------------------------*/
+	/* Create the plot background layer.                                      */
+	/*------------------------------------------------------------------------*/
 	if (NEUIK_NewCanvas(&plot2d->drawing_background))
 	{
 		eNum = 8;
@@ -203,6 +206,9 @@ int neuik_Object_New__Plot2D(
 		goto out;
 	}
 
+	/*------------------------------------------------------------------------*/
+	/* Create the plot ticmark layer.                                         */
+	/*------------------------------------------------------------------------*/
 	if (NEUIK_NewGridLayout(&plot2d->drawing_ticmarks))
 	{
 		eNum = 10;
@@ -278,6 +284,20 @@ int neuik_Object_New__Plot2D(
 	}
 
 	/*------------------------------------------------------------------------*/
+	/* Create the plotted values layer.                                       */
+	/*------------------------------------------------------------------------*/
+	if (NEUIK_NewCanvas(&plot2d->drawing_plotted_data))
+	{
+		eNum = 8;
+		goto out;
+	}
+	if (NEUIK_Element_Configure(plot2d->drawing_plotted_data, "FillAll", NULL))
+	{
+		eNum = 9;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
 	/* Create first level Base SuperClass Object                              */
 	/*------------------------------------------------------------------------*/
 	sClassPtr = (NEUIK_Element *) &(plot2d->objBase.superClassObj);
@@ -307,6 +327,12 @@ int neuik_Object_New__Plot2D(
 		eNum = 7;
 		goto out;
 	}
+	if (NEUIK_Container_AddElement(plot->drawing, plot2d->drawing_plotted_data))
+	{
+		eNum = 7;
+		goto out;
+	}
+
 	/*------------------------------------------------------------------------*/
 	/* Add the Y-Axis elements.                                               */
 	/*------------------------------------------------------------------------*/
@@ -530,6 +556,358 @@ out:
 
 /*******************************************************************************
  *
+ *  Name:          neuik_Plot2D_RenderSimpleLineToMask
+ *
+ *  Description:   Renders a 1 pixel wide X-Y scatter line plot to a maskMap.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_Plot2D_RenderSimpleLineToMask(
+	NEUIK_Plot2D          * plot2d,
+	NEUIK_PlotData        * data,
+	neuik_PlotDataConfig  * dataCfg,
+	int                     maskW,
+	int                     maskH,
+	neuik_MaskMap        ** lineMask)
+{
+	unsigned int  uCtr       = 0;
+	int           firstPt    = TRUE;
+	int           lastPtOut  = FALSE;
+	int           maskPtX    = 0;
+	int           maskPtY    = 0;
+	int           maskPtX1   = 0;
+	int           maskPtX2   = 0;
+	int           maskPtY1   = 0;
+	int           maskPtY2   = 0;
+	float         lst_ptX_32 = 0.0; /* value of preceding (last) point */
+	float         lst_ptY_32 = 0.0; /* value of preceding (last) point */
+	double        lst_ptX_64 = 0.0; /* value of preceding (last) point */
+	double        lst_ptY_64 = 0.0; /* value of preceding (last) point */
+	float         m_32       = 0.0; /* slope between two points */
+	float         dX_32      = 0.0; /* delta in X value between two points */
+	float         dY_32      = 0.0; /* delta in Y value between two points */
+	float         dXmax_32   = 0.0; /* max delta in X value between two points */
+	float         dYmax_32   = 0.0; /* max delta in Y value between two points */
+	float         ptX_32     = 0.0;
+	float         ptY_32     = 0.0;
+	double        ptX_64     = 0.0;
+	double        ptY_64     = 0.0;
+	double        xRangeMin  = 0.0;
+	double        xRangeMax  = 0.0;
+	double        yRangeMin  = 0.0;
+	double        yRangeMax  = 0.0;
+	double        pxDeltaX   = 0.0; /* x-axis width represented by one pixel */
+	double        pxDeltaY   = 0.0; /* y-axis height represented by one pixel */
+	NEUIK_Plot  * plot       = NULL;
+	int           eNum       = 0; /* which error to report (if any) */
+	static char   funcName[] = "neuik_Plot2D_RenderSimpleLineToMask";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `plot2d` is not of Plot2D class.",                       // [1]
+		"Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.", // [2]
+		"Output Argument `lineMask` is NULL.",                             // [3]
+		"Failure in `neuik_MakeMaskMap()`",                                // [4]
+		"Failure in `neuik_MaskAll()`",                                    // [5]
+		"Failure in `neuik_MaskMap_UnmaskPoint()`",                        // [6]
+		"Failure in `neuik_MaskMap_UnmaskLine()`",                         // [7]
+	};
+
+	if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (neuik_Object_GetClassObject(plot2d, neuik__Class_Plot, (void**)&plot))
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (lineMask == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	xRangeMin = plot->x_range_min;
+	xRangeMax = plot->x_range_max;
+	yRangeMin = plot->y_range_min;
+	yRangeMax = plot->y_range_max;
+
+	if (neuik_MakeMaskMap(lineMask, maskW, maskH))
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+	#pragma message("[SLOPPY]: This function needs a massive cleanup.")
+	/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+
+	/*------------------------------------------------------------------------*/
+	/* There are built-in methods for getting easy access to collapsed        */
+	/* unmasked regions; leverage this by setting pixels not encompassed as   */
+	/* masked.                                                                */
+	/*------------------------------------------------------------------------*/
+	if (neuik_MaskMap_MaskAll(*lineMask))
+	{
+		eNum = 5;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Iterate through the points in the PlotData set.                        */
+	/*------------------------------------------------------------------------*/
+	switch (data->precision)
+	{
+	case 32:
+		pxDeltaX = (xRangeMax - xRangeMin)/((double)(maskW));
+		pxDeltaY = (yRangeMax - yRangeMin)/((double)(maskH));
+
+		/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+		#pragma message("[TODO]: Finish 32bit value plotting implementation.")
+		/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+
+		for (uCtr = 0; uCtr < data->nPoints; uCtr++)
+		{
+			ptX_32 = data->data_32[uCtr*2];
+			ptY_32 = data->data_32[(uCtr*2)+1];
+
+			maskPtX1 = maskPtX2;
+			maskPtY1 = maskPtY2;
+
+			if (!firstPt)
+			{
+				if (!lastPtOut)
+				{
+					/*--------------------------------------------------------*/
+					/* The preceding point was within the currently displayed */
+					/* region for this plot.                                  */
+					/*--------------------------------------------------------*/
+					dXmax_32 = ptX_32 - lst_ptX_32;
+					dYmax_32 = ptY_32 - lst_ptY_32;
+					dX_32 = dXmax_32;
+					dY_32 = dYmax_32;
+					m_32  = dY_32/dX_32; /* slope */
+
+					/*--------------------------------------------------------*/
+					/* Check if this point is outside of the displayed region */
+					/* if so, limit the effective range for a drawn line.     */
+					/*--------------------------------------------------------*/
+					if ((double)(ptX_32) < xRangeMin ||
+						(double)(ptY_32) < yRangeMin ||
+						(double)(ptX_32) > xRangeMax ||
+						(double)(ptY_32) > yRangeMax)
+					{
+						/*----------------------------------------------------*/
+						/* This datapoint lies outside of the currently       */
+						/* displayed region for this plot; A partial line     */
+						/* should be drawn between this point and the last.   */
+						/*----------------------------------------------------*/
+						lastPtOut = TRUE;
+
+						/*----------------------------------------------------*/
+						/* Restrict the effective delta (for drawing lines to */
+						/* the region of supported values.                    */
+						/*----------------------------------------------------*/
+						if ((double)(ptX_32) > xRangeMax)
+						{
+							dX_32 = (float)(xRangeMax) - lst_ptX_32;
+							dY_32 = m_32*dX_32 + lst_ptY_32;
+						}
+						if ((double)(ptY_32) < yRangeMin)
+						{
+							dY_32 = (float)(yRangeMin) - lst_ptY_32;
+							dX_32 = dY_32/m_32 + lst_ptX_32;
+						}
+						if ((double)(ptY_32) > yRangeMax)
+						{
+							dY_32 = (float)(yRangeMax) - lst_ptY_32;
+							dX_32 = dY_32/m_32 + lst_ptX_32;
+						}
+
+						// maskPtY2 = (int)(
+						// 	((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
+						// if (maskPtY2 >= maskH)
+						// {
+						// 	printf("Old dX = `%f`\n", dX_32);
+						// 	printf("Old dY = `%f`\n", dY_32);
+						// 	if (dY_32 >= 0)
+						// 	{
+						// 		dY_32 -= (float)(pxDeltaY);
+						// 	}
+						// 	else
+						// 	{
+						// 		dY_32 += (float)(pxDeltaY);
+						// 	}
+						// 	dX_32 = dY_32/m_32 + lst_ptX_32;
+						// 	printf("New dX = `%f`\n", dX_32);
+						// 	printf("New dY = `%f`\n", dY_32);
+						// }
+					}
+
+
+					// maskPtX1 = 
+					// 	(int)(((double)(lst_ptX_32) - xRangeMin)/pxDeltaX);
+					// maskPtY1 = (maskH-1) - 
+					// 	(int)(((double)(lst_ptY_32) - yRangeMin)/pxDeltaY);
+
+					maskPtX2 = (int)(
+						((double)(lst_ptX_32 + dX_32) - xRangeMin)/pxDeltaX);
+					maskPtY2 = (maskH-1) - (int)(
+						((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
+					/*--------------------------------------------------------*/
+					/* Prevent the line from drawing outside the mask by a    */
+					/* single pixel.                                          */
+					/*--------------------------------------------------------*/
+					// if (maskPtY1 < 0)
+					// {
+					// 	printf("modify ptY1 for point %u.\n", uCtr);
+					// 	// printf("Old dX = `%f`\n", dX_32);
+					// 	// printf("Old dY = `%f`\n", dY_32);
+					// 	if (dY_32 >= 0)
+					// 	{
+					// 		dY_32 -= (float)(pxDeltaY);
+					// 	}
+					// 	else
+					// 	{
+					// 		dY_32 += (float)(pxDeltaY);
+					// 	}
+					// 	dX_32 = dY_32/m_32 + lst_ptX_32;
+					// 	// printf("New dX = `%f`\n", dX_32);
+					// 	// printf("New dY = `%f`\n", dY_32);
+
+					// 	maskPtY1 = (maskH-1) - (int)(
+					// 		((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
+					// }
+
+					/*--------------------------------------------------------*/
+					/* Prevent the line from drawing outside the mask by a    */
+					/* single pixel.                                          */
+					/*--------------------------------------------------------*/
+					if (maskPtY2 < 0)
+					{
+						// printf("modify ptY2 for point %u.\n", uCtr);
+						if (dY_32 >= 0)
+						{
+							dY_32 -= (float)(pxDeltaY);
+						}
+						else
+						{
+							dY_32 += (float)(pxDeltaY);
+						}
+						dX_32 = dY_32/m_32 + lst_ptX_32;
+
+						maskPtY2 = (maskH-1) - (int)(
+							((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
+					}
+
+					// printf("umask :: pt [%u]: from [%d, %d] to [%d, %d]\n",
+					// 	uCtr, maskPtX1, maskPtY1,	maskPtX2, maskPtY2);
+
+					if (neuik_MaskMap_UnmaskLine(*lineMask,
+						maskPtX1, maskPtY1,	maskPtX2, maskPtY2))
+					{
+						eNum = 7;
+						goto out;
+					}
+				}
+				else
+				{
+					/*--------------------------------------------------------*/
+					/* The preceding point was outside of the currently       */
+					/* displayed region for this plot.                        */
+					/*--------------------------------------------------------*/
+					if ((double)(ptX_32) < xRangeMin ||
+						(double)(ptY_32) < yRangeMin ||
+						(double)(ptX_32) > xRangeMax ||
+						(double)(ptY_32) > yRangeMax)
+					{
+						/*----------------------------------------------------*/
+						/* This datapoint also lies outside of the currently  */
+						/* displayed region for this plot.                    */
+						/*----------------------------------------------------*/
+						lastPtOut = TRUE;
+						// printf("point %u out!!!\n", uCtr);
+					}
+					else
+					{
+						/*----------------------------------------------------*/
+						/* This point is finally within bounds; at least one  */
+						/* and potentially more points should be unmasked.    */
+						/*----------------------------------------------------*/
+						// maskPtX = (int)(((double)(ptX_32) - xRangeMin)/(pxDeltaX));
+						// maskPtY = (int)(((double)(ptY_32) - yRangeMin)/(pxDeltaY));
+
+						// if (neuik_MaskMap_UnmaskPoint(*lineMask, maskPtX, maskPtY))
+						// {
+						// 	eNum = 6;
+						// 	goto out;
+						// }
+					}
+				}
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* This is how the first data point should be handled.        */
+				/*------------------------------------------------------------*/
+				if ((double)(ptX_32) < xRangeMin ||
+					(double)(ptY_32) < yRangeMin ||
+					(double)(ptX_32) > xRangeMax ||
+					(double)(ptY_32) > yRangeMax)
+				{
+					/*--------------------------------------------------------*/
+					/* This datapoint lies outside of the currently displayed */
+					/* region for this plot.                                  */
+					/*--------------------------------------------------------*/
+					lastPtOut = TRUE;
+				}
+				else
+				{
+					/*--------------------------------------------------------*/
+					/* Unmask a single point.                                 */
+					/*--------------------------------------------------------*/
+					maskPtX = (int)(((double)(ptX_32) - xRangeMin)/(pxDeltaX));
+					maskPtY = (maskH-1) - 
+						(int)(((double)(ptY_32) - yRangeMin)/(pxDeltaY));
+					maskPtX2 = maskPtX;
+					maskPtY2 = maskPtY;
+
+					if (neuik_MaskMap_UnmaskPoint(*lineMask, maskPtX, maskPtY))
+					{
+						eNum = 6;
+						goto out;
+					}
+				}
+				firstPt = FALSE;
+			}
+			lst_ptX_32 = ptX_32;
+			lst_ptY_32 = ptY_32;
+		}
+		break;
+	case 64:
+
+		/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+		#pragma message("[TODO]: Implement 64bit value plotting.")
+		/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+
+		break;
+	default:
+		break;
+	}
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+/*******************************************************************************
+ *
  *  Name:          neuik_Element_Render__Plot2D
  *
  *  Description:   Renders a single button as an SDL_Texture*.
@@ -544,38 +922,50 @@ int neuik_Element_Render__Plot2D(
 	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
 	int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-	int                   ctr          = 0;
-	int                   eNum         = 0; /* which error to report (if any) */
-	int                   tic_x_cl     = 0;
-	int                   tic_xmin     = 0;
-	int                   tic_xmax     = 0;
-	int                   tic_y_cl     = 0;
-	int                   tic_ymin     = 0;
-	int                   tic_ymax     = 0;
-	int                   ticMarkPos   = 0;
-	double                tic_x_offset = 0.0;
-	double                tic_x_adj    = 0.0;
-	double                tic_y_offset = 0.0;
-	double                tic_y_adj    = 0.0;
-	RenderLoc             rl;
-	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
-	RenderLoc             dwg_loc;
-	RenderLoc             tic_loc;
-	SDL_Rect              rect       = {0, 0, 0, 0};
-	RenderSize            rs         = {0, 0};
-	RenderSize            dwg_rs;
-	RenderSize            tic_rs;
-	NEUIK_Element         ticElem    = NULL;
-	SDL_Renderer        * rend       = NULL;
-	NEUIK_Plot          * plot       = NULL;
-	NEUIK_ElementBase   * eBase      = NULL;
-	NEUIK_ElementConfig * eCfg       = NULL;
-	NEUIK_Plot2D        * plt        = NULL;
-	NEUIK_Canvas        * dwg;               /* pointer to active drawing (don't free) */
-	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
-	enum neuik_bgstyle    bgStyle;
-	static char           funcName[] = "neuik_Element_Render__Plot2D";
-	static char         * errMsgs[]  = {"", // [0] no error
+	unsigned int           uCtr         = 0;
+	int                    ctr          = 0;
+	int                    eNum         = 0; /* which error to report (if any) */
+	int                    pltOffsetX   = 0;
+	int                    pltOffsetY   = 0;
+	int                    tic_x_cl     = 0;
+	int                    tic_xmin     = 0;
+	int                    tic_xmax     = 0;
+	int                    tic_y_cl     = 0;
+	int                    tic_ymin     = 0;
+	int                    tic_ymax     = 0;
+	int                    ticMarkPos   = 0;
+	int                    maskCtr      = 0; /* maskMap counter */
+	int                    maskW        = 0;
+	int                    maskH        = 0;
+	int                    maskRegions  = 0; /* number of regions in maskMap */
+	const int            * regionY0;         /* Array of region Y0 values */
+	const int            * regionYf;         /* Array of region Yf values */
+	double                 tic_x_offset = 0.0;
+	double                 tic_x_adj    = 0.0;
+	double                 tic_y_offset = 0.0;
+	double                 tic_y_adj    = 0.0;
+	RenderLoc              rl;
+	RenderLoc              rlRel      = {0, 0}; /* renderloc relative to parent */
+	RenderLoc              dwg_loc;
+	RenderLoc              tic_loc;
+	RenderLoc              ticPlotLoc;
+	SDL_Rect               rect       = {0, 0, 0, 0};
+	RenderSize             rs         = {0, 0};
+	RenderSize             dwg_rs;
+	RenderSize             tic_rs;
+	NEUIK_Element          ticElem    = NULL;
+	SDL_Renderer         * rend       = NULL;
+	NEUIK_Plot           * plot       = NULL;
+	NEUIK_ElementBase    * eBase      = NULL;
+	NEUIK_ElementConfig  * eCfg       = NULL;
+	NEUIK_Plot2D         * plt        = NULL;
+	NEUIK_PlotData       * data       = NULL;
+	neuik_PlotDataConfig * dataCfg    = NULL;
+	NEUIK_Canvas         * dwg;               /* pointer to active drawing (don't free) */
+	neuik_MaskMap        * maskMap    = NULL; /* FREE upon return */
+	enum neuik_bgstyle     bgStyle;
+	static char            funcName[] = "neuik_Element_Render__Plot2D";
+	static char          * errMsgs[]  = {"", // [0] no error
 		"Argument `pltElem` is not of Plot2D class.",                       // [1]
 		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                  // [2]
 		"Element_GetConfig returned NULL.",                                 // [3]
@@ -589,6 +979,8 @@ int neuik_Element_Render__Plot2D(
 		"Failure in `NEUIK_Container_GetFirstElement()`",                   // [11]
 		"Failure in `NEUIK_Container_GetLastElement()`",                    // [12]
 		"Failure in `neuik_Element_GetSizeAndLocation()`.",                 // [13]
+		"Failure in `neuik_Plot2D_RenderSimpleLineToMask()`.",              // [14]
+		"Failure in `neuik_MaskMap_GetUnmaskedRegionsOnVLine()`.",          // [15]
 	};
 
 	if (!neuik_Object_IsClass(pltElem, neuik__Class_Plot2D))
@@ -760,6 +1152,7 @@ int neuik_Element_Render__Plot2D(
 		eNum = 13;
 		goto out;
 	}
+	ticPlotLoc = dwg_loc;
 
 	/*------------------------------------------------------------------------*/
 	/* Get the size and location information for the x_min ticmark label.     */
@@ -977,6 +1370,88 @@ int neuik_Element_Render__Plot2D(
 	NEUIK_Canvas_DrawLine(dwg, (dwg_rs.w-1), (dwg_rs.h-1));
 	NEUIK_Canvas_DrawLine(dwg, 0, (dwg_rs.h-1));
 	NEUIK_Canvas_DrawLine(dwg, 0, 0);
+
+	/*------------------------------------------------------------------------*/
+	/* Now it is time for the contained PlotData sets to be rendered.         */
+	/*------------------------------------------------------------------------*/
+	dwg = plt->drawing_plotted_data;
+	if (neuik_Element_GetSizeAndLocation(dwg, &dwg_rs, &dwg_loc))
+	{
+		eNum = 13;
+		goto out;
+	}
+
+	NEUIK_Canvas_Clear(dwg);
+
+	pltOffsetX = (ticPlotLoc.x - dwg_loc.x) + tic_xmin;
+	pltOffsetY = (ticPlotLoc.y - dwg_loc.y) + tic_ymax;
+
+	for (uCtr = 0; uCtr < plot->n_used; uCtr++)
+	{
+		data = (NEUIK_PlotData*)(plot->data_sets[uCtr]);
+		if (!data->boundsSet) continue;
+
+		dataCfg = &(plot->data_configs[uCtr]);
+
+		if (maskMap != NULL)
+		{
+			neuik_Object_Free(maskMap);
+			maskMap = NULL;
+		}
+
+		maskW = tic_xmax - tic_xmin;
+		maskH = tic_ymin - tic_ymax; /* yMax value is at the top of the plot */
+		if (neuik_Plot2D_RenderSimpleLineToMask(
+			plt, data, dataCfg, maskW, maskH, &maskMap))
+		{
+			eNum = 14;
+			goto out;
+		}
+
+		for (ctr = 0; ctr < maskW; ctr++)
+		{
+			if (neuik_MaskMap_GetUnmaskedRegionsOnVLine(
+				maskMap, ctr, &maskRegions, &regionY0, &regionYf))
+			{
+				eNum = 15;
+				goto out;
+			}
+
+			NEUIK_Canvas_SetDrawColor(dwg, 250, 0, 0, 255); /* dwg line color */
+			for (maskCtr = 0; maskCtr < maskRegions; maskCtr++)
+			{
+				NEUIK_Canvas_MoveTo(dwg, 
+					pltOffsetX + ctr, pltOffsetY + regionY0[maskCtr]);
+
+				if (regionY0[maskCtr] != regionYf[maskCtr])
+				{
+					/*--------------------------------------------------------*/
+					/* This region is two or more points. Draw a line.        */
+					/*--------------------------------------------------------*/
+					{
+						#pragma message("[WORKAROUND]: Fix line drawing graphical glitch")
+						int tempCtr = 0;
+						for (tempCtr = regionY0[maskCtr]; tempCtr <= regionYf[maskCtr]; tempCtr++)
+						{
+							NEUIK_Canvas_MoveTo(dwg, 
+								pltOffsetX + ctr, pltOffsetY + tempCtr);
+							NEUIK_Canvas_DrawPoint(dwg);
+						}
+					}
+					// NEUIK_Canvas_DrawLine(dwg, 
+					// 	tic_xmin + ctr, tic_ymax + regionYf[maskCtr]);
+				}
+				else
+				{
+					/*--------------------------------------------------------*/
+					/* This region is but a single point.                     */
+					/*--------------------------------------------------------*/
+					NEUIK_Canvas_DrawPoint(dwg);
+				}
+			}
+		}
+	}
+
 
 	/*------------------------------------------------------------------------*/
 	/* Finally, have the entire visual redraw itself. It will only redraw the */
@@ -1712,6 +2187,11 @@ int NEUIK_Plot2D_AddPlotData(
 		goto out;
 	}
 	plot->n_used++;
+
+	/*------------------------------------------------------------------------*/
+	/* Set standard default values for the PlotDataConfig.                    */
+	/*------------------------------------------------------------------------*/
+	dataCfg->lineThickness = 1.0;
 
 	if (neuik_Plot2D_UpdateAxesRanges(plot2d))
 	{

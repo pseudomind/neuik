@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "NEUIK_defs.h"
 #include "neuik_MaskMap.h"
 #include "NEUIK_error.h"
 #include "neuik_classes.h"
@@ -1103,10 +1104,10 @@ int neuik_MaskMap_SetMaskLine(
 	/*------------------------------------------------------------------------*/
 	pos0 = map->sizeW*y1 + x1;
 	pos = pos0;
-	map->mapData[pos] = 1;
+	map->mapData[pos] = maskVal;
 
 	pos = map->sizeW*y2 + x2;
-	map->mapData[pos] = 1;
+	map->mapData[pos] = maskVal;
 
 	/*------------------------------------------------------------------------*/
 	/* Mark the rest of the points on the line.                               */
@@ -1114,7 +1115,7 @@ int neuik_MaskMap_SetMaskLine(
 	for (fCtr = 1.0; fCtr < hyp; fCtr += 1.0)
 	{
 		pos = pos0 + map->sizeW*(int)(fCtr*dyInt) + (int)(fCtr*dxInt);
-		map->mapData[pos] = 1;
+		map->mapData[pos] = maskVal;
 	}
 out:
 	if (eNum > 0)
@@ -1570,7 +1571,7 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 	int eNum     = 0; /* which error to report (if any) */
 	int ctr      = 0;
 	int mapPos   = 0;
-	int inRegion = 0;
+	int inRegion = FALSE;
 	int regCount = 0;
 	int x0       = 0;
 	int xf       = 0;
@@ -1582,7 +1583,7 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 		"Return argument `rEnd` is NULL.",                           // [4]
 		"MaskMap size not set; set with `neuik_MaskMap_SetSize()`.", // [5]
 		"Argument `y` invalid; a value (<0) was supplied.",          // [6]
-		"Argument `y` invalid; exceeds mask bounds..",               // [7]
+		"Argument `y` invalid; exceeds mask bounds.",                // [7]
 		"Failure to reallocate memory.",                             // [8]
 	};
 
@@ -1645,14 +1646,14 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 
 			/* else: This is the start of an active region */
 			x0 = ctr;
-			inRegion = 1;
+			inRegion = TRUE;
 		}
 		else if (inRegion)
 		{
 			/*----------------------------------------------------------------*/
 			/* An active region stopped on the previous point.                */
 			/*----------------------------------------------------------------*/
-			inRegion = 0;
+			inRegion = FALSE;
 			regCount++;
 		}
 	}
@@ -1661,7 +1662,7 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 		/*--------------------------------------------------------------------*/
 		/* The current active region stopped at the end of the map.           */
 		/*--------------------------------------------------------------------*/
-		inRegion = 0;
+		inRegion = FALSE;
 		regCount++;
 	}
 
@@ -1700,7 +1701,7 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 
 			/* else: This is the start of an active region */
 			x0 = ctr;
-			inRegion = 1;
+			inRegion = TRUE;
 		}
 		else if (inRegion)
 		{
@@ -1708,7 +1709,7 @@ int neuik_MaskMap_GetUnmaskedRegionsOnHLine(
 			/* An active region stopped on the previous point.                */
 			/*----------------------------------------------------------------*/
 			xf = ctr -1;
-			inRegion = 0;
+			inRegion = FALSE;
 
 			map->regStart[regCount] = x0;
 			map->regEnd[regCount]   = xf;
@@ -1741,3 +1742,200 @@ out:
 
 	return eNum;
 }
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_GetUnmaskedRegionsOnVLine
+ *
+ *  Description:   Identify and return the first and final potions (along the
+ *                 y-axis) of all the unmasked regions of a vertical line. 
+ *                 Argument `nRegions` captures the number of regions; 
+ *                 Argument `rStart` captures all the y0 values for the regions;
+ *                 Argument `rEnd` captures the yf values for the regions.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_GetUnmaskedRegionsOnVLine(
+	neuik_MaskMap * map, 
+	int             x,        /* x-offset corresponding to VLine of interest */
+	int           * nRegions, /* captures the number of regions */
+	const int    ** rStart,   /* captures all the y0 values for the regions */
+	const int    ** rEnd)     /* captures the yf values for the regions */
+{
+	int eNum     = 0; /* which error to report (if any) */
+	int ctr      = 0;
+	int mapPos   = 0;
+	int inRegion = FALSE;
+	int regCount = 0;
+	int y0       = 0;
+	int yf       = 0;
+	static char   funcName[] = "neuik_MaskMap_GetUnmaskedRegionsOnVLine";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Argument `map` does not implement MaskMap class.",          // [1]
+		"Return argument `nRegions` is NULL.",                       // [2]
+		"Return argument `rStart` is NULL.",                         // [3]
+		"Return argument `rEnd` is NULL.",                           // [4]
+		"MaskMap size not set; set with `neuik_MaskMap_SetSize()`.", // [5]
+		"Argument `x` invalid; a value (<0) was supplied.",          // [6]
+		"Argument `x` invalid; exceeds mask bounds.",                // [7]
+		"Failure to reallocate memory.",                             // [8]
+	};
+
+	/*------------------------------------------------------------------------*/
+	/* Check for potential issues before investigating further.               */
+	/*------------------------------------------------------------------------*/
+	if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+	{
+		eNum = 1;
+		goto out;
+	}
+
+	if (nRegions == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+
+	if (rStart == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	if (rEnd == NULL)
+	{
+		eNum = 4;
+		goto out;
+	}
+
+	if (map->sizeW == 0 || map->sizeH == 0)
+	{
+		/* The size of the MaskMap appears to not be set */
+		eNum = 5;
+		goto out;
+	}
+
+	if (x < 0)
+	{
+		/* invalid x-value */
+		eNum = 6;
+		goto out;
+	}
+	if (x >= map->sizeW)
+	{
+		/* x-value beyond bounds */
+		eNum = 7;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the number of regions required (for allocation)              */
+	/*------------------------------------------------------------------------*/
+	for (ctr = 0; ctr < map->sizeH; ctr++)
+	{
+		mapPos = ctr * map->sizeW + x;
+		if (map->mapData[mapPos] == 0)
+		{
+			if (inRegion) continue;
+
+			/* else: This is the start of an active region */
+			y0 = ctr;
+			inRegion = TRUE;
+		}
+		else if (inRegion)
+		{
+			/*----------------------------------------------------------------*/
+			/* An active region stopped on the previous point.                */
+			/*----------------------------------------------------------------*/
+			inRegion = FALSE;
+			regCount++;
+		}
+	}
+	if (inRegion)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The current active region stopped at the end of the map.           */
+		/*--------------------------------------------------------------------*/
+		inRegion = FALSE;
+		regCount++;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Determine if there is enough memory allocated for the region data. If  */
+	/* more is needed, reallocate.                                            */
+	/*------------------------------------------------------------------------*/
+	if (regCount > map->nRegAlloc)
+	{
+		map->nRegAlloc = regCount + 20;
+
+		map->regStart = realloc(map->regStart, map->nRegAlloc*sizeof(int));
+		if (map->regStart == NULL)
+		{
+			eNum = 8;
+			goto out;
+		}
+		map->regEnd = realloc(map->regEnd, map->nRegAlloc*sizeof(int));
+		if (map->regEnd == NULL)
+		{
+			eNum = 8;
+			goto out;
+		}
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Store the region start/stops in the appropriate locations              */
+	/*------------------------------------------------------------------------*/
+	regCount = 0;
+	for (ctr = 0; ctr < map->sizeH; ctr++)
+	{
+		mapPos = ctr * map->sizeW + x;
+		if (map->mapData[mapPos] == 0)
+		{
+			if (inRegion) continue;
+
+			/* else: This is the start of an active region */
+			y0 = ctr;
+			inRegion = TRUE;
+		}
+		else if (inRegion)
+		{
+			/*----------------------------------------------------------------*/
+			/* An active region stopped on the previous point.                */
+			/*----------------------------------------------------------------*/
+			yf = ctr -1;
+			inRegion = FALSE;
+
+			map->regStart[regCount] = y0;
+			map->regEnd[regCount]   = yf;
+			regCount++;
+		}
+	}
+	if (inRegion)
+	{
+		/*--------------------------------------------------------------------*/
+		/* The current active region stopped at the end of the map.           */
+		/*--------------------------------------------------------------------*/
+		yf = ctr -1;
+
+		map->regStart[regCount] = y0;
+		map->regEnd[regCount]   = yf;
+		regCount++;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Set the return values.                                                 */
+	/*------------------------------------------------------------------------*/
+	*nRegions = regCount;
+	*rStart   = map->regStart;
+	*rEnd     = map->regEnd;
+out:
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+	}
+
+	return eNum;
+}
+

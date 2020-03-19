@@ -38,6 +38,7 @@ typedef struct {
 		NEUIK_Canvas        * drawing_ticmarks_plot_area;
 		NEUIK_VGroup        * drawing_y_axis_ticmarks; /* The y-axis ticmark labels */
 		NEUIK_HGroup        * drawing_x_axis_ticmarks; /* The x-axis ticmark labels */
+		NEUIK_Canvas        * drawing_plotted_data; /* Contains actual plotted data */
 		neuik_Plot2DAxisCfg   xAxisCfg;      /* Configuration of x axis for plot */
 		neuik_Plot2DAxisCfg   yAxisCfg;      /* Configuration of y axis for plot */
 		NEUIK_Color           colorGridline; /* Color to use for the gridlines */
