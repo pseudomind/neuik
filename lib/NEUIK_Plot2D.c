@@ -1547,16 +1547,6 @@ int neuik_Plot2D_UpdateAxesRanges(
 		goto out;
 	}
 
-	if (plot->x_range_cfg == NEUIK_PLOTRANGECONFIG_SPECIFIED &&
-		plot->y_range_cfg == NEUIK_PLOTRANGECONFIG_SPECIFIED)
-	{
-		/*--------------------------------------------------------------------*/
-		/* The plot range for both axes has been manuallys specified. There   */
-		/* is no need to autocalculate a range here; return now.              */
-		/*--------------------------------------------------------------------*/
-		goto out;
-	}
-
 	/*------------------------------------------------------------------------*/
 	/* Determine the maximum X-Y range of values from all data sets.          */
 	/*------------------------------------------------------------------------*/
@@ -1678,8 +1668,16 @@ int neuik_Plot2D_UpdateAxesRanges(
 		printf("neuik_Plot2D_UpdateAxesRanges(): xAxisRange unhandled!!!\n");
 		#pragma message ("[TODO] Improve calculation of xAxisRange")
 	}
-	plot->x_range_min = xRangeMin;
-	plot->x_range_max = xRangeMax;
+	if (plot->x_range_cfg == NEUIK_PLOTRANGECONFIG_AUTO)
+	{
+		plot->x_range_min = xRangeMin;
+		plot->x_range_max = xRangeMax;
+	}
+	else if (plot->x_range_cfg == NEUIK_PLOTRANGECONFIG_SPECIFIED)
+	{
+		xRangeMin = plot->x_range_min;
+		xRangeMax = plot->x_range_max;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Calculate the Y bounds to use for the overall plot.                    */
@@ -1725,8 +1723,16 @@ int neuik_Plot2D_UpdateAxesRanges(
 		printf("neuik_Plot2D_UpdateAxesRanges(): yAxisRange unhandled!!!\n");
 		#pragma message ("[TODO] Improve calculation of yAxisRange")
 	}
-	plot->y_range_min = yRangeMin;
-	plot->y_range_max = yRangeMax;
+	if (plot->y_range_cfg == NEUIK_PLOTRANGECONFIG_AUTO)
+	{
+		plot->y_range_min = yRangeMin;
+		plot->y_range_max = yRangeMax;
+	}
+	else if (plot->y_range_cfg == NEUIK_PLOTRANGECONFIG_SPECIFIED)
+	{
+		yRangeMin = plot->y_range_min;
+		yRangeMax = plot->y_range_max;
+	}
 
 	/*------------------------------------------------------------------------*/
 	/* Remove all existing X/Y Axis ticmark labels before adding new ones.    */
@@ -2254,6 +2260,8 @@ int NEUIK_Plot2D_Configure(
 	int                  boolVal   = FALSE;
 	int                  typeMixup;
 	int                  valInt    = 0;
+	double               floatMin  = 0.0;
+	double               floatMax  = 0.0;
 	char                 buf[4096];
 	RenderSize           rSize;
 	RenderLoc            rLoc;
@@ -2262,6 +2270,7 @@ int NEUIK_Plot2D_Configure(
 	char               * name      = NULL;
 	char               * value     = NULL;
 	const char         * set       = NULL;
+	NEUIK_Plot         * plot      = NULL;
 	NEUIK_Color          clr;
 	/*------------------------------------------------------------------------*/
 	/* If a `name=value` string with an unsupported name is found, check to   */
@@ -2280,10 +2289,12 @@ int NEUIK_Plot2D_Configure(
 	/*------------------------------------------------------------------------*/
 	static char * valueNames[] = {
 		"GridlineColor",
-		"xAxisNumTics",
-		"yAxisNumTics",
 		"xAxisGridlineColor",
 		"yAxisGridlineColor",
+		"xAxisRange",
+		"yAxisRange",
+		"xAxisNumTics",
+		"yAxisNumTics",
 		NULL,
 	};
 	static char   funcName[] = "NEUIK_Plot2D_Configure";
@@ -2301,13 +2312,20 @@ int NEUIK_Plot2D_Configure(
 		"BoolType name used as ValueType, skipping.",                        // [11]
 		"NamedSet.name type unknown, skipping.",                             // [12]
 		"xAxisNumTics value invalid; must be an integer value.",             // [13]
-		"xAxisNumTics value invalid; Valid integer values are -1 or >=2.",   // [14]
+		"xAxisNumTics value invalid; Valid integer values are -1 or >=0.",   // [14]
 		"yAxisNumTics value invalid; must be an integer value.",             // [15]
-		"yAxisNumTics value invalid; Valid integer values are -1 or >=2.",   // [16]
+		"yAxisNumTics value invalid; Valid integer values are -1 or >=0.",   // [16]
 		"xAxisGridlineColor value invalid; should be comma separated RGBA.", // [17]
 		"xAxisGridlineColor value invalid; RGBA value range is 0-255.",      // [18]
 		"yAxisGridlineColor value invalid; should be comma separated RGBA.", // [19]
 		"yAxisGridlineColor value invalid; RGBA value range is 0-255.",      // [20]
+		"xAxisRange value invalid; must be comma separated float values.",   // [21]
+		"xAxisRange value invalid; float values cannot be identical.",       // [22]
+		"xAxisRange value invalid; `xMin` must be less than `xMax`.",        // [23]
+		"Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.",   // [24]
+		"yAxisRange value invalid; must be comma separated float values.",   // [25]
+		"yAxisRange value invalid; float values cannot be identical.",       // [26]
+		"yAxisRange value invalid; `yMin` must be less than `yMax`.",        // [27]
 	};
 
 	if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
@@ -2315,6 +2333,13 @@ int NEUIK_Plot2D_Configure(
 		eNum = 1;
 		goto out;
 	}
+
+	if (neuik_Object_GetClassObject(plot2d, neuik__Class_Plot, (void**)&plot))
+	{
+		eNum = 24;
+		goto out;
+	}
+
 	set = set0;
 
 	va_start(args, set0);
@@ -2481,11 +2506,11 @@ int NEUIK_Plot2D_Configure(
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
 				/*------------------------------------------------------------*/
-			#ifndef WIN32
-				if (ns == EOF || ns < 4)
-			#else
-				if (ns < 4)
-			#endif /* WIN32 */
+				#ifndef WIN32
+					if (ns == EOF || ns < 4)
+				#else
+					if (ns < 4)
+				#endif /* WIN32 */
 				{
 					NEUIK_RaiseError(funcName, errMsgs[8]);
 					continue;
@@ -2528,11 +2553,11 @@ int NEUIK_Plot2D_Configure(
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
 				/*------------------------------------------------------------*/
-			#ifndef WIN32
-				if (ns == EOF || ns < 4)
-			#else
-				if (ns < 4)
-			#endif /* WIN32 */
+				#ifndef WIN32
+					if (ns == EOF || ns < 4)
+				#else
+					if (ns < 4)
+				#endif /* WIN32 */
 				{
 					NEUIK_RaiseError(funcName, errMsgs[17]);
 					continue;
@@ -2575,11 +2600,11 @@ int NEUIK_Plot2D_Configure(
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
 				/*------------------------------------------------------------*/
-			#ifndef WIN32
-				if (ns == EOF || ns < 4)
-			#else
-				if (ns < 4)
-			#endif /* WIN32 */
+				#ifndef WIN32
+					if (ns == EOF || ns < 4)
+				#else
+					if (ns < 4)
+				#endif /* WIN32 */
 				{
 					NEUIK_RaiseError(funcName, errMsgs[19]);
 					continue;
@@ -2602,6 +2627,110 @@ int NEUIK_Plot2D_Configure(
 				plot2d->yAxisCfg.colorGridline = clr;
 				doRedraw = TRUE;
 			}
+			else if (!strcmp("xAxisRange", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[21]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[21]);
+					continue;
+				}
+
+				ns = sscanf(value, "%lf,%lf", &floatMin, &floatMax);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+				#ifndef WIN32
+					if (ns == EOF || ns < 2)
+				#else
+					if (ns < 2)
+				#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[21]);
+					continue;
+				}
+
+				if (floatMin == floatMax)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[22]);
+					continue;
+				}
+				if (floatMin > floatMax)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[23]);
+					continue;
+				}
+
+				if (plot->x_range_cfg == NEUIK_PLOTRANGECONFIG_SPECIFIED &&
+					plot->x_range_min == floatMin &&
+					plot->x_range_max == floatMax) continue;
+
+				/* else: The previous setting was changed */
+				plot->x_range_cfg = NEUIK_PLOTRANGECONFIG_SPECIFIED;
+				plot->x_range_min = floatMin;
+				plot->x_range_max = floatMax;
+
+				doRedraw = TRUE;
+			}
+			else if (!strcmp("yAxisRange", name))
+			{
+				/*------------------------------------------------------------*/
+				/* Check for empty value errors.                              */
+				/*------------------------------------------------------------*/
+				if (value == NULL)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[25]);
+					continue;
+				}
+				if (value[0] == '\0')
+				{
+					NEUIK_RaiseError(funcName, errMsgs[25]);
+					continue;
+				}
+
+				ns = sscanf(value, "%lf,%lf", &floatMin, &floatMax);
+				/*------------------------------------------------------------*/
+				/* Check for EOF, incorrect # of values, & out of range vals. */
+				/*------------------------------------------------------------*/
+				#ifndef WIN32
+					if (ns == EOF || ns < 2)
+				#else
+					if (ns < 2)
+				#endif /* WIN32 */
+				{
+					NEUIK_RaiseError(funcName, errMsgs[25]);
+					continue;
+				}
+
+				if (floatMin == floatMax)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[26]);
+					continue;
+				}
+				if (floatMin > floatMax)
+				{
+					NEUIK_RaiseError(funcName, errMsgs[27]);
+					continue;
+				}
+
+				if (plot->y_range_cfg == NEUIK_PLOTRANGECONFIG_SPECIFIED &&
+					plot->y_range_min == floatMin &&
+					plot->y_range_max == floatMax) continue;
+
+				/* else: The previous setting was changed */
+				plot->y_range_cfg = NEUIK_PLOTRANGECONFIG_SPECIFIED;
+				plot->y_range_min = floatMin;
+				plot->y_range_max = floatMax;
+
+				doRedraw = TRUE;
+			}
 			else if (!strcmp("xAxisNumTics", name))
 			{
 				/*------------------------------------------------------------*/
@@ -2622,20 +2751,24 @@ int NEUIK_Plot2D_Configure(
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
 				/*------------------------------------------------------------*/
-			#ifndef WIN32
-				if (ns == EOF || ns < 1)
-			#else
-				if (ns < 1)
-			#endif /* WIN32 */
+				#ifndef WIN32
+					if (ns == EOF || ns < 1)
+				#else
+					if (ns < 1)
+				#endif /* WIN32 */
 				{
 					NEUIK_RaiseError(funcName, errMsgs[13]);
 					continue;
 				}
 
-				if (valInt != -1 && valInt < 2)
+				if (valInt < -1)
 				{
 					NEUIK_RaiseError(funcName, errMsgs[14]);
 					continue;
+				}
+				if (valInt != -1)
+				{
+					valInt += 2;
 				}
 
 				if (plot2d->xAxisCfg.nTicmarks == valInt) continue;
@@ -2664,20 +2797,24 @@ int NEUIK_Plot2D_Configure(
 				/*------------------------------------------------------------*/
 				/* Check for EOF, incorrect # of values, & out of range vals. */
 				/*------------------------------------------------------------*/
-			#ifndef WIN32
-				if (ns == EOF || ns < 1)
-			#else
-				if (ns < 1)
-			#endif /* WIN32 */
+				#ifndef WIN32
+					if (ns == EOF || ns < 1)
+				#else
+					if (ns < 1)
+				#endif /* WIN32 */
 				{
 					NEUIK_RaiseError(funcName, errMsgs[15]);
 					continue;
 				}
 
-				if (valInt != -1 && valInt < 2)
+				if (valInt < -1)
 				{
 					NEUIK_RaiseError(funcName, errMsgs[16]);
 					continue;
+				}
+				if (valInt != -1)
+				{
+					valInt += 2;
 				}
 
 				if (plot2d->yAxisCfg.nTicmarks == valInt) continue;
