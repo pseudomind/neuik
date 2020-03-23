@@ -718,76 +718,41 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						if ((double)(ptY_32) < yRangeMin)
 						{
 							dY_32 = (float)(yRangeMin) - lst_ptY_32;
-							dX_32 = dY_32/m_32 + lst_ptX_32;
+							dX_32 = dY_32/m_32;
 						}
 						if ((double)(ptY_32) > yRangeMax)
 						{
 							dY_32 = (float)(yRangeMax) - lst_ptY_32;
-							dX_32 = dY_32/m_32 + lst_ptX_32;
+							dX_32 = dY_32/m_32;
 						}
-
-						// maskPtY2 = (int)(
-						// 	((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
-						// if (maskPtY2 >= maskH)
-						// {
-						// 	printf("Old dX = `%f`\n", dX_32);
-						// 	printf("Old dY = `%f`\n", dY_32);
-						// 	if (dY_32 >= 0)
-						// 	{
-						// 		dY_32 -= (float)(pxDeltaY);
-						// 	}
-						// 	else
-						// 	{
-						// 		dY_32 += (float)(pxDeltaY);
-						// 	}
-						// 	dX_32 = dY_32/m_32 + lst_ptX_32;
-						// 	printf("New dX = `%f`\n", dX_32);
-						// 	printf("New dY = `%f`\n", dY_32);
-						// }
 					}
-
-
-					// maskPtX1 = 
-					// 	(int)(((double)(lst_ptX_32) - xRangeMin)/pxDeltaX);
-					// maskPtY1 = (maskH-1) - 
-					// 	(int)(((double)(lst_ptY_32) - yRangeMin)/pxDeltaY);
 
 					maskPtX2 = (int)(
 						((double)(lst_ptX_32 + dX_32) - xRangeMin)/pxDeltaX);
 					maskPtY2 = (maskH-1) - (int)(
 						((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
-					/*--------------------------------------------------------*/
-					/* Prevent the line from drawing outside the mask by a    */
-					/* single pixel.                                          */
-					/*--------------------------------------------------------*/
-					// if (maskPtY1 < 0)
-					// {
-					// 	printf("modify ptY1 for point %u.\n", uCtr);
-					// 	// printf("Old dX = `%f`\n", dX_32);
-					// 	// printf("Old dY = `%f`\n", dY_32);
-					// 	if (dY_32 >= 0)
-					// 	{
-					// 		dY_32 -= (float)(pxDeltaY);
-					// 	}
-					// 	else
-					// 	{
-					// 		dY_32 += (float)(pxDeltaY);
-					// 	}
-					// 	dX_32 = dY_32/m_32 + lst_ptX_32;
-					// 	// printf("New dX = `%f`\n", dX_32);
-					// 	// printf("New dY = `%f`\n", dY_32);
-
-					// 	maskPtY1 = (maskH-1) - (int)(
-					// 		((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
-					// }
 
 					/*--------------------------------------------------------*/
 					/* Prevent the line from drawing outside the mask by a    */
 					/* single pixel.                                          */
 					/*--------------------------------------------------------*/
+					if (maskPtX2 == maskW)
+					{
+						if (dX_32 >= 0)
+						{
+							dX_32 -= (float)(pxDeltaX);
+						}
+						else
+						{
+							dX_32 += (float)(pxDeltaX);
+						}
+						dY_32 = m_32*dX_32 + lst_ptY_32;
+
+						maskPtX2 = (int)(
+							((double)(lst_ptX_32 + dX_32) - xRangeMin)/pxDeltaX);
+					}
 					if (maskPtY2 < 0)
 					{
-						// printf("modify ptY2 for point %u.\n", uCtr);
 						if (dY_32 >= 0)
 						{
 							dY_32 -= (float)(pxDeltaY);
@@ -801,9 +766,6 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						maskPtY2 = (maskH-1) - (int)(
 							((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
 					}
-
-					// printf("umask :: pt [%u]: from [%d, %d] to [%d, %d]\n",
-					// 	uCtr, maskPtX1, maskPtY1,	maskPtX2, maskPtY2);
 
 					if (neuik_MaskMap_UnmaskLine(*lineMask,
 						maskPtX1, maskPtY1,	maskPtX2, maskPtY2))
@@ -828,7 +790,6 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						/* displayed region for this plot.                    */
 						/*----------------------------------------------------*/
 						lastPtOut = TRUE;
-						// printf("point %u out!!!\n", uCtr);
 					}
 					else
 					{
@@ -836,14 +797,90 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						/* This point is finally within bounds; at least one  */
 						/* and potentially more points should be unmasked.    */
 						/*----------------------------------------------------*/
-						// maskPtX = (int)(((double)(ptX_32) - xRangeMin)/(pxDeltaX));
-						// maskPtY = (int)(((double)(ptY_32) - yRangeMin)/(pxDeltaY));
+						lastPtOut = FALSE;
 
-						// if (neuik_MaskMap_UnmaskPoint(*lineMask, maskPtX, maskPtY))
-						// {
-						// 	eNum = 6;
-						// 	goto out;
-						// }
+						dXmax_32 = ptX_32 - lst_ptX_32;
+						dYmax_32 = ptY_32 - lst_ptY_32;
+						dX_32 = dXmax_32;
+						dY_32 = dYmax_32;
+						m_32  = dY_32/dX_32; /* slope */
+
+						/*----------------------------------------------------*/
+						/* Restrict the effective delta (for drawing lines to */
+						/* the region of supported values.                    */
+						/*----------------------------------------------------*/
+						if ((double)(lst_ptX_32) < xRangeMin)
+						{
+							lst_ptY_32 = lst_ptY_32 + m_32*(xRangeMin - lst_ptX_32);
+							lst_ptX_32 = xRangeMin;
+							maskPtY1   = (maskH-1) - (int)((
+								(double)(lst_ptY_32) - yRangeMin)/pxDeltaY);
+						}
+						if ((double)(lst_ptY_32) < yRangeMin)
+						{
+							lst_ptX_32 = lst_ptX_32 + (yRangeMin - lst_ptY_32)/m_32;
+							lst_ptY_32 = yRangeMin;
+							maskPtY1   = maskH-1;
+						}
+						if ((double)(lst_ptY_32) > yRangeMax)
+						{
+							maskPtY1   = 0;
+							lst_ptX_32 = lst_ptX_32 + (yRangeMax - lst_ptY_32)/m_32;
+							lst_ptY_32 = yRangeMax;
+						}
+						dY_32 = ptY_32 - (float)(lst_ptY_32);
+						dX_32 = dY_32/m_32;
+
+						maskPtX1 = (int)((
+							(double)(lst_ptX_32) - xRangeMin)/pxDeltaX);
+
+						maskPtX2 = (int)((
+							(double)(lst_ptX_32 + dX_32) - xRangeMin)/pxDeltaX);
+						maskPtY2 = (maskH-1) - (int)((
+							(double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
+
+
+						/*----------------------------------------------------*/
+						/* Prevent the line from drawing outside the mask by  */
+						/* a single pixel.                                    */
+						/*----------------------------------------------------*/
+						if (maskPtX2 == maskW)
+						{
+							if (dX_32 >= 0)
+							{
+								dX_32 -= (float)(pxDeltaX);
+							}
+							else
+							{
+								dX_32 += (float)(pxDeltaX);
+							}
+							dY_32 = m_32*dX_32 + lst_ptY_32;
+
+							maskPtX2 = (int)(((double)
+								(lst_ptX_32 + dX_32) - xRangeMin)/pxDeltaX);
+						}
+						if (maskPtY2 < 0)
+						{
+							if (dY_32 >= 0)
+							{
+								dY_32 -= (float)(pxDeltaY);
+							}
+							else
+							{
+								dY_32 += (float)(pxDeltaY);
+							}
+							dX_32 = dY_32/m_32 + lst_ptX_32;
+
+							maskPtY2 = (maskH-1) - (int)(((double)
+								(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
+						}
+
+						if (neuik_MaskMap_UnmaskLine(*lineMask,
+							maskPtX1, maskPtY1,	maskPtX2, maskPtY2))
+						{
+							eNum = 7;
+							goto out;
+						}
 					}
 				}
 			}

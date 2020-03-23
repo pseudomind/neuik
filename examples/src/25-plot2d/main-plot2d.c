@@ -52,18 +52,13 @@ int main()
 	NEUIK_Window_Configure(mw, "Resizable", NULL);
 
 	NEUIK_NewPlot2D(&plt);
-	NEUIK_Plot2D_Configure(plt, // <--- THIS CASE WORKS
+	NEUIK_Plot2D_Configure(plt,
 		"xAxisNumTics=5",
 		"yAxisNumTics=6",
 		"xAxisRange=0.0,30.0",
 		"yAxisRange=-4.0,10.0",
 		NULL);
-	// NEUIK_Plot2D_Configure(plt, // <--- THIS CASE CRASHES
-	// 	"xAxisNumTics=5",
-	// 	"yAxisNumTics=3",
-	// 	"xAxisRange=0.0,30.0",
-	// 	"yAxisRange=-4.0,4",
-	// 	NULL);
+
 	NEUIK_Plot_SetTitle(plt, "New Title");
 	NEUIK_Element_Configure(plt, "FillAll", "PadAll=10", NULL);
 
