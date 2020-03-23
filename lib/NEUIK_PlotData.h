@@ -69,6 +69,7 @@ int
 int
 	NEUIK_PlotData_SetValuesFromString(
 			NEUIK_PlotData * pd,
+			int              precision,
 			const char     * valStr);
 
 int

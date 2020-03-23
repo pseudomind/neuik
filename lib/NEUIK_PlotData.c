@@ -457,6 +457,221 @@ out:
 
 /*******************************************************************************
  *
+ *  Name:          neuik_GetDoubleArrayFromFields
+ *
+ *  Description:   Get an float array from a whitespace separated values in a 
+ *                 string.
+ *
+ *                 NOTE: This function allocates memory within `arrayPtr` which
+ *                 needs to be freed elsewhere.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int neuik_GetDoubleArrayFromFields(
+	double       ** arrayPtr, /* (out) The resulting allocated double array. */
+	unsigned int  * arrayLen, /* (out) length of the resulting array */
+	const char    * srcStr)   /* whitespace separated value string */
+{
+	int      ctr       = 0;
+	int      isWS      = FALSE; /* current active char is whitespace */
+	int      inValue   = FALSE; /* within a contiguous value substring */
+	int      storeCtr  = 0;
+	int      valCount  = 0;
+	int      srcStrLen = 0;
+	char     aChar     = 0;    /* current active char */
+	double   nextFloat = 0;
+	double * newArray  = NULL;
+	char   * str0      = NULL;
+	char   * srcStrCpy = NULL; /* free on exit */
+	/*------------------------------------------------------------------------*/
+	int           eNum       = 0;
+	static char   funcName[] = "neuik_GetDoubleArrayFromFields";
+	static char * errMsgs[]  = {"", // [0] no error
+		"Output argument `arrayPtr` is NULL.", // [1]
+		"Output argument `arrayLen` is NULL.", // [2]
+		"Argument `srcStr` is NULL.",          // [3]
+		"Failure to allocate memory.",         // [4]
+		"Failed to scan double value.",        // [5]
+	};
+
+	/*------------------------------------------------------------------------*/
+	/* Check for errors before continuing.                                    */
+	/*------------------------------------------------------------------------*/
+	if (arrayPtr == NULL)
+	{
+		eNum = 1;
+		goto out;
+	}
+	if (arrayLen == NULL)
+	{
+		eNum = 2;
+		goto out;
+	}
+	if (srcStr == NULL)
+	{
+		eNum = 3;
+		goto out;
+	}
+
+	/*------------------------------------------------------------------------*/
+	/* Create copies of the inputs which need to be processed.                */
+	/*------------------------------------------------------------------------*/
+	srcStrLen = strlen(srcStr);
+	srcStrCpy = malloc(1 + sizeof(char)*srcStrLen);
+	if (srcStrCpy == NULL)
+	{
+		eNum = 4;
+		goto out;
+	}
+	strcpy(srcStrCpy, srcStr);
+
+	/*------------------------------------------------------------------------*/
+	/* Determine the total number of values in the array.                     */
+	/*------------------------------------------------------------------------*/
+	str0 = srcStrCpy;
+	for (ctr = 0; ctr < srcStrLen; ctr++)
+	{
+		aChar = str0[ctr];
+		isWS = FALSE;
+		if (aChar == ' ' || aChar == '\t' || aChar == '\n' || aChar == '\r')
+		{
+			/*----------------------------------------------------------------*/
+			/* The current active char is a whitespace character.             */
+			/*----------------------------------------------------------------*/
+			isWS = TRUE;
+		}
+
+		if (isWS && inValue)
+		{
+			/*----------------------------------------------------------------*/
+			/* This is a whitespace character following the end of a value.   */
+			/*----------------------------------------------------------------*/
+			inValue = FALSE;
+		}
+		else if (!isWS && !inValue)
+		{
+			/*----------------------------------------------------------------*/
+			/* The start of a value substring.                                */
+			/*----------------------------------------------------------------*/
+			inValue = TRUE;
+			valCount++;
+		}
+	}
+	*arrayLen = valCount;
+
+	/*------------------------------------------------------------------------*/
+	/* Allocate memory and set the value.                                     */
+	/*------------------------------------------------------------------------*/
+	*arrayPtr = malloc(sizeof(double)*valCount);
+	if (*arrayPtr == NULL)
+	{
+		eNum = 4;
+		goto out;
+	}
+	newArray = *arrayPtr;
+
+	/*------------------------------------------------------------------------*/
+	/* Extract the values from the string and store them in the array.        */
+	/*------------------------------------------------------------------------*/
+	str0 = srcStrCpy;
+	for (ctr = 0; ctr < srcStrLen; ctr++)
+	{
+		aChar = srcStrCpy[ctr];
+		isWS = FALSE;
+		if (aChar == ' ' || aChar == '\t' || aChar == '\n' || aChar == '\r')
+		{
+			/*----------------------------------------------------------------*/
+			/* The current active char is a whitespace character.             */
+			/*----------------------------------------------------------------*/
+			isWS = TRUE;
+		}
+
+		if (isWS && inValue)
+		{
+			/*----------------------------------------------------------------*/
+			/* This is a whitespace character following the end of a value.   */
+			/*----------------------------------------------------------------*/
+			inValue = FALSE;
+			srcStrCpy[ctr] = '\0';
+			if (strchr(str0, 'e'))
+			{
+				if (sscanf(str0, "%le", &nextFloat) != 1)
+				{
+					eNum = 5;
+					goto out;
+				}
+			}
+			else if (strchr(str0, 'E'))
+			{
+				if (sscanf(str0, "%lE", &nextFloat) != 1)
+				{
+					eNum = 5;
+					goto out;
+				}
+			}
+			else if (sscanf(str0, "%lf", &nextFloat) != 1)
+			{
+				eNum = 5;
+				goto out;
+			}
+			newArray[storeCtr] = nextFloat;
+			storeCtr++;
+		}
+		else if (!isWS && !inValue)
+		{
+			/*----------------------------------------------------------------*/
+			/* The start of a value substring.                                */
+			/*----------------------------------------------------------------*/
+			inValue = TRUE;
+			str0 = srcStrCpy + ctr;
+		}
+	}
+
+	if (inValue)
+	{
+		/*--------------------------------------------------------------------*/
+		/* There is a final value in the field string; capture it here.       */
+		/*--------------------------------------------------------------------*/
+		if (strchr(str0, 'e'))
+		{
+			if (sscanf(str0, "%le", &nextFloat) != 1)
+			{
+				eNum = 5;
+				goto out;
+			}
+		}
+		else if (strchr(str0, 'E'))
+		{
+			if (sscanf(str0, "%lE", &nextFloat) != 1)
+			{
+				eNum = 5;
+				goto out;
+			}
+		}
+		else if (sscanf(str0, "%lf", &nextFloat) != 1)
+		{
+			eNum = 5;
+			goto out;
+		}
+		newArray[storeCtr] = nextFloat;
+		storeCtr++;
+	}
+out:
+	if (srcStrCpy != NULL) free(srcStrCpy);
+
+	if (eNum > 0)
+	{
+		NEUIK_RaiseError(funcName, errMsgs[eNum]);
+		eNum = 1;
+	}
+
+	return eNum;
+}
+
+
+/*******************************************************************************
+ *
  *  Name:          neuik_GetFloatArrayFromFields
  *
  *  Description:   Get an float array from a whitespace separated values in a 
@@ -682,13 +897,16 @@ out:
  ******************************************************************************/
 int NEUIK_PlotData_SetValuesFromString(
 	NEUIK_PlotData * pd,
+	int              precision,
 	const char     * valStr)
 {
 	int            isXval     = FALSE;
 	unsigned int   ctr        = 0;
 	unsigned int   arrayLen   = 0;
 	float          nextVal    = 0.0;  /* the next value in the array */
-	float        * floatArray = NULL; /* free value before returning */
+	float        * f32Array   = NULL; /* free value before returning */
+	double         nextF64Val = 0.0;  /* the next value in the array */
+	double       * f64Array   = NULL; /* free value before returning */
 	/*------------------------------------------------------------------------*/
 	int           eNum       = 0;
 	static char   funcName[] = "NEUIK_PlotData_SetValuesFromString";
@@ -698,6 +916,7 @@ int NEUIK_PlotData_SetValuesFromString(
 		"Failure in `neuik_GetFloatArrayFromFields()`.",                    // [3]
 		"Argument `valStr` must contain an even number of values.",         // [4]
 		"Argument `valStr` must have values sorted by ascending X values.", // [5]
+		"Argument `precision` has invalid value; must be `32` or `64`.",    // [6]
 	};
 
 	/*------------------------------------------------------------------------*/
@@ -718,10 +937,29 @@ int NEUIK_PlotData_SetValuesFromString(
 	/*------------------------------------------------------------------------*/
 	/* Read in the float values from the string.                              */
 	/*------------------------------------------------------------------------*/
-	if (neuik_GetFloatArrayFromFields(&floatArray, &arrayLen, valStr))
+	switch (precision)
 	{
-		eNum = 3;
+	case 32:
+		if (neuik_GetFloatArrayFromFields(&f32Array, &arrayLen, valStr))
+		{
+			eNum = 3;
+			goto out;
+		}
+		break;
+	case 64:
+		if (neuik_GetDoubleArrayFromFields(&f64Array, &arrayLen, valStr))
+		{
+			eNum = 3;
+			goto out;
+		}
+		break;
+	default:
+		/*--------------------------------------------------------------------*/
+		/* Unsupported value provided for precision.                          */
+		/*--------------------------------------------------------------------*/
+		eNum = 6;
 		goto out;
+		break;
 	}
 
 	/* Make sure that there is an even number of float values provided.       */
@@ -758,102 +996,215 @@ int NEUIK_PlotData_SetValuesFromString(
 	/* Determine/Set the PlotData bounds from these values.                   */
 	/*------------------------------------------------------------------------*/
 	isXval = TRUE;
-	for (ctr = 0; ctr < arrayLen; ctr++)
+	switch (precision)
 	{
-		nextVal = floatArray[ctr];
-		if (isXval)
+	case 32:
+		/*--------------------------------------------------------------------*/
+		/* Store values as 32 bit floats.                                     */
+		/*--------------------------------------------------------------------*/
+		for (ctr = 0; ctr < arrayLen; ctr++)
 		{
-			/*----------------------------------------------------------------*/
-			/* Data is expected to be provided as a list of X,Y pairs. This   */
-			/* section processes the bounds for the X-axis values.            */
-			/*----------------------------------------------------------------*/
-			if (pd->boundsSet)
+			nextVal = f32Array[ctr];
+			if (isXval)
 			{
 				/*------------------------------------------------------------*/
-				/* Bounds are initially set after processing the first point. */
-				/* So this section is for the second point onwards.           */
+				/* Data is expected to be provided as a list of X,Y pairs.    */
+				/* This section processes the bounds for the X-axis values.   */
 				/*------------------------------------------------------------*/
-				if (nextVal <= pd->bounds_32.x_min)
+				if (pd->boundsSet)
 				{
 					/*--------------------------------------------------------*/
-					/* This would indicate that a subsequent data point has   */
-					/* an earlier position on the X-axis (i.e., data points   */
-					/* were not sorted properly).                             */
+					/* Bounds are initially set after processing the first    */
+					/* point So this section is for the second point onwards. */
 					/*--------------------------------------------------------*/
-					eNum = 5;
-					goto out;
+					if (nextVal <= pd->bounds_32.x_min)
+					{
+						/*----------------------------------------------------*/
+						/* This would indicate that a subsequent data point   */
+						/* has an earlier position on the X-axis (i.e., data  */
+						/* points were not sorted properly).                  */
+						/*----------------------------------------------------*/
+						eNum = 5;
+						goto out;
+					}
+					else if (nextVal <= pd->bounds_32.x_max)
+					{
+						/*----------------------------------------------------*/
+						/* This would indicate that a subsequent data point   */
+						/* has an earlier position on the X-axis (i.e., data  */
+						/* points were not sorted properly).                  */
+						/*----------------------------------------------------*/
+						eNum = 5;
+						goto out;
+					}
+					pd->bounds_32.x_max = nextVal;
 				}
-				else if (nextVal <= pd->bounds_32.x_max)
+				else
 				{
 					/*--------------------------------------------------------*/
-					/* This would indicate that a subsequent data point has   */
-					/* an earlier position on the X-axis (i.e., data points   */
-					/* were not sorted properly).                             */
+					/* Bounds are initially set after processing the first    */
+					/* point.This section is for processing the first data    */
+					/* point.                                                 */
 					/*--------------------------------------------------------*/
-					eNum = 5;
-					goto out;
+					pd->bounds_32.x_min = nextVal;
+					pd->bounds_32.x_max = nextVal;
 				}
-				pd->bounds_32.x_max = nextVal;
+				isXval = FALSE;
 			}
 			else
 			{
 				/*------------------------------------------------------------*/
-				/* Bounds are initially set after processing the first point. */
-				/* This section is for processing the first data point.       */
+				/* Data is expected to be provided as a list of X,Y pairs.    */
+				/* This section processes the bounds for the Y-axis values.   */
 				/*------------------------------------------------------------*/
-				pd->bounds_32.x_min = nextVal;
-				pd->bounds_32.x_max = nextVal;
-			}
-			isXval = FALSE;
-		}
-		else
-		{
-			/*----------------------------------------------------------------*/
-			/* Data is expected to be provided as a list of X,Y pairs. This   */
-			/* section processes the bounds for the Y-axis values.            */
-			/*----------------------------------------------------------------*/
-			if (pd->boundsSet)
-			{
-				/*------------------------------------------------------------*/
-				/* Bounds are initially set after processing the first point. */
-				/* So this section is for the second point onwards.           */
-				/*------------------------------------------------------------*/
-				if (nextVal < pd->bounds_32.y_min)
+				if (pd->boundsSet)
 				{
-					pd->bounds_32.y_min = nextVal;
+					/*--------------------------------------------------------*/
+					/* Bounds are initially set after processing the first.   */
+					/* point. So this section is for the second point         */
+					/* onwards.                                               */
+					/*--------------------------------------------------------*/
+					if (nextVal < pd->bounds_32.y_min)
+					{
+						pd->bounds_32.y_min = nextVal;
+					}
+					if (nextVal > pd->bounds_32.y_max)
+					{
+						pd->bounds_32.y_max = nextVal;
+					}
 				}
-				if (nextVal > pd->bounds_32.y_max)
+				else
 				{
+					/*--------------------------------------------------------*/
+					/* Bounds are initially set after processing the first    */
+					/* point. This section is for processing the first data   */
+					/* point.                                                 */
+					/*--------------------------------------------------------*/
+					pd->bounds_32.y_min = nextVal;
 					pd->bounds_32.y_max = nextVal;
 				}
+				isXval        = TRUE;
+				pd->boundsSet = TRUE;
+			}
+		}
+
+		/*--------------------------------------------------------------------*/
+		/* Set the values within the PlotData object.                         */
+		/*--------------------------------------------------------------------*/
+		pd->stateMod++;
+		pd->nAlloc    = arrayLen;
+		pd->nPoints   = arrayLen/2;
+		pd->nUsed     = arrayLen;
+		pd->precision = 32;
+		pd->data_32   = f32Array;
+		break;
+
+	case 64:
+		/*--------------------------------------------------------------------*/
+		/* Store values as 64 bit doubles.                                    */
+		/*--------------------------------------------------------------------*/
+		for (ctr = 0; ctr < arrayLen; ctr++)
+		{
+			nextF64Val = f64Array[ctr];
+			if (isXval)
+			{
+				/*------------------------------------------------------------*/
+				/* Data is expected to be provided as a list of X,Y pairs.    */
+				/* This section processes the bounds for the X-axis values.   */
+				/*------------------------------------------------------------*/
+				if (pd->boundsSet)
+				{
+					/*--------------------------------------------------------*/
+					/* Bounds are initially set after processing the first    */
+					/* point So this section is for the second point onwards. */
+					/*--------------------------------------------------------*/
+					if (nextF64Val <= pd->bounds_64.x_min)
+					{
+						/*----------------------------------------------------*/
+						/* This would indicate that a subsequent data point   */
+						/* has an earlier position on the X-axis (i.e., data  */
+						/* points were not sorted properly).                  */
+						/*----------------------------------------------------*/
+						eNum = 5;
+						goto out;
+					}
+					else if (nextF64Val <= pd->bounds_64.x_max)
+					{
+						/*----------------------------------------------------*/
+						/* This would indicate that a subsequent data point   */
+						/* has an earlier position on the X-axis (i.e., data  */
+						/* points were not sorted properly).                  */
+						/*----------------------------------------------------*/
+						eNum = 5;
+						goto out;
+					}
+					pd->bounds_64.x_max = nextF64Val;
+				}
+				else
+				{
+					/*--------------------------------------------------------*/
+					/* Bounds are initially set after processing the first    */
+					/* point.This section is for processing the first data    */
+					/* point.                                                 */
+					/*--------------------------------------------------------*/
+					pd->bounds_64.x_min = nextF64Val;
+					pd->bounds_64.x_max = nextF64Val;
+				}
+				isXval = FALSE;
 			}
 			else
 			{
 				/*------------------------------------------------------------*/
-				/* Bounds are initially set after processing the first point. */
-				/* This section is for processing the first data point.       */
+				/* Data is expected to be provided as a list of X,Y pairs.    */
+				/* This section processes the bounds for the Y-axis values.   */
 				/*------------------------------------------------------------*/
-				pd->bounds_32.y_min = nextVal;
-				pd->bounds_32.y_max = nextVal;
+				if (pd->boundsSet)
+				{
+					/*--------------------------------------------------------*/
+					/* Bounds are initially set after processing the first.   */
+					/* point. So this section is for the second point         */
+					/* onwards.                                               */
+					/*--------------------------------------------------------*/
+					if (nextF64Val < pd->bounds_64.y_min)
+					{
+						pd->bounds_64.y_min = nextF64Val;
+					}
+					if (nextF64Val > pd->bounds_64.y_max)
+					{
+						pd->bounds_64.y_max = nextF64Val;
+					}
+				}
+				else
+				{
+					/*--------------------------------------------------------*/
+					/* Bounds are initially set after processing the first    */
+					/* point. This section is for processing the first data   */
+					/* point.                                                 */
+					/*--------------------------------------------------------*/
+					pd->bounds_64.y_min = nextF64Val;
+					pd->bounds_64.y_max = nextF64Val;
+				}
+				isXval        = TRUE;
+				pd->boundsSet = TRUE;
 			}
-			isXval        = TRUE;
-			pd->boundsSet = TRUE;
 		}
-	}
 
-	/*------------------------------------------------------------------------*/
-	/* Set the values within the PlotData object.                             */
-	/*------------------------------------------------------------------------*/
-	pd->stateMod++;
-	pd->nAlloc    = arrayLen;
-	pd->nPoints   = arrayLen/2;
-	pd->nUsed     = arrayLen;
-	pd->precision = 32;
-	pd->data_32   = floatArray;
+		/*--------------------------------------------------------------------*/
+		/* Set the values within the PlotData object.                         */
+		/*--------------------------------------------------------------------*/
+		pd->stateMod++;
+		pd->nAlloc    = arrayLen;
+		pd->nPoints   = arrayLen/2;
+		pd->nUsed     = arrayLen;
+		pd->precision = 64;
+		pd->data_64   = f64Array;
+		break;
+	}
 out:
 	if (eNum > 0)
 	{
-		if (floatArray != NULL) free(floatArray);
+		if (f32Array != NULL) free(f32Array);
+		if (f64Array != NULL) free(f64Array);
 
 		NEUIK_RaiseError(funcName, errMsgs[eNum]);
 		eNum = 1;
@@ -980,21 +1331,21 @@ int NEUIK_PlotData_WriteValuesToASCIIFile(
 			if (writeHeader)
 			{
 				fprintf(outFile, "# x_min      : % 18.12e\n",
-					pd->bounds_32.x_min);
+					pd->bounds_64.x_min);
 				fprintf(outFile, "# x_max      : % 18.12e\n",
-					pd->bounds_32.x_max);
+					pd->bounds_64.x_max);
 				fprintf(outFile, "# y_min      : % 18.12e\n",
-					pd->bounds_32.y_min);
+					pd->bounds_64.y_min);
 				fprintf(outFile, "# y_max      : % 18.12e\n",
-					pd->bounds_32.y_max);
+					pd->bounds_64.y_max);
 				fprintf(outFile, cmtBarLn);
 			}
 
 			for (ctr = 0; ctr < pd->nPoints; ctr++)
 			{
 				fprintf(outFile, "% 18.12e % 18.12e\n", 
-					pd->data_32[posCtr],
-					pd->data_32[posCtr+1]);
+					pd->data_64[posCtr],
+					pd->data_64[posCtr+1]);
 				posCtr += 2;
 			}
 			break;
