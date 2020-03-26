@@ -584,13 +584,18 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 	float         lst_ptY_32 = 0.0; /* value of preceding (last) point */
 	double        lst_ptX_64 = 0.0; /* value of preceding (last) point */
 	double        lst_ptY_64 = 0.0; /* value of preceding (last) point */
-	float         m_32       = 0.0; /* slope between two points */
 	float         dX_32      = 0.0; /* delta in X value between two points */
 	float         dY_32      = 0.0; /* delta in Y value between two points */
 	float         dXmax_32   = 0.0; /* max delta in X value between two points */
 	float         dYmax_32   = 0.0; /* max delta in Y value between two points */
+	float         m_32       = 0.0; /* slope between two points */
 	float         ptX_32     = 0.0;
 	float         ptY_32     = 0.0;
+	double        dX_64      = 0.0; /* delta in X value between two points */
+	double        dY_64      = 0.0; /* delta in Y value between two points */
+	double        dXmax_64   = 0.0; /* max delta in X value between two points */
+	double        dYmax_64   = 0.0; /* max delta in Y value between two points */
+	double        m_64       = 0.0; /* slope between two points */
 	double        ptX_64     = 0.0;
 	double        ptY_64     = 0.0;
 	double        xRangeMin  = 0.0;
@@ -655,19 +660,15 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 		goto out;
 	}
 
+	pxDeltaX = (xRangeMax - xRangeMin)/((double)(maskW));
+	pxDeltaY = (yRangeMax - yRangeMin)/((double)(maskH));
+
 	/*------------------------------------------------------------------------*/
 	/* Iterate through the points in the PlotData set.                        */
 	/*------------------------------------------------------------------------*/
 	switch (data->precision)
 	{
 	case 32:
-		pxDeltaX = (xRangeMax - xRangeMin)/((double)(maskW));
-		pxDeltaY = (yRangeMax - yRangeMin)/((double)(maskH));
-
-		/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
-		#pragma message("[TODO]: Finish 32bit value plotting implementation.")
-		/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
-
 		for (uCtr = 0; uCtr < data->nPoints; uCtr++)
 		{
 			ptX_32 = data->data_32[uCtr*2];
@@ -924,11 +925,259 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 		}
 		break;
 	case 64:
+		for (uCtr = 0; uCtr < data->nPoints; uCtr++)
+		{
+			ptX_64 = data->data_64[uCtr*2];
+			ptY_64 = data->data_64[(uCtr*2)+1];
 
-		/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
-		#pragma message("[TODO]: Implement 64bit value plotting.")
-		/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
+			maskPtX1 = maskPtX2;
+			maskPtY1 = maskPtY2;
 
+			if (!firstPt)
+			{
+				if (!lastPtOut)
+				{
+					/*--------------------------------------------------------*/
+					/* The preceding point was within the currently displayed */
+					/* region for this plot.                                  */
+					/*--------------------------------------------------------*/
+					dXmax_64 = ptX_64 - lst_ptX_64;
+					dYmax_64 = ptY_64 - lst_ptY_64;
+					dX_64 = dXmax_64;
+					dY_64 = dYmax_64;
+					m_64  = dY_64/dX_64; /* slope */
+
+					/*--------------------------------------------------------*/
+					/* Check if this point is outside of the displayed region */
+					/* if so, limit the effective range for a drawn line.     */
+					/*--------------------------------------------------------*/
+					if (ptX_64 < xRangeMin ||
+						ptY_64 < yRangeMin ||
+						ptX_64 > xRangeMax ||
+						ptY_64 > yRangeMax)
+					{
+						/*----------------------------------------------------*/
+						/* This data point lies outside of the currently      */
+						/* displayed region for this plot; A partial line     */
+						/* should be drawn between this point and the last.   */
+						/*----------------------------------------------------*/
+						lastPtOut = TRUE;
+
+						/*----------------------------------------------------*/
+						/* Restrict the effective delta (for drawing lines to */
+						/* the region of supported values.                    */
+						/*----------------------------------------------------*/
+						if (ptX_64 > xRangeMax)
+						{
+							dX_64 = (float)(xRangeMax) - lst_ptX_64;
+							dY_64 = m_64*dX_64 + lst_ptY_64;
+						}
+						if (ptY_64 < yRangeMin)
+						{
+							dY_64 = (float)(yRangeMin) - lst_ptY_64;
+							dX_64 = dY_64/m_64;
+						}
+						if (ptY_64 > yRangeMax)
+						{
+							dY_64 = (float)(yRangeMax) - lst_ptY_64;
+							dX_64 = dY_64/m_64;
+						}
+					}
+
+					maskPtX2 = 
+						(int)((lst_ptX_64 + dX_64 - xRangeMin)/pxDeltaX);
+					maskPtY2 = (maskH-1) - 
+						(int)((lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
+
+					/*--------------------------------------------------------*/
+					/* Prevent the line from drawing outside the mask by a    */
+					/* single pixel.                                          */
+					/*--------------------------------------------------------*/
+					if (maskPtX2 == maskW)
+					{
+						if (dX_64 >= 0)
+						{
+							dX_64 -= pxDeltaX;
+						}
+						else
+						{
+							dX_64 += pxDeltaX;
+						}
+						dY_64 = m_64*dX_64 + lst_ptY_64;
+
+						maskPtX2 = 
+							(int)((lst_ptX_64 + dX_64 - xRangeMin)/pxDeltaX);
+					}
+					if (maskPtY2 < 0)
+					{
+						if (dY_64 >= 0)
+						{
+							dY_64 -= (float)(pxDeltaY);
+						}
+						else
+						{
+							dY_64 += (float)(pxDeltaY);
+						}
+						dX_64 = dY_64/m_64 + lst_ptX_64;
+
+						maskPtY2 = (maskH-1) - 
+							(int)((lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
+					}
+
+					if (neuik_MaskMap_UnmaskLine(*lineMask,
+						maskPtX1, maskPtY1,	maskPtX2, maskPtY2))
+					{
+						eNum = 7;
+						goto out;
+					}
+				}
+				else
+				{
+					/*--------------------------------------------------------*/
+					/* The preceding point was outside of the currently       */
+					/* displayed region for this plot.                        */
+					/*--------------------------------------------------------*/
+					if (ptX_64 < xRangeMin ||
+						ptY_64 < yRangeMin ||
+						ptX_64 > xRangeMax ||
+						ptY_64 > yRangeMax)
+					{
+						/*----------------------------------------------------*/
+						/* This data point also lies outside of the currently */
+						/* displayed region for this plot.                    */
+						/*----------------------------------------------------*/
+						lastPtOut = TRUE;
+					}
+					else
+					{
+						/*----------------------------------------------------*/
+						/* This point is finally within bounds; at least one  */
+						/* and potentially more points should be unmasked.    */
+						/*----------------------------------------------------*/
+						lastPtOut = FALSE;
+
+						dXmax_64 = ptX_64 - lst_ptX_64;
+						dYmax_64 = ptY_64 - lst_ptY_64;
+						dX_64 = dXmax_64;
+						dY_64 = dYmax_64;
+						m_64  = dY_64/dX_64; /* slope */
+
+						/*----------------------------------------------------*/
+						/* Restrict the effective delta (for drawing lines to */
+						/* the region of supported values.                    */
+						/*----------------------------------------------------*/
+						if (lst_ptX_64 < xRangeMin)
+						{
+							lst_ptY_64 = lst_ptY_64 + m_64*(xRangeMin - lst_ptX_64);
+							lst_ptX_64 = xRangeMin;
+							maskPtY1   = (maskH-1) - (int)((
+								(double)(lst_ptY_64) - yRangeMin)/pxDeltaY);
+						}
+						if (lst_ptY_64 < yRangeMin)
+						{
+							lst_ptX_64 = lst_ptX_64 + (yRangeMin - lst_ptY_64)/m_64;
+							lst_ptY_64 = yRangeMin;
+							maskPtY1   = maskH-1;
+						}
+						if (lst_ptY_64 > yRangeMax)
+						{
+							maskPtY1   = 0;
+							lst_ptX_64 = lst_ptX_64 + (yRangeMax - lst_ptY_64)/m_64;
+							lst_ptY_64 = yRangeMax;
+						}
+						dY_64 = ptY_64 - lst_ptY_64;
+						dX_64 = dY_64/m_64;
+
+						maskPtX1 = (int)((lst_ptX_64 - xRangeMin)/pxDeltaX);
+
+						maskPtX2 = 
+							(int)((lst_ptX_64 + dX_64 - xRangeMin)/pxDeltaX);
+						maskPtY2 = (maskH-1) - 
+							(int)((lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
+
+
+						/*----------------------------------------------------*/
+						/* Prevent the line from drawing outside the mask by  */
+						/* a single pixel.                                    */
+						/*----------------------------------------------------*/
+						if (maskPtX2 == maskW)
+						{
+							if (dX_64 >= 0)
+							{
+								dX_64 -= pxDeltaX;
+							}
+							else
+							{
+								dX_64 += pxDeltaX;
+							}
+							dY_64 = m_64*dX_64 + lst_ptY_64;
+
+							maskPtX2 = 
+								(int)((lst_ptX_64 + dX_64 - xRangeMin)/pxDeltaX);
+						}
+						if (maskPtY2 < 0)
+						{
+							if (dY_64 >= 0)
+							{
+								dY_64 -= pxDeltaY;
+							}
+							else
+							{
+								dY_64 += pxDeltaY;
+							}
+							dX_64 = dY_64/m_64 + lst_ptX_64;
+
+							maskPtY2 = (maskH-1) - 
+								(int)((lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
+						}
+
+						if (neuik_MaskMap_UnmaskLine(*lineMask,
+							maskPtX1, maskPtY1,	maskPtX2, maskPtY2))
+						{
+							eNum = 7;
+							goto out;
+						}
+					}
+				}
+			}
+			else
+			{
+				/*------------------------------------------------------------*/
+				/* This is how the first data point should be handled.        */
+				/*------------------------------------------------------------*/
+				if (ptX_64 < xRangeMin ||
+					ptY_64 < yRangeMin ||
+					ptX_64 > xRangeMax ||
+					ptY_64 > yRangeMax)
+				{
+					/*--------------------------------------------------------*/
+					/* This data point lies outside of the currently          */
+					/* displayed region for this plot.                        */
+					/*--------------------------------------------------------*/
+					lastPtOut = TRUE;
+				}
+				else
+				{
+					/*--------------------------------------------------------*/
+					/* Unmask a single point.                                 */
+					/*--------------------------------------------------------*/
+					maskPtX = (int)((ptX_64 - xRangeMin)/(pxDeltaX));
+					maskPtY = (maskH-1) - 
+						(int)((ptY_64 - yRangeMin)/(pxDeltaY));
+					maskPtX2 = maskPtX;
+					maskPtY2 = maskPtY;
+
+					if (neuik_MaskMap_UnmaskPoint(*lineMask, maskPtX, maskPtY))
+					{
+						eNum = 6;
+						goto out;
+					}
+				}
+				firstPt = FALSE;
+			}
+			lst_ptX_64 = ptX_64;
+			lst_ptY_64 = ptY_64;
+		}
 		break;
 	default:
 		break;
