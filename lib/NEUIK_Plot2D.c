@@ -580,14 +580,12 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 	int           maskPtX2   = 0;
 	int           maskPtY1   = 0;
 	int           maskPtY2   = 0;
-	float         lst_ptX_32 = 0.0; /* value of preceding (last) point */
-	float         lst_ptY_32 = 0.0; /* value of preceding (last) point */
-	double        lst_ptX_64 = 0.0; /* value of preceding (last) point */
-	double        lst_ptY_64 = 0.0; /* value of preceding (last) point */
 	float         dX_32      = 0.0; /* delta in X value between two points */
 	float         dY_32      = 0.0; /* delta in Y value between two points */
 	float         dXmax_32   = 0.0; /* max delta in X value between two points */
 	float         dYmax_32   = 0.0; /* max delta in Y value between two points */
+	float         lst_ptX_32 = 0.0; /* value of preceding (last) point */
+	float         lst_ptY_32 = 0.0; /* value of preceding (last) point */
 	float         m_32       = 0.0; /* slope between two points */
 	float         ptX_32     = 0.0;
 	float         ptY_32     = 0.0;
@@ -595,6 +593,8 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 	double        dY_64      = 0.0; /* delta in Y value between two points */
 	double        dXmax_64   = 0.0; /* max delta in X value between two points */
 	double        dYmax_64   = 0.0; /* max delta in Y value between two points */
+	double        lst_ptX_64 = 0.0; /* value of preceding (last) point */
+	double        lst_ptY_64 = 0.0; /* value of preceding (last) point */
 	double        m_64       = 0.0; /* slope between two points */
 	double        ptX_64     = 0.0;
 	double        ptY_64     = 0.0;
@@ -611,10 +611,11 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 		"Argument `plot2d` is not of Plot2D class.",                       // [1]
 		"Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.", // [2]
 		"Output Argument `lineMask` is NULL.",                             // [3]
-		"Failure in `neuik_MakeMaskMap()`",                                // [4]
-		"Failure in `neuik_MaskAll()`",                                    // [5]
-		"Failure in `neuik_MaskMap_UnmaskPoint()`",                        // [6]
-		"Failure in `neuik_MaskMap_UnmaskLine()`",                         // [7]
+		"Failure in `neuik_MakeMaskMap()`.",                               // [4]
+		"Failure in `neuik_MaskAll()`.",                                   // [5]
+		"Failure in `neuik_MaskMap_UnmaskPoint()`.",                       // [6]
+		"Failure in `neuik_MaskMap_UnmaskLine()`.",                        // [7]
+		"Argument `data` has an unsupported value for precision.",         // [8]
 	};
 
 	if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
@@ -644,10 +645,6 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 		eNum = 4;
 		goto out;
 	}
-
-	/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
-	#pragma message("[SLOPPY]: This function needs a massive cleanup.")
-	/*PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP*/
 
 	/*------------------------------------------------------------------------*/
 	/* There are built-in methods for getting easy access to collapsed        */
@@ -701,7 +698,7 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						(double)(ptY_32) > yRangeMax)
 					{
 						/*----------------------------------------------------*/
-						/* This datapoint lies outside of the currently       */
+						/* This data point lies outside of the currently      */
 						/* displayed region for this plot; A partial line     */
 						/* should be drawn between this point and the last.   */
 						/*----------------------------------------------------*/
@@ -749,8 +746,8 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						}
 						dY_32 = m_32*dX_32 + lst_ptY_32;
 
-						maskPtX2 = (int)(
-							((double)(lst_ptX_32 + dX_32) - xRangeMin)/pxDeltaX);
+						maskPtX2 = (int)((
+							(double)(lst_ptX_32 + dX_32) - xRangeMin)/pxDeltaX);
 					}
 					if (maskPtY2 < 0)
 					{
@@ -764,8 +761,8 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						}
 						dX_32 = dY_32/m_32 + lst_ptX_32;
 
-						maskPtY2 = (maskH-1) - (int)(
-							((double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
+						maskPtY2 = (maskH-1) - (int)((
+							(double)(lst_ptY_32 + dY_32) - yRangeMin)/pxDeltaY);
 					}
 
 					if (neuik_MaskMap_UnmaskLine(*lineMask,
@@ -787,7 +784,7 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						(double)(ptY_32) > yRangeMax)
 					{
 						/*----------------------------------------------------*/
-						/* This datapoint also lies outside of the currently  */
+						/* This data point also lies outside of the currently */
 						/* displayed region for this plot.                    */
 						/*----------------------------------------------------*/
 						lastPtOut = TRUE;
@@ -812,21 +809,24 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						/*----------------------------------------------------*/
 						if ((double)(lst_ptX_32) < xRangeMin)
 						{
-							lst_ptY_32 = lst_ptY_32 + m_32*(xRangeMin - lst_ptX_32);
+							lst_ptY_32 = 
+								lst_ptY_32 + m_32*(xRangeMin - lst_ptX_32);
 							lst_ptX_32 = xRangeMin;
 							maskPtY1   = (maskH-1) - (int)((
 								(double)(lst_ptY_32) - yRangeMin)/pxDeltaY);
 						}
 						if ((double)(lst_ptY_32) < yRangeMin)
 						{
-							lst_ptX_32 = lst_ptX_32 + (yRangeMin - lst_ptY_32)/m_32;
+							lst_ptX_32 = 
+								lst_ptX_32 + (yRangeMin - lst_ptY_32)/m_32;
 							lst_ptY_32 = yRangeMin;
 							maskPtY1   = maskH-1;
 						}
 						if ((double)(lst_ptY_32) > yRangeMax)
 						{
 							maskPtY1   = 0;
-							lst_ptX_32 = lst_ptX_32 + (yRangeMax - lst_ptY_32)/m_32;
+							lst_ptX_32 = 
+								lst_ptX_32 + (yRangeMax - lst_ptY_32)/m_32;
 							lst_ptY_32 = yRangeMax;
 						}
 						dY_32 = ptY_32 - (float)(lst_ptY_32);
@@ -896,8 +896,8 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 					(double)(ptY_32) > yRangeMax)
 				{
 					/*--------------------------------------------------------*/
-					/* This datapoint lies outside of the currently displayed */
-					/* region for this plot.                                  */
+					/* This data point lies outside of the currently          */
+					/* displayed region for this plot.                        */
 					/*--------------------------------------------------------*/
 					lastPtOut = TRUE;
 				}
@@ -1068,21 +1068,24 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						/*----------------------------------------------------*/
 						if (lst_ptX_64 < xRangeMin)
 						{
-							lst_ptY_64 = lst_ptY_64 + m_64*(xRangeMin - lst_ptX_64);
+							lst_ptY_64 = 
+								lst_ptY_64 + m_64*(xRangeMin - lst_ptX_64);
 							lst_ptX_64 = xRangeMin;
 							maskPtY1   = (maskH-1) - (int)((
 								(double)(lst_ptY_64) - yRangeMin)/pxDeltaY);
 						}
 						if (lst_ptY_64 < yRangeMin)
 						{
-							lst_ptX_64 = lst_ptX_64 + (yRangeMin - lst_ptY_64)/m_64;
+							lst_ptX_64 = 
+								lst_ptX_64 + (yRangeMin - lst_ptY_64)/m_64;
 							lst_ptY_64 = yRangeMin;
 							maskPtY1   = maskH-1;
 						}
 						if (lst_ptY_64 > yRangeMax)
 						{
 							maskPtY1   = 0;
-							lst_ptX_64 = lst_ptX_64 + (yRangeMax - lst_ptY_64)/m_64;
+							lst_ptX_64 = 
+								lst_ptX_64 + (yRangeMax - lst_ptY_64)/m_64;
 							lst_ptY_64 = yRangeMax;
 						}
 						dY_64 = ptY_64 - lst_ptY_64;
@@ -1112,8 +1115,8 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 							}
 							dY_64 = m_64*dX_64 + lst_ptY_64;
 
-							maskPtX2 = 
-								(int)((lst_ptX_64 + dX_64 - xRangeMin)/pxDeltaX);
+							maskPtX2 = (int)(
+								(lst_ptX_64 + dX_64 - xRangeMin)/pxDeltaX);
 						}
 						if (maskPtY2 < 0)
 						{
@@ -1127,8 +1130,8 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 							}
 							dX_64 = dY_64/m_64 + lst_ptX_64;
 
-							maskPtY2 = (maskH-1) - 
-								(int)((lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
+							maskPtY2 = (maskH-1) - (int)(
+								(lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
 						}
 
 						if (neuik_MaskMap_UnmaskLine(*lineMask,
@@ -1180,6 +1183,8 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 		}
 		break;
 	default:
+		eNum = 8;
+		goto out;
 		break;
 	}
 out:
