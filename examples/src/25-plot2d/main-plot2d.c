@@ -82,11 +82,11 @@ int main()
 	NEUIK_Element_Configure(plt, "FillAll", "PadAll=10", NULL);
 
 	NEUIK_MakePlotData(&pd_sine, "sampleSineFunc", 64);
-	NEUIK_PlotData_SetValuesFromString(pd_sine, 32, SAMPLE_SINE_FUNC);
+	NEUIK_PlotData_SetValuesFromString(pd_sine, 64, SAMPLE_SINE_FUNC);
 	NEUIK_PlotData_WriteValuesToASCIIFile(pd_sine, "sampleSineFunc.pltdat", TRUE);
 
-	NEUIK_MakePlotData(&pd_ln, "theLine", 32);
-	NEUIK_PlotData_SetValuesFromString(pd_ln, 32, SAMPLE_LINE);
+	NEUIK_MakePlotData(&pd_ln, "theLine", 64);
+	NEUIK_PlotData_SetValuesFromString(pd_ln, 64, SAMPLE_LINE);
 	NEUIK_PlotData_WriteValuesToASCIIFile(pd_ln, "sampleLineFunc.pltdat", TRUE);
 
 	NEUIK_Plot2D_AddPlotData(plt, pd_sine, "sineFunc");
