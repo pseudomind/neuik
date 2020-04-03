@@ -32,13 +32,18 @@ const char SAMPLE_SINE_FUNC[] =
 	"28	3.87938266513032\n"
 	"29	2.10131556174964\n";
 
+const char SAMPLE_LINE[] = 
+	"0	0\n"
+	"25	5\n";
+
 
 int main()
 {
-	int              rv  = 0;
-	NEUIK_Window   * mw  = NULL;
-	NEUIK_Plot2D   * plt = NULL;
-	NEUIK_PlotData * pd  = NULL;
+	int              rv      = 0;
+	NEUIK_Window   * mw      = NULL;
+	NEUIK_Plot2D   * plt     = NULL;
+	NEUIK_PlotData * pd_sine = NULL;
+	NEUIK_PlotData * pd_ln   = NULL;
 
 	if (NEUIK_Init())
 	{
@@ -59,14 +64,33 @@ int main()
 		"yAxisRange=-4.0,10.0",
 		NULL);
 
+	// NEUIK_Plot2D_Configure(plt,
+	// 	"xAxisNumTics=4",
+	// 	"yAxisNumTics=2",
+	// 	"xAxisRange=5.0,30.0",
+	// 	"yAxisRange=-2.0,4.0",
+	// 	NULL);
+
+	// NEUIK_Plot2D_Configure(plt,
+	// 	"xAxisNumTics=2",
+	// 	"yAxisNumTics=2",
+	// 	"xAxisRange=5.0,20.0",
+	// 	"yAxisRange=-2.0,4.0",
+	// 	NULL);
+
 	NEUIK_Plot_SetTitle(plt, "New Title");
 	NEUIK_Element_Configure(plt, "FillAll", "PadAll=10", NULL);
 
-	NEUIK_MakePlotData(&pd, "sampleSineFunc", 64);
-	NEUIK_PlotData_SetValuesFromString(pd, 32, SAMPLE_SINE_FUNC);
-	NEUIK_PlotData_WriteValuesToASCIIFile(pd, "sampleSineFunc.pltdat", TRUE);
+	NEUIK_MakePlotData(&pd_sine, "sampleSineFunc", 64);
+	NEUIK_PlotData_SetValuesFromString(pd_sine, 32, SAMPLE_SINE_FUNC);
+	NEUIK_PlotData_WriteValuesToASCIIFile(pd_sine, "sampleSineFunc.pltdat", TRUE);
 
-	NEUIK_Plot2D_AddPlotData(plt, pd, "sineFunc");
+	NEUIK_MakePlotData(&pd_ln, "theLine", 32);
+	NEUIK_PlotData_SetValuesFromString(pd_ln, 32, SAMPLE_LINE);
+	NEUIK_PlotData_WriteValuesToASCIIFile(pd_ln, "sampleLineFunc.pltdat", TRUE);
+
+	NEUIK_Plot2D_AddPlotData(plt, pd_sine, "sineFunc");
+	NEUIK_Plot2D_AddPlotData(plt, pd_ln,   "lineFunc");
 
 	NEUIK_Window_SetElement(mw, plt);
 

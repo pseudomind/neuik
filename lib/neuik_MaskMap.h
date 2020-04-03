@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -106,6 +106,14 @@ int
 
 int 
 	neuik_MaskMap_UnmaskLine(
+			neuik_MaskMap * map, 
+			int             x1,
+			int             y1,
+			int             x2,
+			int             y2);
+
+int 
+	neuik_MaskMap_UnmaskUnboundedLine(
 			neuik_MaskMap * map, 
 			int             x1,
 			int             y1,
