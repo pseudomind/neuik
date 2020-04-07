@@ -1134,7 +1134,14 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 								lst_ptX_32 + (yRangeMax - lst_ptY_32)/m_32;
 							lst_ptY_32 = yRangeMax;
 						}
-						dY_32 = ptY_32 - (float)(lst_ptY_32);
+						if ((double)(ptY_32) > yRangeMax)
+						{
+							dY_32 = yRangeMax - (float)(lst_ptY_32);
+						}
+						else
+						{
+							dY_32 = ptY_32 - (float)(lst_ptY_32);
+						}
 						dX_32 = dY_32/m_32;
 
 						maskPtX1 = (int)((
@@ -1756,17 +1763,17 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 						/*----------------------------------------------------*/
 						if (ptX_64 > xRangeMax)
 						{
-							dX_64 = (float)(xRangeMax) - lst_ptX_64;
+							dX_64 = xRangeMax - lst_ptX_64;
 							dY_64 = m_64*dX_64 + lst_ptY_64;
 						}
 						if (ptY_64 < yRangeMin)
 						{
-							dY_64 = (float)(yRangeMin) - lst_ptY_64;
+							dY_64 = yRangeMin - lst_ptY_64;
 							dX_64 = dY_64/m_64;
 						}
 						if (ptY_64 > yRangeMax)
 						{
-							dY_64 = (float)(yRangeMax) - lst_ptY_64;
+							dY_64 = yRangeMax - lst_ptY_64;
 							dX_64 = dY_64/m_64;
 						}
 					}
@@ -1799,11 +1806,11 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 					{
 						if (dY_64 >= 0)
 						{
-							dY_64 -= (float)(pxDeltaY);
+							dY_64 -= pxDeltaY;
 						}
 						else
 						{
-							dY_64 += (float)(pxDeltaY);
+							dY_64 += pxDeltaY;
 						}
 						dX_64 = dY_64/m_64 + lst_ptX_64;
 
@@ -2147,8 +2154,8 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 							lst_ptY_64 = 
 								lst_ptY_64 + m_64*(xRangeMin - lst_ptX_64);
 							lst_ptX_64 = xRangeMin;
-							maskPtY1   = (ticZoneH-1) - (int)((
-								(double)(lst_ptY_64) - yRangeMin)/pxDeltaY);
+							maskPtY1   = (ticZoneH-1) - 
+								(int)((lst_ptY_64 - yRangeMin)/pxDeltaY);
 						}
 						if (lst_ptY_64 < yRangeMin)
 						{
@@ -2164,7 +2171,14 @@ int neuik_Plot2D_RenderSimpleLineToMask(
 								lst_ptX_64 + (yRangeMax - lst_ptY_64)/m_64;
 							lst_ptY_64 = yRangeMax;
 						}
-						dY_64 = ptY_64 - lst_ptY_64;
+						if (ptY_64 > yRangeMax)
+						{
+							dY_64 = yRangeMax - lst_ptY_64;
+						}
+						else
+						{
+							dY_64 = ptY_64 - lst_ptY_64;
+						}
 						dX_64 = dY_64/m_64;
 
 						maskPtX1 = (int)((lst_ptX_64 - xRangeMin)/pxDeltaX);
