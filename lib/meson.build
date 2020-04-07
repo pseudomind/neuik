@@ -42,6 +42,8 @@ libneuik_srcs = [
 	'NEUIK_ComboBoxConfig.c',
 	'NEUIK_Plot.c',
 	'NEUIK_Plot2D.c',
+	'neuik_Plot2D_Render32.c',
+	'neuik_Plot2D_Render64.c',
 	'NEUIK_PlotData.c',
 	'NEUIK_ProgressBar.c',
 	'NEUIK_ProgressBarConfig.c',
