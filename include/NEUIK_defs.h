@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -42,5 +42,15 @@ enum neuik_VJustify
 #define NEUIK_RESTRICT_CUSTOM_STR_NOT   8 /* input can be anything but chars in custom_str */
 
 #define NEUIK_DOUBLE_CLICK_TIMEOUT      200 /* time to register as dbl click (ms) */
+
+#ifndef FALSE
+	#define FALSE 0
+#endif
+#ifndef TRUE
+	#define TRUE 1
+#endif
+#ifndef UNDEFINED
+	#define UNDEFINED -1
+#endif
 
 #endif /* NEUIK_DEFS_H */

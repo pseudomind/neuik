@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,9 +36,6 @@ typedef struct {
 } NEUIK_FontSet;
 
 
-// NEUIK_FontSet        * NEUIK_NewFontSet(const char * fName);
-// neuik_ptrTo_TTF_Font   NEUIK_FontSet_GetFont(NEUIK_FontSet * fs, unsigned int fSize);
-
 NEUIK_FontSet * 
 	NEUIK_NewFontSet(
 			const char * fNameBase,
@@ -53,6 +50,10 @@ NEUIK_FontSet *
 
 NEUIK_FontSet * 
 	NEUIK_GetDefaultFontSet(
+			char ** baseName);
+
+NEUIK_FontSet * 
+	NEUIK_GetDefaultMSFontSet(
 			char ** baseName);
 
 neuik_ptrTo_TTF_Font 

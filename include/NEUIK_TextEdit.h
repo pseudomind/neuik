@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,13 +32,17 @@ typedef struct {
 		void                 * textSurf;      /*  `SDL_Surface *` */ 
 		void                 * textTex;       /*  `SDL_Texture *` */ 
 		void                 * textRend;      /*  `SDL_Renderer*` */ 
-		char                 * text;
 		neuik_TextBlock      * textBlk;
-		size_t                 textLen;       /* current length of the text */
-		size_t                 textAllocSize; /* current mem alloc for text */
+		double                 scrollPct;     /* percent of total TextEdit lines scrolled from top */
+		double                 viewPct;       /* percent of total TextEdit lines currently viewed */
 		size_t                 cursorLine;    /* line on which the cursor is */
 		size_t                 cursorPos;     /* position of cursor within line */
+		long long              vertMovePos;   /* desired position of vertical movement (-1=unset) */
+		unsigned long long     vertPanLn;     /* Vertical number of lines the view is panned */
+		unsigned int           vertPanPx;     /* Additional pixels of vertical view panning */
 		int                    cursorX;       /* px pos of cursor (not considering pan) */
+		int                    lastMouseX;    /* X-position of associated last mouse event */
+		int                    lastMouseY;    /* Y-position of associated last mouse event */
 		int                    selected;
 		int                    wasSelected;
 		int                    highlightIsSet;
@@ -56,6 +60,8 @@ typedef struct {
 		int                    clickHeld;       /* click being held following select click */
 		int                    needsRedraw;
 		unsigned int           timeLastClick;
+		unsigned int           timeClickMinus2; /* time at which the penultimate */
+												/* preceding click was clicked.*/
 } NEUIK_TextEdit;
 
 
@@ -68,9 +74,16 @@ int
 			NEUIK_TextEdit ** tePtr,
 			const char      * text);
 
-const char *
+int 
 	NEUIK_TextEdit_GetText(
-			NEUIK_TextEdit * te);
+			NEUIK_TextEdit  * te,
+			char           ** textPtr);
+
+int
+	NEUIK_TextEdit_GetHighlightInfo(
+			NEUIK_TextEdit * te,
+			size_t         * nLines,
+			size_t         * nChars);
 
 int 
 	NEUIK_TextEdit_SetText(

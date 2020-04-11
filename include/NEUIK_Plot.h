@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,6 +26,11 @@ typedef enum {
 		NEUIK_PLOTRANGECONFIG_SPECIFIED} 
 neuik_PlotRangeConfig;
 
+typedef struct {
+	char  * uniqueName;
+	char  * label;
+	float   lineThickness;
+} neuik_PlotDataConfig;
 
 typedef struct {
 		neuik_Object            objBase;     /* this structure is requied to be an neuik object */
@@ -37,14 +42,15 @@ typedef struct {
 		NEUIK_Element         * drawing_ticmarks;
 		NEUIK_Element         * drawing;
 		NEUIK_Element         * legend;
-		NEUIK_Element         * data_sets;   /* data_set of this plot */
 		NEUIK_Element         * visual;
-		unsigned int            n_allocated; /* number of data_set slots allocated */
-		unsigned int            n_used;      /* number of data_set slots in use */
-		neuik_PlotRangeConfig   x_range_cfg; /* specifies plot range determination */
+		NEUIK_Object          * data_sets;    /* data_set of this plot */
+		neuik_PlotDataConfig  * data_configs; /* config for the associated data sets */
+		unsigned int            n_allocated;  /* number of data_set slots allocated */
+		unsigned int            n_used;       /* number of data_set slots in use */
+		neuik_PlotRangeConfig   x_range_cfg;  /* specifies plot range determination */
 		double                  x_range_min;
 		double                  x_range_max;
-		neuik_PlotRangeConfig   y_range_cfg; /* specifies plot range determination */
+		neuik_PlotRangeConfig   y_range_cfg;  /* specifies plot range determination */
 		double                  y_range_min;
 		double                  y_range_max;
 } NEUIK_Plot;

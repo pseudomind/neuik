@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,8 +16,6 @@
 #ifndef NEUIK_TEXTBLOCK_H
 #define NEUIK_TEXTBLOCK_H
 
-// #include "NEUIK_defs.h"
-
 typedef struct {
 	size_t   firstLineNo;    /* 0 = start of */
 	size_t   nLines;         /* number of actual lines in block */
@@ -32,9 +30,11 @@ typedef struct {
 	size_t                 blockSize;         /* the number of blocks per chapter */
 	size_t                 chapterSize;       /* the number of blocks per chapter */
 	size_t                 nDataBlocks;       /* the number of data blocks in the TextBlock */
+	size_t                 length;            /* total number of bytes of text in the TextBlock */
 	size_t                 nLines;            /* total number of lines in the TextBlock */
 	size_t                 nChapters;         /* total number of chapters in the TextBlock */
 	size_t                 chaptersAllocated; /* size of allocated chapter array */
+	unsigned int           overProvisionPct;  /* percent of textBlockData required to be unused. */
 	neuik_TextBlockData *  firstBlock;
 	neuik_TextBlockData *  lastBlock;
 	neuik_TextBlockData ** chapters;      /*  */
@@ -50,6 +50,14 @@ int
 	neuik_TextBlock_SetText(
 			neuik_TextBlock * tblk,
 			const char      * text);
+
+/*----------------------------------------------------------------------------*/
+/* Get the number of bytes contained by the TextBlock.                        */
+/*----------------------------------------------------------------------------*/
+int
+	neuik_TextBlock_GetLength(
+			neuik_TextBlock * tblk,
+			size_t          * length);
 
 /*----------------------------------------------------------------------------*/
 /* Get the number of lines contained by the TextBlock.                        */
@@ -97,6 +105,18 @@ int
 			size_t            endLineNo,
 			size_t            endLinePos,
 			char           ** secData);
+
+/*----------------------------------------------------------------------------*/
+/* Get the number of characters encapsulated by the specified section.        */
+/*----------------------------------------------------------------------------*/
+int 
+	neuik_TextBlock_GetSectionLength(
+			neuik_TextBlock * tblk,
+			size_t            startLineNo,
+			size_t            startLinePos,
+			size_t            endLineNo,
+			size_t            endLinePos,
+			size_t          * secLen);
 
 /*----------------------------------------------------------------------------*/
 /* Replace an actual line of data with another                                */

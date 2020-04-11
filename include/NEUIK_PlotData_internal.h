@@ -13,37 +13,16 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef NEUIK_LINE_H
-#define NEUIK_LINE_H
-
-#include "NEUIK_Element.h"
+#ifndef NEUIK_PLOTDATA_INTERNAL_H
+#define NEUIK_PLOTDATA_INTERNAL_H
 
 
-typedef struct {
-		neuik_Object objBase;     /* this structure is requied to be an neuik object */
-		int          orientation; /* horizontal = 0; vertical = 1 */
-		int          thickness;   /* thickness of line (px) */
-		NEUIK_Color  color;       /* color to use for the line */
-} NEUIK_Line;
+/*----------------------------------------------------------------------------*/
+/* Internal Function Prototypes                                               */
+/*----------------------------------------------------------------------------*/
+int neuik_Object_New__PlotData(void ** ptr);
+int neuik_Object_Copy__PlotData(void * dst, const void * src);
+int neuik_Object_Free__PlotData(void * ptr);
 
 
-int 
-	NEUIK_NewHLine(
-			NEUIK_Line ** linePtr);
-
-int 
-	NEUIK_NewVLine(
-			NEUIK_Line ** linePtr);
-
-int
-	NEUIK_Line_Configure(
-			NEUIK_Line * line,
-			const char * set0,
-			...);
-
-int 
-	NEUIK_Line_SetThickness(
-			NEUIK_Line * line,
-			int          px);
-
-#endif /* NEUIK_LINE_H */
+#endif /* NEUIK_PLOTDATA_INTERNAL_H */
