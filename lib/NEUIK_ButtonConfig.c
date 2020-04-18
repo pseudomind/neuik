@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,14 +36,14 @@ int neuik_Object_Free__ButtonConfig(void * cfgPtr);
 /* neuik_Object    Function Table                                             */
 /*----------------------------------------------------------------------------*/
 neuik_Class_BaseFuncs  neuik_ButtonConfig_BaseFuncs = {
-	/* Init(): Class initialization (in most cases will not be needed) */
-	NULL, /* (unused) */
-	/* New(): Allocate and Initialize the object */
-	neuik_Object_New__ButtonConfig,
-	/* Copy(): Copy the contents of one object into another */
-	neuik_Object_Copy__ButtonConfig,
-	/* Free(): Free the allocated memory of an object */
-	neuik_Object_Free__ButtonConfig,
+    /* Init(): Class initialization (in most cases will not be needed) */
+    NULL, /* (unused) */
+    /* New(): Allocate and Initialize the object */
+    neuik_Object_New__ButtonConfig,
+    /* Copy(): Copy the contents of one object into another */
+    neuik_Object_Copy__ButtonConfig,
+    /* Free(): Free the allocated memory of an object */
+    neuik_Object_Free__ButtonConfig,
 };
 
 /*******************************************************************************
@@ -57,42 +57,42 @@ neuik_Class_BaseFuncs  neuik_ButtonConfig_BaseFuncs = {
  ******************************************************************************/
 int neuik_RegisterClass_ButtonConfig()
 {
-	int            eNum       = 0; /* which error to report (if any) */
-	static char    funcName[] = "neuik_RegisterClass_ButtonConfig";
-	static char  * errMsgs[]  = {"",                        // [0] no error
-		"NEUIK library must be initialized first.",         // [1]
-		"Failed to register `ButtonConfig` object class .", // [2]
-	};
+    int            eNum       = 0; /* which error to report (if any) */
+    static char    funcName[] = "neuik_RegisterClass_ButtonConfig";
+    static char  * errMsgs[]  = {"",                        // [0] no error
+        "NEUIK library must be initialized first.",         // [1]
+        "Failed to register `ButtonConfig` object class .", // [2]
+    };
 
-	if (!neuik__isInitialized)
-	{
-		eNum = 1;
-		goto out;
-	}
+    if (!neuik__isInitialized)
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Otherwise, register the object                                         */
-	/*------------------------------------------------------------------------*/
-	if (neuik_RegisterClass(
-		"ButtonConfig",                         // className
-		"Configuration for the Button Object.", // classDescription
-		neuik__Set_NEUIK,                       // classSet
-		NULL,                                   // superClass
-		&neuik_ButtonConfig_BaseFuncs,          // baseFuncs
-		NULL,                                   // classFuncs
-		&neuik__Class_ButtonConfig))            // newClass
-	{
-		eNum = 2;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Otherwise, register the object                                         */
+    /*------------------------------------------------------------------------*/
+    if (neuik_RegisterClass(
+        "ButtonConfig",                         // className
+        "Configuration for the Button Object.", // classDescription
+        neuik__Set_NEUIK,                       // classSet
+        NULL,                                   // superClass
+        &neuik_ButtonConfig_BaseFuncs,          // baseFuncs
+        NULL,                                   // classFuncs
+        &neuik__Class_ButtonConfig))            // newClass
+    {
+        eNum = 2;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -108,77 +108,77 @@ out:
  ******************************************************************************/
 NEUIK_ButtonConfig * NEUIK_GetDefaultButtonConfig()
 {
-	int                         eNum           = 0;
-	static int                  isInitialized  = 0;
-	static char               * dFontName      = NULL;
-	NEUIK_ButtonConfig        * rvCfg          = NULL;
-	/* default ButtonConfig */
-	static NEUIK_ButtonConfig   dCfg = {
-		{0, 0, NULL, NULL, NULL}, // neuik_Object        objBase
-		NULL,                     // NEUIK_FontSet     * fontSet
-		11,                       // int                 fontSize
-		0,                        // int                 fontBold
-		0,                        // int                 fontItalic
-		NULL,                     // char              * fontName
-		COLOR_LBLACK,             // SDL_Color           fgColor
-		COLOR_WHITE,              // SDL_Color           fgColorSelect
-		COLOR_GRAY,               // SDL_Color           borderColor
-		COLOR_DGRAY,              // SDL_Color           borderColorDark
-		15,                       // int                 EmWidth
-	};
-	static char   funcName[] = "NEUIK_GetDefaultButtonConfig";
-	static char * errMsgs[]  = {"",        // [0] no error
-		"Failure in GetDefaultFontSet().", // [1]
-		"Failure in FontSet_GetFont().",   // [2]
-		"Failure in String_Duplicate().",  // [3]
-		"Failed to allocate memory().",    // [4]
-	};
+    int                         eNum           = 0;
+    static int                  isInitialized  = 0;
+    static char               * dFontName      = NULL;
+    NEUIK_ButtonConfig        * rvCfg          = NULL;
+    /* default ButtonConfig */
+    static NEUIK_ButtonConfig   dCfg = {
+        {0, 0, NULL, NULL, NULL}, // neuik_Object        objBase
+        NULL,                     // NEUIK_FontSet     * fontSet
+        11,                       // int                 fontSize
+        0,                        // int                 fontBold
+        0,                        // int                 fontItalic
+        NULL,                     // char              * fontName
+        COLOR_LBLACK,             // SDL_Color           fgColor
+        COLOR_WHITE,              // SDL_Color           fgColorSelect
+        COLOR_GRAY,               // SDL_Color           borderColor
+        COLOR_DGRAY,              // SDL_Color           borderColorDark
+        15,                       // int                 EmWidth
+    };
+    static char   funcName[] = "NEUIK_GetDefaultButtonConfig";
+    static char * errMsgs[]  = {"",        // [0] no error
+        "Failure in GetDefaultFontSet().", // [1]
+        "Failure in FontSet_GetFont().",   // [2]
+        "Failure in String_Duplicate().",  // [3]
+        "Failed to allocate memory().",    // [4]
+    };
 
-	if (!isInitialized)
-	{
-		isInitialized = 1;
+    if (!isInitialized)
+    {
+        isInitialized = 1;
 
-		neuik_GetObjectBaseOfClass(
-			neuik__Set_NEUIK, 
-			neuik__Class_ButtonConfig, 
-			NULL,
-			&(dCfg.objBase));
+        neuik_GetObjectBaseOfClass(
+            neuik__Set_NEUIK, 
+            neuik__Class_ButtonConfig, 
+            NULL,
+            &(dCfg.objBase));
 
-		/* Look for the first default font that is supported */
-		dCfg.fontSet = NEUIK_GetDefaultFontSet(&dFontName);
-		if (dCfg.fontSet == NULL)
-		{
-			eNum = 1;
-			goto out;
-		}
+        /* Look for the first default font that is supported */
+        dCfg.fontSet = NEUIK_GetDefaultFontSet(&dFontName);
+        if (dCfg.fontSet == NULL)
+        {
+            eNum = 1;
+            goto out;
+        }
 
-		String_Duplicate(&(dCfg.fontName), dFontName);
-		if (dCfg.fontName == NULL)
-		{
-			eNum = 3;
-			goto out;
-		}
+        String_Duplicate(&(dCfg.fontName), dFontName);
+        if (dCfg.fontName == NULL)
+        {
+            eNum = 3;
+            goto out;
+        }
 
-		/* Finally attempt to load the font */
-		if (NEUIK_FontSet_GetFont(dCfg.fontSet, dCfg.fontSize, 
-			dCfg.fontBold, dCfg.fontItalic) == NULL)
-		{
-			eNum = 2;
-			goto out;
-		}
-		rvCfg = &dCfg;
-	}
-	else
-	{
-		rvCfg = &dCfg;
-	}
+        /* Finally attempt to load the font */
+        if (NEUIK_FontSet_GetFont(dCfg.fontSet, dCfg.fontSize, 
+            dCfg.fontBold, dCfg.fontItalic) == NULL)
+        {
+            eNum = 2;
+            goto out;
+        }
+        rvCfg = &dCfg;
+    }
+    else
+    {
+        rvCfg = &dCfg;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
 
-	return rvCfg;
+    return rvCfg;
 }
 
 
@@ -192,9 +192,9 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_New__ButtonConfig(
-	void ** cfg)
+    void ** cfg)
 {
-	return NEUIK_NewButtonConfig((NEUIK_ButtonConfig **)cfg);
+    return NEUIK_NewButtonConfig((NEUIK_ButtonConfig **)cfg);
 }
 
 
@@ -208,56 +208,56 @@ int neuik_Object_New__ButtonConfig(
  *
  ******************************************************************************/
 int NEUIK_NewButtonConfig(
-		NEUIK_ButtonConfig ** cfgPtr)
+        NEUIK_ButtonConfig ** cfgPtr)
 {
-	int                  eNum       = 0;
-	NEUIK_ButtonConfig * cfg        = NULL;
-	static char          funcName[] = "NEUIK_NewButtonConfig";
-	static char        * errMsgs[]  = {"",  // [0] no error
-		"Output Argument cfgPtr is NULL.",  // [1]
-		"Failure to allocate memory.",      // [2]
-		"Failure in ButtonConfig_Copy().",  // [3]
-	};
+    int                  eNum       = 0;
+    NEUIK_ButtonConfig * cfg        = NULL;
+    static char          funcName[] = "NEUIK_NewButtonConfig";
+    static char        * errMsgs[]  = {"",  // [0] no error
+        "Output Argument cfgPtr is NULL.",  // [1]
+        "Failure to allocate memory.",      // [2]
+        "Failure in ButtonConfig_Copy().",  // [3]
+    };
 
-	if (cfgPtr == NULL)
-	{
-		eNum = 1;
-		goto out;
-	}
+    if (cfgPtr == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	(*cfgPtr) = (NEUIK_ButtonConfig*) malloc(sizeof(NEUIK_ButtonConfig));
-	cfg = (*cfgPtr);
-	if (cfg == NULL)
-	{
-		eNum = 2;
-		goto out;
-	}
+    (*cfgPtr) = (NEUIK_ButtonConfig*) malloc(sizeof(NEUIK_ButtonConfig));
+    cfg = (*cfgPtr);
+    if (cfg == NULL)
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Set the object base to that of ButtonConfig                            */
-	/*------------------------------------------------------------------------*/
-	neuik_GetObjectBaseOfClass(
-		neuik__Set_NEUIK, 
-		neuik__Class_ButtonConfig, 
-		NULL,
-		&(cfg->objBase));
+    /*------------------------------------------------------------------------*/
+    /* Set the object base to that of ButtonConfig                            */
+    /*------------------------------------------------------------------------*/
+    neuik_GetObjectBaseOfClass(
+        neuik__Set_NEUIK, 
+        neuik__Class_ButtonConfig, 
+        NULL,
+        &(cfg->objBase));
 
-	/*------------------------------------------------------------------------*/
-	/* Copy the default config settings into the new ButtonConfig             */
-	/*------------------------------------------------------------------------*/
-	if (NEUIK_ButtonConfig_Copy((cfg), NEUIK_GetDefaultButtonConfig()))
-	{
-		eNum = 3;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Copy the default config settings into the new ButtonConfig             */
+    /*------------------------------------------------------------------------*/
+    if (NEUIK_ButtonConfig_Copy((cfg), NEUIK_GetDefaultButtonConfig()))
+    {
+        eNum = 3;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -271,11 +271,11 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Copy__ButtonConfig(
-	void        * dst,
-	const void  * src)
+    void        * dst,
+    const void  * src)
 {
-	return NEUIK_ButtonConfig_Copy(
-		(NEUIK_ButtonConfig *)dst, (const NEUIK_ButtonConfig *)src);
+    return NEUIK_ButtonConfig_Copy(
+        (NEUIK_ButtonConfig *)dst, (const NEUIK_ButtonConfig *)src);
 }
 
 
@@ -289,59 +289,59 @@ int neuik_Object_Copy__ButtonConfig(
  *
  ******************************************************************************/
 int NEUIK_ButtonConfig_Copy(
-	NEUIK_ButtonConfig       * dst,
-	const NEUIK_ButtonConfig * src)
+    NEUIK_ButtonConfig       * dst,
+    const NEUIK_ButtonConfig * src)
 {
-	int           eNum       = 0; /* which error to report (if any) */
-	static char   funcName[] = "NEUIK_ButtonConfig_Copy";
-	static char * errMsgs[]  = {"",                        // [0] no error
-		"Argument `src` is invalid or an incorrect type.", // [1]
-		"Argument `dst` is invalid or an incorrect type.", // [2]
-		"ButtonConfig->fontName is NULL.",                 // [3]
-		"Failure in String_Duplicate.",                    // [4]
-	};
+    int           eNum       = 0; /* which error to report (if any) */
+    static char   funcName[] = "NEUIK_ButtonConfig_Copy";
+    static char * errMsgs[]  = {"",                        // [0] no error
+        "Argument `src` is invalid or an incorrect type.", // [1]
+        "Argument `dst` is invalid or an incorrect type.", // [2]
+        "ButtonConfig->fontName is NULL.",                 // [3]
+        "Failure in String_Duplicate.",                    // [4]
+    };
 
-	if (!neuik_Object_IsClass(src, neuik__Class_ButtonConfig))
-	{
-		eNum = 1;
-		goto out;
-	}
-	if (!neuik_Object_IsClass(dst, neuik__Class_ButtonConfig))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(src, neuik__Class_ButtonConfig))
+    {
+        eNum = 1;
+        goto out;
+    }
+    if (!neuik_Object_IsClass(dst, neuik__Class_ButtonConfig))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	dst->fontSet    = src->fontSet;
-	dst->fontSize   = src->fontSize;
-	dst->fontBold   = src->fontBold;
-	dst->fontItalic = src->fontItalic;
+    dst->fontSet    = src->fontSet;
+    dst->fontSize   = src->fontSize;
+    dst->fontBold   = src->fontBold;
+    dst->fontItalic = src->fontItalic;
 
-	if (src->fontName == NULL)
-	{
-		eNum = 3;
-		goto out;
-	}
-	String_Duplicate(&(dst->fontName), src->fontName);
-	if (dst->fontName == NULL)
-	{
-		eNum = 4;
-		goto out;
-	}
+    if (src->fontName == NULL)
+    {
+        eNum = 3;
+        goto out;
+    }
+    String_Duplicate(&(dst->fontName), src->fontName);
+    if (dst->fontName == NULL)
+    {
+        eNum = 4;
+        goto out;
+    }
 
-	dst->fgColor         = src->fgColor;
- 	dst->fgColorSelect   = src->fgColorSelect;
- 	dst->borderColor     = src->borderColor;
- 	dst->borderColorDark = src->borderColorDark;
- 	dst->fontEmWidth     = src->fontEmWidth;
+    dst->fgColor         = src->fgColor;
+    dst->fgColorSelect   = src->fgColorSelect;
+    dst->borderColor     = src->borderColor;
+    dst->borderColorDark = src->borderColorDark;
+    dst->fontEmWidth     = src->fontEmWidth;
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -355,9 +355,9 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__ButtonConfig(
-	void * cfg)
+    void * cfg)
 {
-	return NEUIK_ButtonConfig_Free((NEUIK_ButtonConfig*)cfg);
+    return NEUIK_ButtonConfig_Free((NEUIK_ButtonConfig*)cfg);
 }
 
 
@@ -371,42 +371,42 @@ int neuik_Object_Free__ButtonConfig(
  *
  ******************************************************************************/
 int NEUIK_ButtonConfig_Free(
-	NEUIK_ButtonConfig * cfgPtr)
+    NEUIK_ButtonConfig * cfgPtr)
 {
-	int                  eNum       = 0;
-	NEUIK_ButtonConfig * cfg        = NULL;
-	static char          funcName[] = "NEUIK_ButtonConfig_Free";
-	static char        * errMsgs[]  = {"",                    // [0] no error
-		"Argument `cfgPtr` is NULL.",                         // [1]
-		"Argument `cfgPtr` is invalid or an incorrect type.", // [2]
-	};
+    int                  eNum       = 0;
+    NEUIK_ButtonConfig * cfg        = NULL;
+    static char          funcName[] = "NEUIK_ButtonConfig_Free";
+    static char        * errMsgs[]  = {"",                    // [0] no error
+        "Argument `cfgPtr` is NULL.",                         // [1]
+        "Argument `cfgPtr` is invalid or an incorrect type.", // [2]
+    };
 
-	if (cfgPtr == NULL)
-	{
-		eNum = 1;
-		goto out;
-	}
-	cfg = (NEUIK_ButtonConfig*)cfgPtr;
+    if (cfgPtr == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
+    cfg = (NEUIK_ButtonConfig*)cfgPtr;
 
-	if (!neuik_Object_IsClass(cfg, neuik__Class_ButtonConfig))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(cfg, neuik__Class_ButtonConfig))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* The object is what it says it is and it is still allocated.            */
-	/*------------------------------------------------------------------------*/
-	if (cfg->fontName != NULL) free(cfg->fontName);
+    /*------------------------------------------------------------------------*/
+    /* The object is what it says it is and it is still allocated.            */
+    /*------------------------------------------------------------------------*/
+    if (cfg->fontName != NULL) free(cfg->fontName);
 
-	free(cfg);
+    free(cfg);
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 

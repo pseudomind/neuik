@@ -40,38 +40,38 @@ int neuik_Object_Free__Stack(void * stkPtr);
 int neuik_Element_CaptureEvent__Stack(NEUIK_Element cont, SDL_Event * ev);
 int neuik_Element_GetMinSize__Stack(NEUIK_Element, RenderSize*);
 int neuik_Element_Render__Stack(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
+    NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
 /*----------------------------------------------------------------------------*/
 neuik_Class_BaseFuncs  neuik_Stack_BaseFuncs = {
-	/* Init(): Class initialization (in most cases will not be needed) */
-	NULL, /* (unused) */
-	/* New(): Allocate and Initialize the object */
-	neuik_Object_New__Stack,
-	/* Copy(): Copy the contents of one object into another */
-	NULL,
-	/* Free(): Free the allocated memory of an object */
-	neuik_Object_Free__Stack,
+    /* Init(): Class initialization (in most cases will not be needed) */
+    NULL, /* (unused) */
+    /* New(): Allocate and Initialize the object */
+    neuik_Object_New__Stack,
+    /* Copy(): Copy the contents of one object into another */
+    NULL,
+    /* Free(): Free the allocated memory of an object */
+    neuik_Object_Free__Stack,
 };
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
 /*----------------------------------------------------------------------------*/
 NEUIK_Element_FuncTable neuik_Stack_FuncTable = {
-	/* GetMinSize(): Get the minimum required size for the element  */
-	neuik_Element_GetMinSize__Stack,
+    /* GetMinSize(): Get the minimum required size for the element  */
+    neuik_Element_GetMinSize__Stack,
 
-	/* Render(): Redraw the element  element  */
-	neuik_Element_Render__Stack,
+    /* Render(): Redraw the element  element  */
+    neuik_Element_Render__Stack,
 
-	/* CaptureEvent(): Determine if this element caputures a given event */
-	NULL,
+    /* CaptureEvent(): Determine if this element caputures a given event */
+    NULL,
 
-	/* Defocus(): This function will be called when an element looses focus */
-	NULL,
+    /* Defocus(): This function will be called when an element looses focus */
+    NULL,
 };
 
 
@@ -86,52 +86,52 @@ NEUIK_Element_FuncTable neuik_Stack_FuncTable = {
  ******************************************************************************/
 int neuik_RegisterClass_Stack()
 {
-	int            eNum       = 0; /* which error to report (if any) */
-	static char    funcName[] = "neuik_RegisterClass_Stack";
-	static char  * errMsgs[]  = {"",                 // [0] no error
-		"NEUIK library must be initialized first.",  // [1]
-		"Failed to register `Stack` object class .", // [2]
-		"Failed to register `Virtual Function`.",    // [3]
-	};
+    int            eNum       = 0; /* which error to report (if any) */
+    static char    funcName[] = "neuik_RegisterClass_Stack";
+    static char  * errMsgs[]  = {"", // [0] no error
+        "NEUIK library must be initialized first.",  // [1]
+        "Failed to register `Stack` object class .", // [2]
+        "Failed to register `Virtual Function`.",    // [3]
+    };
 
-	if (!neuik__isInitialized)
-	{
-		eNum = 1;
-		goto out;
-	}
+    if (!neuik__isInitialized)
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Otherwise, register the object                                         */
-	/*------------------------------------------------------------------------*/
-	if (neuik_RegisterClass(
-		"Stack",                                                     // className
-		"A multi-element container which shows only one at a time.", // classDescription
-		neuik__Set_NEUIK,                                            // classSet
-		neuik__Class_Container,                                      // superClass
-		&neuik_Stack_BaseFuncs,                                      // baseFuncs
-		NULL,                                                        // classFuncs
-		&neuik__Class_Stack))                                        // newClass
-	{
-		eNum = 2;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Otherwise, register the object                                         */
+    /*------------------------------------------------------------------------*/
+    if (neuik_RegisterClass(
+        "Stack",                                                     // className
+        "A multi-element container which shows only one at a time.", // classDescription
+        neuik__Set_NEUIK,                                            // classSet
+        neuik__Class_Container,                                      // superClass
+        &neuik_Stack_BaseFuncs,                                      // baseFuncs
+        NULL,                                                        // classFuncs
+        &neuik__Class_Stack))                                        // newClass
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	if (neuik_VirtualFunc_RegisterImplementation(
-		&neuik_Element_vfunc_CaptureEvent,
-		neuik__Class_Stack,
-		neuik_Element_CaptureEvent__Stack))
-	{
-		eNum = 3;
-		goto out;
-	}
+    if (neuik_VirtualFunc_RegisterImplementation(
+        &neuik_Element_vfunc_CaptureEvent,
+        neuik__Class_Stack,
+        neuik_Element_CaptureEvent__Stack))
+    {
+        eNum = 3;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -145,101 +145,100 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_New__Stack(
-	void ** objPtr)
+    void ** objPtr)
 {
-	int               eNum       = 0;
-	NEUIK_Container * cont       = NULL;
-	NEUIK_Stack     * stk        = NULL;
-	NEUIK_Element   * sClassPtr  = NULL;
-	static char       funcName[] = "neuik_Object_New__Stack";
-	static char     * errMsgs[]  = {"",                                  // [0] no error
-		"Output Argument `fPtr` is NULL.",                               // [1]
-		"Failure to allocate memory.",                                   // [2]
-		"Failure in `neuik_GetObjectBaseOfClass`.",                      // [3]
-		"Failure in function `neuik.NewElement`.",                       // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.",             // [5]
-		"Argument `fPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
-		"Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",     // [7]
-	};
+    int               eNum       = 0;
+    NEUIK_Container * cont       = NULL;
+    NEUIK_Stack     * stk        = NULL;
+    NEUIK_Element   * sClassPtr  = NULL;
+    static char       funcName[] = "neuik_Object_New__Stack";
+    static char     * errMsgs[]  = {"", // [0] no error
+        "Output Argument `fPtr` is NULL.",                               // [1]
+        "Failure to allocate memory.",                                   // [2]
+        "Failure in `neuik_GetObjectBaseOfClass`.",                      // [3]
+        "Failure in function `neuik.NewElement`.",                       // [4]
+        "Failure in function `neuik_Element_SetFuncTable`.",             // [5]
+        "Argument `fPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+        "Failure in `NEUIK_Element_SetBackgroundColorTransparent`.",     // [7]
+    };
 
-	if (objPtr == NULL)
-	{
-		eNum = 1;
-		goto out;
-	}
-	(*objPtr) = (NEUIK_Stack*) malloc(sizeof(NEUIK_Stack));
-	stk = *objPtr;
-	if (stk == NULL)
-	{
-		eNum = 2;
-		goto out;
-	}
-	stk->elemActive = NULL;
+    if (objPtr == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
+    (*objPtr) = (NEUIK_Stack*) malloc(sizeof(NEUIK_Stack));
+    stk = *objPtr;
+    if (stk == NULL)
+    {
+        eNum = 2;
+        goto out;
+    }
+    stk->elemActive = NULL;
 
-	/*------------------------------------------------------------------------*/
-	/* Successful allocation of Memory -- Create Base Class Object            */
-	/*------------------------------------------------------------------------*/
-	if (neuik_GetObjectBaseOfClass(
-			neuik__Set_NEUIK, 
-			neuik__Class_Stack, 
-			NULL,
-			&(stk->objBase)))
-	{
-		eNum = 3;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Successful allocation of Memory -- Create Base Class Object            */
+    /*------------------------------------------------------------------------*/
+    if (neuik_GetObjectBaseOfClass(
+            neuik__Set_NEUIK, 
+            neuik__Class_Stack, 
+            NULL,
+            &(stk->objBase)))
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Create first level Base SuperClass Object                              */
-	/*------------------------------------------------------------------------*/
-	sClassPtr = (NEUIK_Element *) &(stk->objBase.superClassObj);
-	if (neuik_Object_New(neuik__Class_Container, sClassPtr))
-	{
-		eNum = 4;
-		goto out;
-	}
-	if (neuik_Element_SetFuncTable(stk, &neuik_Stack_FuncTable))
-	{
-		eNum = 5;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Create first level Base SuperClass Object                              */
+    /*------------------------------------------------------------------------*/
+    sClassPtr = (NEUIK_Element *) &(stk->objBase.superClassObj);
+    if (neuik_Object_New(neuik__Class_Container, sClassPtr))
+    {
+        eNum = 4;
+        goto out;
+    }
+    if (neuik_Element_SetFuncTable(stk, &neuik_Stack_FuncTable))
+    {
+        eNum = 5;
+        goto out;
+    }
 
-	if (neuik_Object_GetClassObject(stk, neuik__Class_Container, (void**)&cont))
-	{
-		eNum = 6;
-		goto out;
-	}
-	cont->cType        = NEUIK_CONTAINER_MULTI;
-	cont->shownIfEmpty = 1;
+    if (neuik_Object_GetClassObject(stk, neuik__Class_Container, (void**)&cont))
+    {
+        eNum = 6;
+        goto out;
+    }
+    cont->cType        = NEUIK_CONTAINER_MULTI;
+    cont->shownIfEmpty = 1;
 
-	/*------------------------------------------------------------------------*/
-	/* Set the default element background redraw styles.                      */
-	/*------------------------------------------------------------------------*/
-	if (NEUIK_Element_SetBackgroundColorTransparent(stk, "normal"))
-	{
-		eNum = 7;
-		goto out;
-	}
-	if (NEUIK_Element_SetBackgroundColorTransparent(stk, "selected"))
-	{
-		eNum = 7;
-		goto out;
-	}
-	if (NEUIK_Element_SetBackgroundColorTransparent(stk, "hovered"))
-	{
-		eNum = 7;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Set the default element background redraw styles.                      */
+    /*------------------------------------------------------------------------*/
+    if (NEUIK_Element_SetBackgroundColorTransparent(stk, "normal"))
+    {
+        eNum = 7;
+        goto out;
+    }
+    if (NEUIK_Element_SetBackgroundColorTransparent(stk, "selected"))
+    {
+        eNum = 7;
+        goto out;
+    }
+    if (NEUIK_Element_SetBackgroundColorTransparent(stk, "hovered"))
+    {
+        eNum = 7;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
-
 
 
 /*******************************************************************************
@@ -252,48 +251,48 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__Stack(
-	void * stkPtr)
+    void * stkPtr)
 {
-	int           eNum       = 0;    /* which error to report (if any) */
-	NEUIK_Stack * stk        = NULL;
-	static char   funcName[] = "neuik_Object_Free__Stack";
-	static char * errMsgs[]  = {"",                 // [0] no error
-		"Argument `fPtr` is NULL.",                 // [1]
-		"Argument `fPtr` is not of Frame class.",   // [2]
-		"Failure in function `neuik_Object_Free`.", // [3]
-	};
+    int           eNum       = 0;    /* which error to report (if any) */
+    NEUIK_Stack * stk        = NULL;
+    static char   funcName[] = "neuik_Object_Free__Stack";
+    static char * errMsgs[]  = {"",                 // [0] no error
+        "Argument `fPtr` is NULL.",                 // [1]
+        "Argument `fPtr` is not of Frame class.",   // [2]
+        "Failure in function `neuik_Object_Free`.", // [3]
+    };
 
-	if (stkPtr == NULL)
-	{
-		eNum = 1;
-		goto out;
-	}
-	stk = (NEUIK_Stack*)stkPtr;
+    if (stkPtr == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
+    stk = (NEUIK_Stack*)stkPtr;
 
-	if (!neuik_Object_IsClass(stk, neuik__Class_Stack))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(stk, neuik__Class_Stack))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* The object is what it says it is and it is still allocated.            */
-	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(stk->objBase.superClassObj))
-	{
-		eNum = 3;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* The object is what it says it is and it is still allocated.            */
+    /*------------------------------------------------------------------------*/
+    if(neuik_Object_Free(stk->objBase.superClassObj))
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	free(stk);
+    free(stk);
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -307,10 +306,11 @@ out:
  *
  ******************************************************************************/
 int NEUIK_NewStack(
-	NEUIK_Stack ** fPtr)
+    NEUIK_Stack ** fPtr)
 {
-	return neuik_Object_New__Stack((void**)fPtr);
+    return neuik_Object_New__Stack((void**)fPtr);
 }
+
 
 /*******************************************************************************
  *
@@ -326,92 +326,92 @@ int NEUIK_NewStack(
  *
  ******************************************************************************/
 int neuik_Element_GetMinSize__Stack(
-	NEUIK_Element    stkElem, 
-	RenderSize     * rSize)
+    NEUIK_Element    stkElem, 
+    RenderSize     * rSize)
 {
-	int                   tempW;
-	int                   tempH;
-	int                   eNum      = 0;   /* which error to report (if any) */
-	int                   ctr       = 0;
-	RenderSize            rs        = {0, 0};
-	NEUIK_Container     * cont      = NULL;
-	NEUIK_Element         elem      = NULL;
-	NEUIK_ElementConfig * eCfg      = NULL;
-	static char          funcName[] = "neuik_Element_GetMinSize__Stack";
-	static char         * errMsgs[] = {"",                                  // [0] no error
-		"Argument `stkElem` is not of Stack class.",                        // [1]
-		"Argument `stkElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
-		"Element_GetConfig returned NULL.",                                 // [3]
-		"Failure in neuik_Element_GetSize.",                                // [4]
-	};
+    int                   tempW;
+    int                   tempH;
+    int                   eNum      = 0;   /* which error to report (if any) */
+    int                   ctr       = 0;
+    RenderSize            rs        = {0, 0};
+    NEUIK_Container     * cont      = NULL;
+    NEUIK_Element         elem      = NULL;
+    NEUIK_ElementConfig * eCfg      = NULL;
+    static char          funcName[] = "neuik_Element_GetMinSize__Stack";
+    static char         * errMsgs[] = {"", // [0] no error
+        "Argument `stkElem` is not of Stack class.",                        // [1]
+        "Argument `stkElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
+        "Element_GetConfig returned NULL.",                                 // [3]
+        "Failure in neuik_Element_GetSize.",                                // [4]
+    };
 
-	(*rSize) = rs;
+    (*rSize) = rs;
 
-	/*------------------------------------------------------------------------*/
-	/* Check for problems before proceding                                    */
-	/*------------------------------------------------------------------------*/
-	if (!neuik_Object_IsClass(stkElem, neuik__Class_Stack))
-	{
-		eNum = 1;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Check for problems before proceding                                    */
+    /*------------------------------------------------------------------------*/
+    if (!neuik_Object_IsClass(stkElem, neuik__Class_Stack))
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	if (neuik_Object_GetClassObject(stkElem, neuik__Class_Container, (void**)&cont))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (neuik_Object_GetClassObject(stkElem, neuik__Class_Container, (void**)&cont))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	if (cont->elems == NULL) goto out;
-	/* ^^^ there are no UI elements contained by this Stack */
+    if (cont->elems == NULL) goto out;
+    /* ^^^ there are no UI elements contained by this Stack */
 
-	/*------------------------------------------------------------------------*/
-	/* Determine the (maximum) width & height required by any of the elements */
-	/*------------------------------------------------------------------------*/
-	for (ctr = 0;; ctr++)
-	{
-		elem = cont->elems[ctr];
-		if (elem == NULL) break;
+    /*------------------------------------------------------------------------*/
+    /* Determine the (maximum) width & height required by any of the elements */
+    /*------------------------------------------------------------------------*/
+    for (ctr = 0;; ctr++)
+    {
+        elem = cont->elems[ctr];
+        if (elem == NULL) break;
 
-		eCfg = neuik_Element_GetConfig(elem);
-		if (eCfg == NULL)
-		{
-			eNum = 3;
-			goto out;
-		}
+        eCfg = neuik_Element_GetConfig(elem);
+        if (eCfg == NULL)
+        {
+            eNum = 3;
+            goto out;
+        }
 
-		if (neuik_Element_GetMinSize(elem, &rs) != 0)
-		{
-			eNum = 4;
-			goto out;
-		}
+        if (neuik_Element_GetMinSize(elem, &rs) != 0)
+        {
+            eNum = 4;
+            goto out;
+        }
 
-		/*--------------------------------------------------------------------*/
-		/* Get the (maximum) width required by any one of the elements        */
-		/*--------------------------------------------------------------------*/
-		tempW = rs.w + (eCfg->PadLeft + eCfg->PadRight);
-		if (tempW > rSize->w)
-		{
-			rSize->w = tempW;
-		}
+        /*--------------------------------------------------------------------*/
+        /* Get the (maximum) width required by any one of the elements        */
+        /*--------------------------------------------------------------------*/
+        tempW = rs.w + (eCfg->PadLeft + eCfg->PadRight);
+        if (tempW > rSize->w)
+        {
+            rSize->w = tempW;
+        }
 
-		/*--------------------------------------------------------------------*/
-		/* Get the (maximum) height required by any one of the elements       */
-		/*--------------------------------------------------------------------*/
-		tempH = rs.h + (eCfg->PadTop + eCfg->PadBottom);
-		if (tempH > rSize->h)
-		{
-			rSize->h = tempH;
-		}
-	}
+        /*--------------------------------------------------------------------*/
+        /* Get the (maximum) height required by any one of the elements       */
+        /*--------------------------------------------------------------------*/
+        tempH = rs.h + (eCfg->PadTop + eCfg->PadBottom);
+        if (tempH > rSize->h)
+        {
+            rSize->h = tempH;
+        }
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -425,289 +425,289 @@ out:
  *
  ******************************************************************************/
 int neuik_Element_Render__Stack(
-	NEUIK_Element   stkElem, 
-	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
-	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
-	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	int             mock)  /* If true; calculate sizes/locations but don't draw */
+    NEUIK_Element   stkElem, 
+    RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+    RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
+    SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+    int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-	int                   ctr        = 0;
-	int                   eNum       = 0; /* which error to report (if any) */
-	int                   elemIncl;
-	RenderLoc             rl;
-	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
-	SDL_Rect              rect;
-	RenderSize            rs;
-	SDL_Renderer        * rend       = NULL;
-	NEUIK_Stack         * stk        = NULL;
-	NEUIK_Container     * cont       = NULL;
-	NEUIK_Element         elem       = NULL;
-	NEUIK_ElementBase   * eBase      = NULL;
-	NEUIK_ElementConfig * eCfg       = NULL;
-	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
-	enum neuik_bgstyle    bgStyle;
-	static char           funcName[] = "neuik_Element_Render__Stack";
-	static char         * errMsgs[]  = {"",                              // [0] no error
-		"Argument `stkElem` is not of Stack class.",                        // [1]
-		"Argument `stkElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
-		"Call to Element_GetMinSize failed.",                               // [3]
-		"Invalid specified `rSize` (negative values).",                     // [4]
-		"Failure in `neuik_Element_Render().",                              // [5]
-		"Active element not contained by this stack.",                      // [6]
-		"Element_GetConfig returned NULL.",                                 // [7]
-		"Failure in neuik_Element_RedrawBackground().",                     // [8]
-		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                  // [9]
-		"Failure in `neuik_MakeMaskMap()`",                                 // [10]
-		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",                // [11]
-	};
+    int                   ctr        = 0;
+    int                   eNum       = 0; /* which error to report (if any) */
+    int                   elemIncl;
+    RenderLoc             rl;
+    RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
+    SDL_Rect              rect;
+    RenderSize            rs;
+    SDL_Renderer        * rend       = NULL;
+    NEUIK_Stack         * stk        = NULL;
+    NEUIK_Container     * cont       = NULL;
+    NEUIK_Element         elem       = NULL;
+    NEUIK_ElementBase   * eBase      = NULL;
+    NEUIK_ElementConfig * eCfg       = NULL;
+    neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+    enum neuik_bgstyle    bgStyle;
+    static char           funcName[] = "neuik_Element_Render__Stack";
+    static char         * errMsgs[]  = {"", // [0] no error
+        "Argument `stkElem` is not of Stack class.",                        // [1]
+        "Argument `stkElem` caused `neuik_Object_GetClassObject` to fail.", // [2]
+        "Call to Element_GetMinSize failed.",                               // [3]
+        "Invalid specified `rSize` (negative values).",                     // [4]
+        "Failure in `neuik_Element_Render().",                              // [5]
+        "Active element not contained by this stack.",                      // [6]
+        "Element_GetConfig returned NULL.",                                 // [7]
+        "Failure in neuik_Element_RedrawBackground().",                     // [8]
+        "Failure in `neuik_Element_GetCurrentBGStyle()`.",                  // [9]
+        "Failure in `neuik_MakeMaskMap()`",                                 // [10]
+        "Failure in `neuik_Window_FillTranspMaskFromLoc()`",                // [11]
+    };
 
-	if (!neuik_Object_IsClass(stkElem, neuik__Class_Stack))
-	{
-		eNum = 1;
-		goto out;
-	}
-	stk = (NEUIK_Stack *)stkElem;
+    if (!neuik_Object_IsClass(stkElem, neuik__Class_Stack))
+    {
+        eNum = 1;
+        goto out;
+    }
+    stk = (NEUIK_Stack *)stkElem;
 
-	if (neuik_Object_GetClassObject(stkElem, neuik__Class_Element, (void**)&eBase))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (neuik_Object_GetClassObject(stkElem, neuik__Class_Element, (void**)&eBase))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	if (neuik_Object_GetClassObject(stkElem, neuik__Class_Container, (void**)&cont))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (neuik_Object_GetClassObject(stkElem, neuik__Class_Container, (void**)&cont))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	if (rSize->w < 0 || rSize->h < 0)
-	{
-		eNum = 4;
-		goto out;
-	}
+    if (rSize->w < 0 || rSize->h < 0)
+    {
+        eNum = 4;
+        goto out;
+    }
 
-	eBase->eSt.rend = xRend;
-	rend = eBase->eSt.rend;
+    eBase->eSt.rend = xRend;
+    rend = eBase->eSt.rend;
 
-	/*------------------------------------------------------------------------*/
-	/* Redraw the background surface before continuing.                       */
-	/*------------------------------------------------------------------------*/
-	if (!mock)
-	{
-		if (neuik_Element_GetCurrentBGStyle(stkElem, &bgStyle))
-		{
-			eNum = 9;
-			goto out;
-		}
-		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
-		{
-			/*----------------------------------------------------------------*/
-			/* Create a MaskMap an mark off the trasnparent pixels.           */
-			/*----------------------------------------------------------------*/
-			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
-			{
-				eNum = 10;
-				goto out;
-			}
+    /*------------------------------------------------------------------------*/
+    /* Redraw the background surface before continuing.                       */
+    /*------------------------------------------------------------------------*/
+    if (!mock)
+    {
+        if (neuik_Element_GetCurrentBGStyle(stkElem, &bgStyle))
+        {
+            eNum = 9;
+            goto out;
+        }
+        if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+        {
+            /*----------------------------------------------------------------*/
+            /* Create a MaskMap an mark off the trasnparent pixels.           */
+            /*----------------------------------------------------------------*/
+            if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+            {
+                eNum = 10;
+                goto out;
+            }
 
-			rl = eBase->eSt.rLoc;
-			if (neuik_Window_FillTranspMaskFromLoc(
-					eBase->eSt.window, maskMap, rl.x, rl.y))
-			{
-				eNum = 11;
-				goto out;
-			}
+            rl = eBase->eSt.rLoc;
+            if (neuik_Window_FillTranspMaskFromLoc(
+                    eBase->eSt.window, maskMap, rl.x, rl.y))
+            {
+                eNum = 11;
+                goto out;
+            }
 
-			if (neuik_Element_RedrawBackground(stkElem, rlMod, maskMap))
-			{
-				eNum = 8;
-				goto out;
-			}
-		}
-	}
-	rl = eBase->eSt.rLoc;
+            if (neuik_Element_RedrawBackground(stkElem, rlMod, maskMap))
+            {
+                eNum = 8;
+                goto out;
+            }
+        }
+    }
+    rl = eBase->eSt.rLoc;
 
-	/*------------------------------------------------------------------------*/
-	/* Draw the currently shown UI element onto the Stack                     */
-	/*------------------------------------------------------------------------*/
-	if (cont->elems == NULL) goto out; /* stack contains no elements */
-	if (stk->elemActive == NULL) goto out; /* no active stack element */
+    /*------------------------------------------------------------------------*/
+    /* Draw the currently shown UI element onto the Stack                     */
+    /*------------------------------------------------------------------------*/
+    if (cont->elems == NULL) goto out; /* stack contains no elements */
+    if (stk->elemActive == NULL) goto out; /* no active stack element */
 
-	/*------------------------------------------------------------------------*/
-	/* Verify that the current active stack element is within the stack.      */
-	/*------------------------------------------------------------------------*/
-	elemIncl = 0;
-	for (ctr = 0;; ctr++)
-	{
-		elem = cont->elems[ctr];
-		if (elem == NULL) break;
+    /*------------------------------------------------------------------------*/
+    /* Verify that the current active stack element is within the stack.      */
+    /*------------------------------------------------------------------------*/
+    elemIncl = 0;
+    for (ctr = 0;; ctr++)
+    {
+        elem = cont->elems[ctr];
+        if (elem == NULL) break;
 
-		if (elem == stk->elemActive)
-		{
-			elemIncl = 1;
-			break;
-		}
-	}
+        if (elem == stk->elemActive)
+        {
+            elemIncl = 1;
+            break;
+        }
+    }
 
-	if (elemIncl == 0) 
-	{
-		/* Error: the currently active element is not contained by this stack */
-		eNum = 6;
-		goto out;
-	}
+    if (elemIncl == 0) 
+    {
+        /* Error: the currently active element is not contained by this stack */
+        eNum = 6;
+        goto out;
+    }
 
-	elem = stk->elemActive;
-	if (!NEUIK_Element_IsShown(elem)) goto out; /* active elem not shown */
-
-
-	/*------------------------------------------------------------------------*/
-	/* Render and place the currently active stack element                    */
-	/*------------------------------------------------------------------------*/
-	eCfg = neuik_Element_GetConfig(elem);
-	if (eCfg == NULL)
-	{
-		eNum = 7;
-		goto out;
-	}
-
-	/*------------------------------------------------------------------------*/
-	/* Start with the default calculated element size                         */
-	/*------------------------------------------------------------------------*/
-	if (neuik_Element_GetMinSize(elem, &rs))
-	{
-		eNum = 3;
-		goto out;
-	}
-
-	/*------------------------------------------------------------------------*/
-	/* Check for and apply if necessary Horizontal and Vertical fill          */
-	/*------------------------------------------------------------------------*/
-	if (eCfg->HFill)
-	{
-		/* This element is configured to fill space horizontally */
-		rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
-	}
-	if (eCfg->VFill)
-	{
-		/* This element is configured to fill space vertically */
-		rs.h = rSize->h - (eCfg->PadTop + eCfg->PadBottom);
-	}
+    elem = stk->elemActive;
+    if (!NEUIK_Element_IsShown(elem)) goto out; /* active elem not shown */
 
 
-	/*------------------------------------------------------------------------*/
-	/* Update the stored location before rendering the element. This is       */
-	/* necessary as the location of this object will propagate to its         */
-	/* child objects.                                                         */
-	/*------------------------------------------------------------------------*/
-	rect.x = rl.x;
-	rect.y = rl.y;
-	rect.w = rs.w;
-	rect.h = rs.h;
+    /*------------------------------------------------------------------------*/
+    /* Render and place the currently active stack element                    */
+    /*------------------------------------------------------------------------*/
+    eCfg = neuik_Element_GetConfig(elem);
+    if (eCfg == NULL)
+    {
+        eNum = 7;
+        goto out;
+    }
 
-	switch (eCfg->HJustify)
-	{
-		case NEUIK_HJUSTIFY_DEFAULT:
-			switch (cont->HJustify)
-			{
-				case NEUIK_HJUSTIFY_LEFT:
-					rect.x += eCfg->PadLeft;
-					break;
-				case NEUIK_HJUSTIFY_CENTER:
-				case NEUIK_HJUSTIFY_DEFAULT:
-					rect.x += rSize->w/2 - (rs.w/2);
-					break;
-				case NEUIK_HJUSTIFY_RIGHT:
-					rect.x += rSize->w - (rs.w + eCfg->PadRight);
-					break;
-			}
-			break;
-		case NEUIK_HJUSTIFY_LEFT:
-			rect.x += eCfg->PadLeft;
-			break;
-		case NEUIK_HJUSTIFY_CENTER:
-			rect.x += rSize->w/2 - (rs.w/2);
-			break;
-		case NEUIK_HJUSTIFY_RIGHT:
-			rect.x += rSize->w - (rs.w + eCfg->PadRight);
-			break;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Start with the default calculated element size                         */
+    /*------------------------------------------------------------------------*/
+    if (neuik_Element_GetMinSize(elem, &rs))
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	switch (eCfg->VJustify)
-	{
-		case NEUIK_VJUSTIFY_DEFAULT:
-			switch (cont->VJustify)
-			{
-				case NEUIK_VJUSTIFY_TOP:
-					rect.y += eCfg->PadTop;
-					break;
-				case NEUIK_VJUSTIFY_CENTER:
-				case NEUIK_VJUSTIFY_DEFAULT:
-					if (eCfg->VFill)
-					{
-						rect.y += eCfg->PadTop;
-					}
-					else
-					{
-						rect.y += (rSize->h
-							- (eCfg->PadTop + eCfg->PadBottom))/2 - (rs.h/2);
-					}
-					break;
-				case NEUIK_VJUSTIFY_BOTTOM:
-					rect.y += rSize->h - (rs.h + eCfg->PadBottom);
-					break;
-			}
-			break;
-		case NEUIK_VJUSTIFY_TOP:
-			rect.y += eCfg->PadTop;
-			break;
-		case NEUIK_VJUSTIFY_CENTER:
-			if (eCfg->VFill)
-			{
-				rect.y += eCfg->PadTop;
-			}
-			else
-			{
-				rect.y += (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 
-					- (rs.h/2);
-			}
-			break;
-		case NEUIK_VJUSTIFY_BOTTOM:
-			rect.y += rSize->h - (rs.h + eCfg->PadBottom);
-			break;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Check for and apply if necessary Horizontal and Vertical fill          */
+    /*------------------------------------------------------------------------*/
+    if (eCfg->HFill)
+    {
+        /* This element is configured to fill space horizontally */
+        rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight);
+    }
+    if (eCfg->VFill)
+    {
+        /* This element is configured to fill space vertically */
+        rs.h = rSize->h - (eCfg->PadTop + eCfg->PadBottom);
+    }
 
-	rl.x = rect.x;
-	rl.y = rect.y;
-	rlRel.x = rect.x;
-	rlRel.y = rect.y;
-	neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-	if (neuik_Element_NeedsRedraw(elem))
-	{
-		if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
-		{
-			eNum = 5;
-			goto out;
-		}
-	}
+    /*------------------------------------------------------------------------*/
+    /* Update the stored location before rendering the element. This is       */
+    /* necessary as the location of this object will propagate to its         */
+    /* child objects.                                                         */
+    /*------------------------------------------------------------------------*/
+    rect.x = rl.x;
+    rect.y = rl.y;
+    rect.w = rs.w;
+    rect.h = rs.h;
+
+    switch (eCfg->HJustify)
+    {
+        case NEUIK_HJUSTIFY_DEFAULT:
+            switch (cont->HJustify)
+            {
+                case NEUIK_HJUSTIFY_LEFT:
+                    rect.x += eCfg->PadLeft;
+                    break;
+                case NEUIK_HJUSTIFY_CENTER:
+                case NEUIK_HJUSTIFY_DEFAULT:
+                    rect.x += rSize->w/2 - (rs.w/2);
+                    break;
+                case NEUIK_HJUSTIFY_RIGHT:
+                    rect.x += rSize->w - (rs.w + eCfg->PadRight);
+                    break;
+            }
+            break;
+        case NEUIK_HJUSTIFY_LEFT:
+            rect.x += eCfg->PadLeft;
+            break;
+        case NEUIK_HJUSTIFY_CENTER:
+            rect.x += rSize->w/2 - (rs.w/2);
+            break;
+        case NEUIK_HJUSTIFY_RIGHT:
+            rect.x += rSize->w - (rs.w + eCfg->PadRight);
+            break;
+    }
+
+    switch (eCfg->VJustify)
+    {
+        case NEUIK_VJUSTIFY_DEFAULT:
+            switch (cont->VJustify)
+            {
+                case NEUIK_VJUSTIFY_TOP:
+                    rect.y += eCfg->PadTop;
+                    break;
+                case NEUIK_VJUSTIFY_CENTER:
+                case NEUIK_VJUSTIFY_DEFAULT:
+                    if (eCfg->VFill)
+                    {
+                        rect.y += eCfg->PadTop;
+                    }
+                    else
+                    {
+                        rect.y += (rSize->h
+                            - (eCfg->PadTop + eCfg->PadBottom))/2 - (rs.h/2);
+                    }
+                    break;
+                case NEUIK_VJUSTIFY_BOTTOM:
+                    rect.y += rSize->h - (rs.h + eCfg->PadBottom);
+                    break;
+            }
+            break;
+        case NEUIK_VJUSTIFY_TOP:
+            rect.y += eCfg->PadTop;
+            break;
+        case NEUIK_VJUSTIFY_CENTER:
+            if (eCfg->VFill)
+            {
+                rect.y += eCfg->PadTop;
+            }
+            else
+            {
+                rect.y += (rSize->h - (eCfg->PadTop + eCfg->PadBottom))/2 
+                    - (rs.h/2);
+            }
+            break;
+        case NEUIK_VJUSTIFY_BOTTOM:
+            rect.y += rSize->h - (rs.h + eCfg->PadBottom);
+            break;
+    }
+
+    rl.x = rect.x;
+    rl.y = rect.y;
+    rlRel.x = rect.x;
+    rlRel.y = rect.y;
+    neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
+
+    if (neuik_Element_NeedsRedraw(elem))
+    {
+        if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+        {
+            eNum = 5;
+            goto out;
+        }
+    }
 out:
-	if (eBase != NULL)
-	{
-		if (!mock) eBase->eSt.doRedraw = 0;
-	}
-	if (cont != NULL)
-	{
-		if (!mock) cont->redrawAll = 0;
-	}
-	if (maskMap != NULL) neuik_Object_Free(maskMap);
+    if (eBase != NULL)
+    {
+        if (!mock) eBase->eSt.doRedraw = 0;
+    }
+    if (cont != NULL)
+    {
+        if (!mock) cont->redrawAll = 0;
+    }
+    if (maskMap != NULL) neuik_Object_Free(maskMap);
 
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -722,24 +722,24 @@ out:
  *
  ******************************************************************************/
 int neuik_Element_CaptureEvent__Stack(
-	NEUIK_Element   stkElem, 
-	SDL_Event     * ev)
+    NEUIK_Element   stkElem, 
+    SDL_Event     * ev)
 {
-	int             evCaputred = 0;
-	NEUIK_Stack   * stk        = NULL;
-	NEUIK_Element   elem       = NULL;
+    int             evCaputred = 0;
+    NEUIK_Stack   * stk        = NULL;
+    NEUIK_Element   elem       = NULL;
 
-	if (neuik_Object_GetClassObject_NoError(
-		stkElem, neuik__Class_Stack, (void**)&stk)) goto out;
+    if (neuik_Object_GetClassObject_NoError(
+        stkElem, neuik__Class_Stack, (void**)&stk)) goto out;
 
-	elem = stk->elemActive;
-	if (elem == NULL) goto out;
-	if (!NEUIK_Element_IsShown(elem)) goto out;
+    elem = stk->elemActive;
+    if (elem == NULL) goto out;
+    if (!NEUIK_Element_IsShown(elem)) goto out;
 
-	evCaputred = neuik_Element_CaptureEvent(elem, ev);
-	if (evCaputred) neuik_Element_SetActive(stkElem, 1);
+    evCaputred = neuik_Element_CaptureEvent(elem, ev);
+    if (evCaputred) neuik_Element_SetActive(stkElem, 1);
 out:
-	return evCaputred;
+    return evCaputred;
 }
 
 
@@ -755,74 +755,74 @@ out:
  *
  ******************************************************************************/
 int NEUIK_Stack_SetActiveElement(
-	NEUIK_Stack   * stk,
-	NEUIK_Element   elem)
+    NEUIK_Stack   * stk,
+    NEUIK_Element   elem)
 {
-	int               elemIncl;
-	int               ctr        = 0;
-	int               eNum       = 0; /* which error to report (if any) */
-	NEUIK_Container * cont       = NULL;
-	NEUIK_Element   * elemPtr;
-	static char       funcName[] = "NEUIK_Stack_SetActiveElement";
-	static char     * errMsgs[]  = {"",                                 // [0] no error
-		"Argument `stk` is not of Stack class.",                        // [1]
-		"Argument `elem` does not implement Element class.",            // [2]
-		"Active element not within this stack.",                        // [3]
-		"Argument `stk` caused `neuik_Object_GetClassObject` to fail.", // [4]
-		"Failure in `neuik_Container_RequestFullRedraw()`.",            // [5]
-	};
+    int               elemIncl;
+    int               ctr        = 0;
+    int               eNum       = 0; /* which error to report (if any) */
+    NEUIK_Container * cont       = NULL;
+    NEUIK_Element   * elemPtr;
+    static char       funcName[] = "NEUIK_Stack_SetActiveElement";
+    static char     * errMsgs[]  = {"", // [0] no error
+        "Argument `stk` is not of Stack class.",                        // [1]
+        "Argument `elem` does not implement Element class.",            // [2]
+        "Active element not within this stack.",                        // [3]
+        "Argument `stk` caused `neuik_Object_GetClassObject` to fail.", // [4]
+        "Failure in `neuik_Container_RequestFullRedraw()`.",            // [5]
+    };
 
-	if (!neuik_Object_IsClass(stk, neuik__Class_Stack))
-	{
-		eNum = 1;
-		goto out;
-	}
-	if (!neuik_Object_ImplementsClass(elem, neuik__Class_Element))
-	{
-		eNum = 2;
-		goto out;
-	}
-	if (neuik_Object_GetClassObject(stk, neuik__Class_Container, (void**)&cont))
-	{
-		eNum = 4;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(stk, neuik__Class_Stack))
+    {
+        eNum = 1;
+        goto out;
+    }
+    if (!neuik_Object_ImplementsClass(elem, neuik__Class_Element))
+    {
+        eNum = 2;
+        goto out;
+    }
+    if (neuik_Object_GetClassObject(stk, neuik__Class_Container, (void**)&cont))
+    {
+        eNum = 4;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Verify that the current active stack element is within the stack.      */
-	/*------------------------------------------------------------------------*/
-	elemIncl = 0;
-	for (ctr = 0;; ctr++)
-	{
-		elemPtr = cont->elems[ctr];
-		if (elemPtr == NULL) break;
+    /*------------------------------------------------------------------------*/
+    /* Verify that the current active stack element is within the stack.      */
+    /*------------------------------------------------------------------------*/
+    elemIncl = 0;
+    for (ctr = 0;; ctr++)
+    {
+        elemPtr = cont->elems[ctr];
+        if (elemPtr == NULL) break;
 
-		if (elem == elemPtr)
-		{
-			elemIncl = 1;
-			break;
-		}
-	}
+        if (elem == elemPtr)
+        {
+            elemIncl = 1;
+            break;
+        }
+    }
 
-	if (!elemIncl) 
-	{
-		/* Error: the currently active element is not contained by this stack */
-		eNum = 3;
-		goto out;
-	}
+    if (!elemIncl) 
+    {
+        /* Error: the currently active element is not contained by this stack */
+        eNum = 3;
+        goto out;
+    }
 
-	stk->elemActive = elem;
-	if (neuik_Container_RequestFullRedraw(stk))
-	{
-		eNum = 5;
-		goto out;
-	}
+    stk->elemActive = elem;
+    if (neuik_Container_RequestFullRedraw(stk))
+    {
+        eNum = 5;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
 
-	return eNum;
+    return eNum;
 }
 

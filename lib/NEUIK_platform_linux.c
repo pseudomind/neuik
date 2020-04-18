@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -18,93 +18,102 @@
 
 #include "NEUIK_platform.h"
 
+
 /* Ctrl + X */
 int neuik_KeyShortcut_Cut(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_x) return 1;
+    if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_x) return 1;
 
-	return 0;
+    return 0;
 }
+
 
 /* Ctrl + C */
 int neuik_KeyShortcut_Copy(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_c) return 1;
+    if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_c) return 1;
 
-	return 0;
+    return 0;
 }
+
 
 /* Ctrl + V */
 int neuik_KeyShortcut_Paste(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_v) return 1;
+    if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_v) return 1;
 
-	return 0;
+    return 0;
 }
+
 
 /* Ctrl + A */
 int neuik_KeyShortcut_SelectAll(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_a) return 1;
+    if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_a) return 1;
 
-	return 0;
+    return 0;
 }
+
 
 /* Ctrl + Z */
 int neuik_KeyShortcut_Undo(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_z) return 1;
+    if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_z) return 1;
 
-	return 0;
+    return 0;
 }
+
 
 /* Ctrl + S */
 int neuik_KeyShortcut_Save(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_s) return 1;
+    if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_s) return 1;
 
-	return 0;
+    return 0;
 }
+
 
 /* Ctrl + N */
 int neuik_KeyShortcut_New(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_n) return 1;
+    if (keyMod & KMOD_CTRL && keyEv->keysym.sym == SDLK_n) return 1;
 
-	return 0;
+    return 0;
 }
+
 
 /* Ctrl + Shift + N */
 int neuik_KeyShortcut_NewWindow(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL && keyMod & KMOD_SHIFT &&keyEv->keysym.sym == SDLK_n) return 1;
+    if (keyMod & KMOD_CTRL && keyMod & KMOD_SHIFT &&keyEv->keysym.sym == SDLK_n) return 1;
 
-	return 0;
+    return 0;
 }
+
 
 /* Ctrl + F */
 int neuik_KeyShortcut_Find(
-		SDL_KeyboardEvent  * keyEv, 
-		SDL_Keymod           keyMod)
+        SDL_KeyboardEvent  * keyEv, 
+        SDL_Keymod           keyMod)
 {
-	if (keyMod & KMOD_CTRL &&keyEv->keysym.sym == SDLK_f) return 1;
+    if (keyMod & KMOD_CTRL &&keyEv->keysym.sym == SDLK_f) return 1;
 
-	return 0;
+    return 0;
 }
 

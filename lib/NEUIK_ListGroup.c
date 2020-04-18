@@ -38,38 +38,38 @@ int neuik_Object_Free__ListGroup(void * lgPtr);
 int neuik_Element_GetMinSize__ListGroup(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ListGroup(NEUIK_Element lgElem, SDL_Event * ev);
 int neuik_Element_Render__ListGroup(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
+    NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
 /*----------------------------------------------------------------------------*/
 neuik_Class_BaseFuncs  neuik_ListGroup_BaseFuncs = {
-	/* Init(): Class initialization (in most cases will not be needed) */
-	NULL, /* (unused) */
-	/* New(): Allocate and Initialize the object */
-	neuik_Object_New__ListGroup,
-	/* Copy(): Copy the contents of one object into another */
-	NULL,
-	/* Free(): Free the allocated memory of an object */
-	neuik_Object_Free__ListGroup,
+    /* Init(): Class initialization (in most cases will not be needed) */
+    NULL, /* (unused) */
+    /* New(): Allocate and Initialize the object */
+    neuik_Object_New__ListGroup,
+    /* Copy(): Copy the contents of one object into another */
+    NULL,
+    /* Free(): Free the allocated memory of an object */
+    neuik_Object_Free__ListGroup,
 };
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
 /*----------------------------------------------------------------------------*/
 NEUIK_Element_FuncTable neuik_ListGroup_FuncTable = {
-	/* GetMinSize(): Get the minimum required size for the element  */
-	neuik_Element_GetMinSize__ListGroup,
+    /* GetMinSize(): Get the minimum required size for the element  */
+    neuik_Element_GetMinSize__ListGroup,
 
-	/* Render(): Redraw the element  element  */
-	neuik_Element_Render__ListGroup,
+    /* Render(): Redraw the element  element  */
+    neuik_Element_Render__ListGroup,
 
-	/* CaptureEvent(): Determine if this element caputures a given event */
-	neuik_Element_CaptureEvent__ListGroup,
+    /* CaptureEvent(): Determine if this element caputures a given event */
+    neuik_Element_CaptureEvent__ListGroup,
 
-	/* Defocus(): This function will be called when an element looses focus */
-	NULL,
+    /* Defocus(): This function will be called when an element looses focus */
+    NULL,
 };
 
 
@@ -84,42 +84,42 @@ NEUIK_Element_FuncTable neuik_ListGroup_FuncTable = {
  ******************************************************************************/
 int neuik_RegisterClass_ListGroup()
 {
-	int            eNum       = 0; /* which error to report (if any) */
-	static char    funcName[] = "neuik_RegisterClass_ListGroup";
-	static char  * errMsgs[]  = {"",                     // [0] no error
-		"NEUIK library must be initialized first.",      // [1]
-		"Failed to register `ListGroup` object class .", // [2]
-	};
+    int            eNum       = 0; /* which error to report (if any) */
+    static char    funcName[] = "neuik_RegisterClass_ListGroup";
+    static char  * errMsgs[]  = {"",                     // [0] no error
+        "NEUIK library must be initialized first.",      // [1]
+        "Failed to register `ListGroup` object class .", // [2]
+    };
 
-	if (!neuik__isInitialized)
-	{
-		eNum = 1;
-		goto out;
-	}
+    if (!neuik__isInitialized)
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Otherwise, register the object                                         */
-	/*------------------------------------------------------------------------*/
-	if (neuik_RegisterClass(
-		"NEUIK_ListGroup",                                       // className
-		"An element container which horizontally groups items.", // classDescription
-		neuik__Set_NEUIK,                                        // classSet
-		neuik__Class_Container,                                  // superClass
-		&neuik_ListGroup_BaseFuncs,                              // baseFuncs
-		NULL,                                                    // classFuncs
-		&neuik__Class_ListGroup))                                // newClass
-	{
-		eNum = 2;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Otherwise, register the object                                         */
+    /*------------------------------------------------------------------------*/
+    if (neuik_RegisterClass(
+        "NEUIK_ListGroup",                                       // className
+        "An element container which horizontally groups items.", // classDescription
+        neuik__Set_NEUIK,                                        // classSet
+        neuik__Class_Container,                                  // superClass
+        &neuik_ListGroup_BaseFuncs,                              // baseFuncs
+        NULL,                                                    // classFuncs
+        &neuik__Class_ListGroup))                                // newClass
+    {
+        eNum = 2;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -133,126 +133,126 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_New__ListGroup(
-	void ** lgPtr)
+    void ** lgPtr)
 {
-	int               eNum        = 0;
-	NEUIK_Container * cont        = NULL;
-	NEUIK_ListGroup * lg          = NULL;
-	NEUIK_Element   * sClassPtr   = NULL;
-	NEUIK_Color       bdrClr      = COLOR_GRAY;
-	NEUIK_Color       bgSelectClr = COLOR_MBLUE;
-	NEUIK_Color       bgOddClr    = COLOR_WHITE;
-	NEUIK_Color       bgEvenClr   = COLOR_LWHITE;
-	RenderSize        rSize;
-	RenderLoc         rLoc;
-	static char       funcName[]  = "neuik_Object_New__ListGroup";
-	static char     * errMsgs[]   = {"",                                  // [0] no error
-		"Output Argument `lgPtr` is NULL.",                               // [1]
-		"Failure to allocate memory.",                                    // [2]
-		"Failure in `neuik_GetObjectBaseOfClass`.",                       // [3]
-		"Failure in function `neuik.NewElement`.",                        // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.",              // [5]
-		"Argument `lgPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
-		"Failure in `NEUIK_Element_SetBackgroundColorSolid()`.",          // [7]
-		"Failure in `neuik_Element_RequestRedraw()`.",                    // [8]
-		"Failure in `neuik_Element_GetSizeAndLocation()`.",               // [9]
-	};
+    int               eNum        = 0;
+    NEUIK_Container * cont        = NULL;
+    NEUIK_ListGroup * lg          = NULL;
+    NEUIK_Element   * sClassPtr   = NULL;
+    NEUIK_Color       bdrClr      = COLOR_GRAY;
+    NEUIK_Color       bgSelectClr = COLOR_MBLUE;
+    NEUIK_Color       bgOddClr    = COLOR_WHITE;
+    NEUIK_Color       bgEvenClr   = COLOR_LWHITE;
+    RenderSize        rSize;
+    RenderLoc         rLoc;
+    static char       funcName[]  = "neuik_Object_New__ListGroup";
+    static char     * errMsgs[]   = {"",                                  // [0] no error
+        "Output Argument `lgPtr` is NULL.",                               // [1]
+        "Failure to allocate memory.",                                    // [2]
+        "Failure in `neuik_GetObjectBaseOfClass`.",                       // [3]
+        "Failure in function `neuik.NewElement`.",                        // [4]
+        "Failure in function `neuik_Element_SetFuncTable`.",              // [5]
+        "Argument `lgPtr` caused `neuik_Object_GetClassObject` to fail.", // [6]
+        "Failure in `NEUIK_Element_SetBackgroundColorSolid()`.",          // [7]
+        "Failure in `neuik_Element_RequestRedraw()`.",                    // [8]
+        "Failure in `neuik_Element_GetSizeAndLocation()`.",               // [9]
+    };
 
-	if (lgPtr == NULL)
-	{
-		eNum = 1;
-		goto out;
-	}
-	(*lgPtr) = (NEUIK_ListGroup*) malloc(sizeof(NEUIK_ListGroup));
-	lg = *lgPtr;
-	if (lg == NULL)
-	{
-		eNum = 2;
-		goto out;
-	}
-	lg->VSpacing      = 0;
-	lg->WidthBorder   = 1;           /* thickness of border (px) */
-	lg->colorBorder   = bdrClr;      /* color to use for the border */
-	lg->colorBGSelect = bgSelectClr; /* color to use for the selected text */
-	lg->colorBGOdd    = bgOddClr;    /* background color to use for unselected odd rows */
-	lg->colorBGEven   = bgEvenClr;   /* background color to use for unselected even rows */
+    if (lgPtr == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
+    (*lgPtr) = (NEUIK_ListGroup*) malloc(sizeof(NEUIK_ListGroup));
+    lg = *lgPtr;
+    if (lg == NULL)
+    {
+        eNum = 2;
+        goto out;
+    }
+    lg->VSpacing      = 0;
+    lg->WidthBorder   = 1;           /* thickness of border (px) */
+    lg->colorBorder   = bdrClr;      /* color to use for the border */
+    lg->colorBGSelect = bgSelectClr; /* color to use for the selected text */
+    lg->colorBGOdd    = bgOddClr;    /* background color to use for unselected odd rows */
+    lg->colorBGEven   = bgEvenClr;   /* background color to use for unselected even rows */
 
-	/*------------------------------------------------------------------------*/
-	/* Successful allocation of Memory -- Create Base Class Object            */
-	/*------------------------------------------------------------------------*/
-	if (neuik_GetObjectBaseOfClass(
-			neuik__Set_NEUIK, 
-			neuik__Class_ListGroup, 
-			NULL,
-			&(lg->objBase)))
-	{
-		eNum = 3;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Successful allocation of Memory -- Create Base Class Object            */
+    /*------------------------------------------------------------------------*/
+    if (neuik_GetObjectBaseOfClass(
+            neuik__Set_NEUIK, 
+            neuik__Class_ListGroup, 
+            NULL,
+            &(lg->objBase)))
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Create first level Base SuperClass Object                              */
-	/*------------------------------------------------------------------------*/
-	sClassPtr = (NEUIK_Element *) &(lg->objBase.superClassObj);
-	if (neuik_Object_New(neuik__Class_Container, sClassPtr))
-	{
-		eNum = 4;
-		goto out;
-	}
-	if (neuik_Element_SetFuncTable(lg, &neuik_ListGroup_FuncTable))
-	{
-		eNum = 5;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Create first level Base SuperClass Object                              */
+    /*------------------------------------------------------------------------*/
+    sClassPtr = (NEUIK_Element *) &(lg->objBase.superClassObj);
+    if (neuik_Object_New(neuik__Class_Container, sClassPtr))
+    {
+        eNum = 4;
+        goto out;
+    }
+    if (neuik_Element_SetFuncTable(lg, &neuik_ListGroup_FuncTable))
+    {
+        eNum = 5;
+        goto out;
+    }
 
-	if (neuik_Object_GetClassObject(lg, neuik__Class_Container, (void**)&cont))
-	{
-		eNum = 6;
-		goto out;
-	}
-	cont->cType        = NEUIK_CONTAINER_NO_DEFAULT_ADD_SET;
-	cont->shownIfEmpty = 1;
+    if (neuik_Object_GetClassObject(lg, neuik__Class_Container, (void**)&cont))
+    {
+        eNum = 6;
+        goto out;
+    }
+    cont->cType        = NEUIK_CONTAINER_NO_DEFAULT_ADD_SET;
+    cont->shownIfEmpty = 1;
 
-	if (neuik_Element_GetSizeAndLocation(lg, &rSize, &rLoc))
-	{
-		eNum = 9;
-		goto out;
-	}
-	if (neuik_Element_RequestRedraw(lg, rLoc, rSize))
-	{
-		eNum = 8;
-		goto out;
-	}
+    if (neuik_Element_GetSizeAndLocation(lg, &rSize, &rLoc))
+    {
+        eNum = 9;
+        goto out;
+    }
+    if (neuik_Element_RequestRedraw(lg, rLoc, rSize))
+    {
+        eNum = 8;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Set the default element background redraw styles.                      */
-	/*------------------------------------------------------------------------*/
-	if (NEUIK_Element_SetBackgroundColorSolid(cont, "normal",
-		bgOddClr.r, bgOddClr.g, bgOddClr.b, bgOddClr.a))
-	{
-		eNum = 7;
-		goto out;
-	}
-	if (NEUIK_Element_SetBackgroundColorSolid(cont, "selected",
-		bgOddClr.r, bgOddClr.g, bgOddClr.b, bgOddClr.a))
-	{
-		eNum = 7;
-		goto out;
-	}
-	if (NEUIK_Element_SetBackgroundColorSolid(cont, "hovered",
-		bgOddClr.r, bgOddClr.g, bgOddClr.b, bgOddClr.a))
-	{
-		eNum = 7;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Set the default element background redraw styles.                      */
+    /*------------------------------------------------------------------------*/
+    if (NEUIK_Element_SetBackgroundColorSolid(cont, "normal",
+        bgOddClr.r, bgOddClr.g, bgOddClr.b, bgOddClr.a))
+    {
+        eNum = 7;
+        goto out;
+    }
+    if (NEUIK_Element_SetBackgroundColorSolid(cont, "selected",
+        bgOddClr.r, bgOddClr.g, bgOddClr.b, bgOddClr.a))
+    {
+        eNum = 7;
+        goto out;
+    }
+    if (NEUIK_Element_SetBackgroundColorSolid(cont, "hovered",
+        bgOddClr.r, bgOddClr.g, bgOddClr.b, bgOddClr.a))
+    {
+        eNum = 7;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -268,9 +268,9 @@ out:
  *
  ******************************************************************************/
 int NEUIK_NewListGroup(
-	NEUIK_ListGroup ** lgPtr)
+    NEUIK_ListGroup ** lgPtr)
 {
-	return neuik_Object_New__ListGroup((void**)lgPtr);
+    return neuik_Object_New__ListGroup((void**)lgPtr);
 }
 
 
@@ -284,48 +284,48 @@ int NEUIK_NewListGroup(
  *
  ******************************************************************************/
 int neuik_Object_Free__ListGroup(
-	void * lgPtr)
+    void * lgPtr)
 {
-	int               eNum       = 0;    /* which error to report (if any) */
-	NEUIK_ListGroup * lg         = NULL;
-	static char       funcName[] = "neuik_Object_Free__ListGroup";
-	static char     * errMsgs[]  = {"",                // [0] no error
-		"Argument `lgPtr` is NULL.",                   // [1]
-		"Argument `lgPtr` is not of FlowGroup class.", // [2]
-		"Failure in function `neuik_Object_Free`.",    // [3]
-	};
+    int               eNum       = 0;    /* which error to report (if any) */
+    NEUIK_ListGroup * lg         = NULL;
+    static char       funcName[] = "neuik_Object_Free__ListGroup";
+    static char     * errMsgs[]  = {"",                // [0] no error
+        "Argument `lgPtr` is NULL.",                   // [1]
+        "Argument `lgPtr` is not of FlowGroup class.", // [2]
+        "Failure in function `neuik_Object_Free`.",    // [3]
+    };
 
-	if (lgPtr == NULL)
-	{
-		eNum = 1;
-		goto out;
-	}
-	lg = (NEUIK_ListGroup*)lgPtr;
+    if (lgPtr == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
+    lg = (NEUIK_ListGroup*)lgPtr;
 
-	if (!neuik_Object_IsClass(lg, neuik__Class_ListGroup))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(lg, neuik__Class_ListGroup))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* The object is what it says it is and it is still allocated.            */
-	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(lg->objBase.superClassObj))
-	{
-		eNum = 3;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* The object is what it says it is and it is still allocated.            */
+    /*------------------------------------------------------------------------*/
+    if(neuik_Object_Free(lg->objBase.superClassObj))
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	free(lg);
+    free(lg);
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -339,15 +339,15 @@ out:
  *
  ******************************************************************************/
 int neuik_Element_GetMinSize__ListGroup(
-	NEUIK_Element    lgElem,
-	RenderSize     * rSize)
+    NEUIK_Element    lgElem,
+    RenderSize     * rSize)
 {
-	if (rSize != NULL)
-	{
-		rSize->w = 1;
-		rSize->h = 1;
-	}
-	return 0;
+    if (rSize != NULL)
+    {
+        rSize->w = 1;
+        rSize->h = 1;
+    }
+    return 0;
 }
 
 
@@ -361,315 +361,315 @@ int neuik_Element_GetMinSize__ListGroup(
  *
  ******************************************************************************/
 int neuik_Element_Render__ListGroup(
-	NEUIK_Element   lgElem,
-	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
-	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
-	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	int             mock)  /* If true; calculate sizes/locations but don't draw */
+    NEUIK_Element   lgElem,
+    RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+    RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
+    SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+    int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-	int                   tempW;
-	int                   offLeft;
-	int                   offRight;
-	int                   offTop;
-	int                   offBottom;
-	int                   ctr        = 0;
-	int                   vctr       = 0; /* valid counter; for elements shown */
-	int                   xPos       = 0;
-	int                   yPos       = 0;
-	int                   elWidth    = 0;
-	int                   eNum       = 0; /* which error to report (if any) */
-	float                 yFree      = 0.0; /* px of space free for vFill elems */
-	float                 tScale     = 0.0; /* total vFill scaling factors */
-	RenderLoc             rl;
-	RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
-	SDL_Rect              rect;
-	RenderSize            rs;
-	static RenderSize     rsZero     = {0, 0};
-	const NEUIK_Color   * bClr       = NULL; /* border color */
-	SDL_Renderer        * rend       = NULL;
-	NEUIK_Container     * cont       = NULL;
-	NEUIK_ElementBase   * eBase      = NULL;
-	NEUIK_Element         elem       = NULL;
-	NEUIK_ElementConfig * eCfg       = NULL;
-	NEUIK_ListGroup     * lg         = NULL;
-	neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
-	enum neuik_bgstyle    bgStyle;
-	static char           funcName[] = "neuik_Element_Render__ListGroup";
-	static char         * errMsgs[]  = {"",                                // [0] no error
-		"Argument `lgElem` is not of ListGroup class.",                    // [1]
-		"Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [2]
-		"Element_GetConfig returned NULL.",                                // [3]
-		"Element_GetMinSize Failed.",                                      // [4]
-		"Element_Render returned NULL.",                                   // [5]
-		"Invalid specified `rSize` (negative values).",                    // [6]
-		"Failure in `neuik_MakeMaskMap()`",                                // [7]
-		"Argument `lgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
-		"Failure in neuik_Element_RedrawBackground().",                    // [9]
-		"Failure in `neuik_Window_FillTranspMaskFromLoc()`",              // [10]
-	};
+    int                   tempW;
+    int                   offLeft;
+    int                   offRight;
+    int                   offTop;
+    int                   offBottom;
+    int                   ctr        = 0;
+    int                   vctr       = 0; /* valid counter; for elements shown */
+    int                   xPos       = 0;
+    int                   yPos       = 0;
+    int                   elWidth    = 0;
+    int                   eNum       = 0; /* which error to report (if any) */
+    float                 yFree      = 0.0; /* px of space free for vFill elems */
+    float                 tScale     = 0.0; /* total vFill scaling factors */
+    RenderLoc             rl;
+    RenderLoc             rlRel      = {0, 0}; /* renderloc relative to parent */
+    SDL_Rect              rect;
+    RenderSize            rs;
+    static RenderSize     rsZero     = {0, 0};
+    const NEUIK_Color   * bClr       = NULL; /* border color */
+    SDL_Renderer        * rend       = NULL;
+    NEUIK_Container     * cont       = NULL;
+    NEUIK_ElementBase   * eBase      = NULL;
+    NEUIK_Element         elem       = NULL;
+    NEUIK_ElementConfig * eCfg       = NULL;
+    NEUIK_ListGroup     * lg         = NULL;
+    neuik_MaskMap       * maskMap    = NULL; /* FREE upon return */
+    enum neuik_bgstyle    bgStyle;
+    static char           funcName[] = "neuik_Element_Render__ListGroup";
+    static char         * errMsgs[]  = {"",                                // [0] no error
+        "Argument `lgElem` is not of ListGroup class.",                    // [1]
+        "Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [2]
+        "Element_GetConfig returned NULL.",                                // [3]
+        "Element_GetMinSize Failed.",                                      // [4]
+        "Element_Render returned NULL.",                                   // [5]
+        "Invalid specified `rSize` (negative values).",                    // [6]
+        "Failure in `neuik_MakeMaskMap()`",                                // [7]
+        "Argument `lgElem` caused `neuik_Object_GetClassObject` to fail.", // [8]
+        "Failure in neuik_Element_RedrawBackground().",                    // [9]
+        "Failure in `neuik_Window_FillTranspMaskFromLoc()`",              // [10]
+    };
 
-	if (!neuik_Object_IsClass(lgElem, neuik__Class_ListGroup))
-	{
-		eNum = 1;
-		goto out;
-	}
-	lg = (NEUIK_ListGroup*)lgElem;
+    if (!neuik_Object_IsClass(lgElem, neuik__Class_ListGroup))
+    {
+        eNum = 1;
+        goto out;
+    }
+    lg = (NEUIK_ListGroup*)lgElem;
 
-	if (neuik_Object_GetClassObject(lgElem, neuik__Class_Element, (void**)&eBase))
-	{
-		eNum = 8;
-		goto out;
-	}
-	if (neuik_Object_GetClassObject(lgElem, neuik__Class_Container, (void**)&cont))
-	{
-		eNum = 8;
-		goto out;
-	}
+    if (neuik_Object_GetClassObject(lgElem, neuik__Class_Element, (void**)&eBase))
+    {
+        eNum = 8;
+        goto out;
+    }
+    if (neuik_Object_GetClassObject(lgElem, neuik__Class_Container, (void**)&cont))
+    {
+        eNum = 8;
+        goto out;
+    }
 
-	if (rSize->w < 0 || rSize->h < 0)
-	{
-		eNum = 6;
-		goto out;
-	}
-	yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
+    if (rSize->w < 0 || rSize->h < 0)
+    {
+        eNum = 6;
+        goto out;
+    }
+    yFree = (float)(rSize->h); /* free Y-px: start with the full ht. and deduct as used */
 
-	eBase->eSt.rend = xRend;
-	rend = eBase->eSt.rend;
+    eBase->eSt.rend = xRend;
+    rend = eBase->eSt.rend;
 
-	/*------------------------------------------------------------------------*/
-	/* Redraw the background surface before continuing.                       */
-	/*------------------------------------------------------------------------*/
-	if (!mock)
-	{
-		if (neuik_Element_GetCurrentBGStyle(lgElem, &bgStyle))
-		{
-			eNum = 2;
-			goto out;
-		}
-		if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
-		{
-			/*----------------------------------------------------------------*/
-			/* Create a MaskMap an mark off the trasnparent pixels.           */
-			/*----------------------------------------------------------------*/
-			if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
-			{
-				eNum = 7;
-				goto out;
-			}
+    /*------------------------------------------------------------------------*/
+    /* Redraw the background surface before continuing.                       */
+    /*------------------------------------------------------------------------*/
+    if (!mock)
+    {
+        if (neuik_Element_GetCurrentBGStyle(lgElem, &bgStyle))
+        {
+            eNum = 2;
+            goto out;
+        }
+        if (bgStyle != NEUIK_BGSTYLE_TRANSPARENT)
+        {
+            /*----------------------------------------------------------------*/
+            /* Create a MaskMap an mark off the trasnparent pixels.           */
+            /*----------------------------------------------------------------*/
+            if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+            {
+                eNum = 7;
+                goto out;
+            }
 
-			rl = eBase->eSt.rLoc;
-			if (neuik_Window_FillTranspMaskFromLoc(
-					eBase->eSt.window, maskMap, rl.x, rl.y))
-			{
-				eNum = 10;
-				goto out;
-			}
+            rl = eBase->eSt.rLoc;
+            if (neuik_Window_FillTranspMaskFromLoc(
+                    eBase->eSt.window, maskMap, rl.x, rl.y))
+            {
+                eNum = 10;
+                goto out;
+            }
 
-			if (neuik_Element_RedrawBackground(lgElem, rlMod, maskMap))
-			{
-				eNum = 9;
-				goto out;
-			}
-		}
-	}
-	rl = eBase->eSt.rLoc;
+            if (neuik_Element_RedrawBackground(lgElem, rlMod, maskMap))
+            {
+                eNum = 9;
+                goto out;
+            }
+        }
+    }
+    rl = eBase->eSt.rLoc;
 
-	/*------------------------------------------------------------------------*/
-	/* Draw the border of the ListGroup.                                      */
-	/*------------------------------------------------------------------------*/
-	if (!mock)
-	{
-		bClr = &(lg->colorBorder);
-		SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
+    /*------------------------------------------------------------------------*/
+    /* Draw the border of the ListGroup.                                      */
+    /*------------------------------------------------------------------------*/
+    if (!mock)
+    {
+        bClr = &(lg->colorBorder);
+        SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
-		offLeft   = rl.x;
-		offRight  = rl.x + (rSize->w - 1);
-		offTop    = rl.y;
-		offBottom = rl.y + (rSize->h - 1);
+        offLeft   = rl.x;
+        offRight  = rl.x + (rSize->w - 1);
+        offTop    = rl.y;
+        offBottom = rl.y + (rSize->h - 1);
 
-		/* upper border line */
-		SDL_RenderDrawLine(rend, offLeft, offTop, offRight, offTop); 
-		/* left border line */
-		SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
-		/* right border line */
-		SDL_RenderDrawLine(rend, offRight, offTop, offRight, offBottom); 
-		/* lower border line */
-		SDL_RenderDrawLine(rend, offLeft, offBottom, offRight, offBottom);
-	}
+        /* upper border line */
+        SDL_RenderDrawLine(rend, offLeft, offTop, offRight, offTop); 
+        /* left border line */
+        SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
+        /* right border line */
+        SDL_RenderDrawLine(rend, offRight, offTop, offRight, offBottom); 
+        /* lower border line */
+        SDL_RenderDrawLine(rend, offLeft, offBottom, offRight, offBottom);
+    }
 
-	xPos = 2;
+    xPos = 2;
 
-	/*------------------------------------------------------------------------*/
-	/* Draw the UI elements into the ListGroup                                */
-	/*------------------------------------------------------------------------*/
-	if (cont->elems != NULL)
-	{
-		/*------------------------------------------------------*/
-		/* Determine the (maximum) width of any of the elements */
-		/*------------------------------------------------------*/
-		vctr    = 0;
-		elWidth = rSize->w;
-		for (ctr = 0;; ctr++)
-		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
+    /*------------------------------------------------------------------------*/
+    /* Draw the UI elements into the ListGroup                                */
+    /*------------------------------------------------------------------------*/
+    if (cont->elems != NULL)
+    {
+        /*------------------------------------------------------*/
+        /* Determine the (maximum) width of any of the elements */
+        /*------------------------------------------------------*/
+        vctr    = 0;
+        elWidth = rSize->w;
+        for (ctr = 0;; ctr++)
+        {
+            elem = (NEUIK_Element)cont->elems[ctr];
+            if (elem == NULL) break;
 
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
-			{
-				eNum = 3;
-				goto out;
-			}
+            eCfg = neuik_Element_GetConfig(elem);
+            if (eCfg == NULL)
+            {
+                eNum = 3;
+                goto out;
+            }
 
-			if (!NEUIK_Element_IsShown(elem)) continue;
-			vctr++;
+            if (!NEUIK_Element_IsShown(elem)) continue;
+            vctr++;
 
-			if (vctr > 0)
-			{
-				/* subsequent UI element is valid, deduct Vertical Spacing */
-				yFree -= lg->VSpacing;
-			}
+            if (vctr > 0)
+            {
+                /* subsequent UI element is valid, deduct Vertical Spacing */
+                yFree -= lg->VSpacing;
+            }
 
-			if (neuik_Element_GetMinSize(elem, &rs))
-			{
-				eNum = 4;
-				goto out;
-			}
+            if (neuik_Element_GetMinSize(elem, &rs))
+            {
+                eNum = 4;
+                goto out;
+            }
 
-			tempW = rs.w + eCfg->PadLeft + eCfg->PadRight;
-			if (tempW > elWidth)
-			{
-				elWidth = tempW;
-			}
-			yFree -= rs.h;
-		}
+            tempW = rs.w + eCfg->PadLeft + eCfg->PadRight;
+            if (tempW > elWidth)
+            {
+                elWidth = tempW;
+            }
+            yFree -= rs.h;
+        }
 
-		if (vctr == 0)
-		{
-			goto out;
-		}
+        if (vctr == 0)
+        {
+            goto out;
+        }
 
-		/*-----------------------------------------------------------*/
-		/* Check if there are any elements which can fill vertically */
-		/*-----------------------------------------------------------*/
-		for (ctr = 0;; ctr++)
-		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
+        /*-----------------------------------------------------------*/
+        /* Check if there are any elements which can fill vertically */
+        /*-----------------------------------------------------------*/
+        for (ctr = 0;; ctr++)
+        {
+            elem = (NEUIK_Element)cont->elems[ctr];
+            if (elem == NULL) break;
 
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
-			{
-				eNum = 3;
-				goto out;
-			}
+            eCfg = neuik_Element_GetConfig(elem);
+            if (eCfg == NULL)
+            {
+                eNum = 3;
+                goto out;
+            }
 
-			if (!NEUIK_Element_IsShown(elem)) continue;
+            if (!NEUIK_Element_IsShown(elem)) continue;
 
-			if (eCfg->VFill)
-			{
-				/* This element is fills space vertically */
-				tScale += eCfg->VScale;
-				rs = rsZero; /* (0,0); use default calculated size */
-				if (neuik_Element_GetMinSize(elem, &rs))
-				{
-					eNum = 4;
-					goto out;
-				}
-				yFree += rs.h;
-			}
-		}
+            if (eCfg->VFill)
+            {
+                /* This element is fills space vertically */
+                tScale += eCfg->VScale;
+                rs = rsZero; /* (0,0); use default calculated size */
+                if (neuik_Element_GetMinSize(elem, &rs))
+                {
+                    eNum = 4;
+                    goto out;
+                }
+                yFree += rs.h;
+            }
+        }
 
-		/*--------------------------------------------------------------------*/
-		/* Render and place the child elements                                */
-		/*--------------------------------------------------------------------*/
-		vctr = 0;
-		for (ctr = 0;; ctr++)
-		{
-			elem = (NEUIK_Element)cont->elems[ctr];
-			if (elem == NULL) break;
+        /*--------------------------------------------------------------------*/
+        /* Render and place the child elements                                */
+        /*--------------------------------------------------------------------*/
+        vctr = 0;
+        for (ctr = 0;; ctr++)
+        {
+            elem = (NEUIK_Element)cont->elems[ctr];
+            if (elem == NULL) break;
 
-			eCfg = neuik_Element_GetConfig(elem);
-			if (eCfg == NULL)
-			{
-				eNum = 3;
-				goto out;
-			}
+            eCfg = neuik_Element_GetConfig(elem);
+            if (eCfg == NULL)
+            {
+                eNum = 3;
+                goto out;
+            }
 
-			if (!NEUIK_Element_IsShown(elem)) continue;
-			vctr++;
+            if (!NEUIK_Element_IsShown(elem)) continue;
+            vctr++;
 
-			if (vctr > 0)
-			{
-				/* add vertical spacing between subsequent elements */
-				yPos += lg->VSpacing;
-			}
+            if (vctr > 0)
+            {
+                /* add vertical spacing between subsequent elements */
+                yPos += lg->VSpacing;
+            }
 
-			/*----------------------------------------------------------------*/
-			/* Start with the default calculated element size                 */
-			/*----------------------------------------------------------------*/
-			if (neuik_Element_GetMinSize(elem, &rs))
-			{
-				eNum = 4;
-				goto out;
-			}
+            /*----------------------------------------------------------------*/
+            /* Start with the default calculated element size                 */
+            /*----------------------------------------------------------------*/
+            if (neuik_Element_GetMinSize(elem, &rs))
+            {
+                eNum = 4;
+                goto out;
+            }
 
-			/*----------------------------------------------------------------*/
-			/* Check for and apply if necessary Horizontal and Veritcal fill  */
-			/*----------------------------------------------------------------*/
-			if (eCfg->HFill)
-			{
-				/* This element is configured to fill space horizontally */
-				rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight) - 4;
-				/* ^^^ The -4 is for the left/right frame and space near it. */
-			}
+            /*----------------------------------------------------------------*/
+            /* Check for and apply if necessary Horizontal and Veritcal fill  */
+            /*----------------------------------------------------------------*/
+            if (eCfg->HFill)
+            {
+                /* This element is configured to fill space horizontally */
+                rs.w = rSize->w - (eCfg->PadLeft + eCfg->PadRight) - 4;
+                /* ^^^ The -4 is for the left/right frame and space near it. */
+            }
 
-			/*----------------------------------------------------------------*/
-			/* Update the stored location before rendering the element. This  */
-			/* is necessary as the location of this object will propagate to  */
-			/* its child objects.                                             */
-			/*----------------------------------------------------------------*/
-			rect.x = xPos + eCfg->PadLeft;
+            /*----------------------------------------------------------------*/
+            /* Update the stored location before rendering the element. This  */
+            /* is necessary as the location of this object will propagate to  */
+            /* its child objects.                                             */
+            /*----------------------------------------------------------------*/
+            rect.x = xPos + eCfg->PadLeft;
 
-			rect.y = yPos + eCfg->PadTop;
-			rect.w = rs.w;
-			rect.h = rs.h;
-			rl.x = (eBase->eSt.rLoc).x + rect.x;
-			rl.y = (eBase->eSt.rLoc).y + rect.y;
-			rlRel.x = rect.x;
-			rlRel.y = rect.y;
-			neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
+            rect.y = yPos + eCfg->PadTop;
+            rect.w = rs.w;
+            rect.h = rs.h;
+            rl.x = (eBase->eSt.rLoc).x + rect.x;
+            rl.y = (eBase->eSt.rLoc).y + rect.y;
+            rlRel.x = rect.x;
+            rlRel.y = rect.y;
+            neuik_Element_StoreSizeAndLocation(elem, rs, rl, rlRel);
 
-			if (neuik_Element_NeedsRedraw(elem))
-			{
-				if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
-				{
-					eNum = 5;
-					goto out;
-				}
-			}
+            if (neuik_Element_NeedsRedraw(elem))
+            {
+                if (neuik_Element_Render(elem, &rs, rlMod, rend, mock))
+                {
+                    eNum = 5;
+                    goto out;
+                }
+            }
 
-			yPos += rs.h + (eCfg->PadTop + eCfg->PadBottom) ;
-		}
-	}
+            yPos += rs.h + (eCfg->PadTop + eCfg->PadBottom) ;
+        }
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Present all changes and create a texture from this surface             */
-	/*------------------------------------------------------------------------*/
+    /*------------------------------------------------------------------------*/
+    /* Present all changes and create a texture from this surface             */
+    /*------------------------------------------------------------------------*/
 out:
-	if (eBase != NULL)
-	{
-		if (!mock) eBase->eSt.doRedraw = 0;
-	}
-	if (maskMap != NULL) neuik_Object_Free(maskMap);
+    if (eBase != NULL)
+    {
+        if (!mock) eBase->eSt.doRedraw = 0;
+    }
+    if (maskMap != NULL) neuik_Object_Free(maskMap);
 
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 /*******************************************************************************
@@ -682,127 +682,127 @@ out:
  *
  ******************************************************************************/
 int NEUIK_ListGroup_AddRow(
-	NEUIK_ListGroup * lg, 
-	NEUIK_ListRow   * row)
+    NEUIK_ListGroup * lg, 
+    NEUIK_ListRow   * row)
 {
-	int                 len;
-	int                 ctr;
-	RenderSize          rSize;
-	RenderLoc           rLoc;
-	int                 newInd;            /* index for newly added item */
-	int                 eNum       = 0;    /* which error to report (if any) */
-	NEUIK_ElementBase * eBase      = NULL;
-	NEUIK_Container   * cBase      = NULL;
-	static char         funcName[] = "NEUIK_ListGroup_AddRow";
-	static char       * errMsgs[]  = {"",                              // [0] no error
-		"Argument `lg` is not of ListGroup class.",                    // [1]
-		"Argument `lg` caused `neuik_Object_GetClassObject` to fail.", // [2]
-		"Argument `row` is not of ListRow class.",                     // [3]
-		"Failure to allocate memory.",                                 // [4]
-		"Failure to reallocate memory.",                               // [5]
-		"Failure in `neuik_Element_RequestRedraw()`.",                 // [6]
-		"Failure in `neuik_Element_GetSizeAndLocation()`.",            // [7]
-	};
+    int                 len;
+    int                 ctr;
+    RenderSize          rSize;
+    RenderLoc           rLoc;
+    int                 newInd;            /* index for newly added item */
+    int                 eNum       = 0;    /* which error to report (if any) */
+    NEUIK_ElementBase * eBase      = NULL;
+    NEUIK_Container   * cBase      = NULL;
+    static char         funcName[] = "NEUIK_ListGroup_AddRow";
+    static char       * errMsgs[]  = {"",                              // [0] no error
+        "Argument `lg` is not of ListGroup class.",                    // [1]
+        "Argument `lg` caused `neuik_Object_GetClassObject` to fail.", // [2]
+        "Argument `row` is not of ListRow class.",                     // [3]
+        "Failure to allocate memory.",                                 // [4]
+        "Failure to reallocate memory.",                               // [5]
+        "Failure in `neuik_Element_RequestRedraw()`.",                 // [6]
+        "Failure in `neuik_Element_GetSizeAndLocation()`.",            // [7]
+    };
 
-	if (!neuik_Object_IsClass(lg, neuik__Class_ListGroup))
-	{
-		eNum = 1;
-		goto out;
-	}
-	if (neuik_Object_GetClassObject(lg, neuik__Class_Container, (void**)&cBase))
-	{
-		eNum = 2;
-		goto out;
-	}
-	if (!neuik_Object_IsClass(row, neuik__Class_ListRow))
-	{
-		eNum = 3;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(lg, neuik__Class_ListGroup))
+    {
+        eNum = 1;
+        goto out;
+    }
+    if (neuik_Object_GetClassObject(lg, neuik__Class_Container, (void**)&cBase))
+    {
+        eNum = 2;
+        goto out;
+    }
+    if (!neuik_Object_IsClass(row, neuik__Class_ListRow))
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	if (cBase->elems == NULL)
-	{
-		/*--------------------------------------------------------------------*/
-		/* elems array currently unallocated; allocate now                    */
-		/*--------------------------------------------------------------------*/
-		cBase->elems = (NEUIK_Element*)malloc(2*sizeof(NEUIK_Element));
-		if (cBase->elems == NULL)
-		{
-			eNum = 4;
-			goto out;
-		}
-		newInd = 0;
-	}
-	else
-	{
-		/*--------------------------------------------------------------------*/
-		/* This is subsequent UI element, reallocate memory.                  */
-		/* This pointer array will be null terminated.                        */
-		/*--------------------------------------------------------------------*/
-		
-		/* determine the current length */
-		for (ctr = 0;;ctr++)
-		{
-			if (cBase->elems[ctr] == NULL)
-			{
-				len = 2 + ctr;
-				break;
-			}
-		}
+    if (cBase->elems == NULL)
+    {
+        /*--------------------------------------------------------------------*/
+        /* elems array currently unallocated; allocate now                    */
+        /*--------------------------------------------------------------------*/
+        cBase->elems = (NEUIK_Element*)malloc(2*sizeof(NEUIK_Element));
+        if (cBase->elems == NULL)
+        {
+            eNum = 4;
+            goto out;
+        }
+        newInd = 0;
+    }
+    else
+    {
+        /*--------------------------------------------------------------------*/
+        /* This is subsequent UI element, reallocate memory.                  */
+        /* This pointer array will be null terminated.                        */
+        /*--------------------------------------------------------------------*/
+        
+        /* determine the current length */
+        for (ctr = 0;;ctr++)
+        {
+            if (cBase->elems[ctr] == NULL)
+            {
+                len = 2 + ctr;
+                break;
+            }
+        }
 
-		cBase->elems = (NEUIK_Element*)realloc(cBase->elems, len*sizeof(NEUIK_Element));
-		if (cBase->elems == NULL)
-		{
-			eNum = 5;
-			goto out;
-		}
-		newInd = ctr;
-	}
+        cBase->elems = (NEUIK_Element*)realloc(cBase->elems, len*sizeof(NEUIK_Element));
+        if (cBase->elems == NULL)
+        {
+            eNum = 5;
+            goto out;
+        }
+        newInd = ctr;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Set the Window and Parent Element pointers                             */
-	/*------------------------------------------------------------------------*/
-	if (neuik_Object_GetClassObject(lg, neuik__Class_Element, (void**)&eBase))
-	{
-		eNum = 2;
-		goto out;
-	}
-	if (eBase->eSt.window != NULL)
-	{
-		neuik_Element_SetWindowPointer(row, eBase->eSt.window);
-	}
-	neuik_Element_SetParentPointer(row, lg);
+    /*------------------------------------------------------------------------*/
+    /* Set the Window and Parent Element pointers                             */
+    /*------------------------------------------------------------------------*/
+    if (neuik_Object_GetClassObject(lg, neuik__Class_Element, (void**)&eBase))
+    {
+        eNum = 2;
+        goto out;
+    }
+    if (eBase->eSt.window != NULL)
+    {
+        neuik_Element_SetWindowPointer(row, eBase->eSt.window);
+    }
+    neuik_Element_SetParentPointer(row, lg);
 
-	/*------------------------------------------------------------------------*/
-	/* Set the odd/even flag of the row.                                      */
-	/*------------------------------------------------------------------------*/
-	row->isOddRow = 0;
-	if ((newInd+1) % 2 == 1) row->isOddRow = 1;
+    /*------------------------------------------------------------------------*/
+    /* Set the odd/even flag of the row.                                      */
+    /*------------------------------------------------------------------------*/
+    row->isOddRow = 0;
+    if ((newInd+1) % 2 == 1) row->isOddRow = 1;
 
-	cBase->elems[newInd]   = row;
-	cBase->elems[newInd+1] = NULL; /* NULLptr terminated array */
+    cBase->elems[newInd]   = row;
+    cBase->elems[newInd+1] = NULL; /* NULLptr terminated array */
 
-	/*------------------------------------------------------------------------*/
-	/* When a new row is added, trigger a redraw                              */
-	/*------------------------------------------------------------------------*/
-	if (neuik_Element_GetSizeAndLocation(lg, &rSize, &rLoc))
-	{
-		eNum = 7;
-		goto out;
-	}
-	if (neuik_Element_RequestRedraw(lg, rLoc, rSize))
-	{
-		eNum = 6;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* When a new row is added, trigger a redraw                              */
+    /*------------------------------------------------------------------------*/
+    if (neuik_Element_GetSizeAndLocation(lg, &rSize, &rLoc))
+    {
+        eNum = 7;
+        goto out;
+    }
+    if (neuik_Element_RequestRedraw(lg, rLoc, rSize))
+    {
+        eNum = 6;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 /*******************************************************************************
@@ -818,54 +818,54 @@ out:
  *
  ******************************************************************************/
 int NEUIK_ListGroup_AddRows(
-	NEUIK_ListGroup * lg, 
-	NEUIK_ListRow   * row0, 
-	...)
+    NEUIK_ListGroup * lg, 
+    NEUIK_ListRow   * row0, 
+    ...)
 {
-	int             ctr;
-	int             vaOpen = 0;
-	int             eNum   = 0; /* which error to report (if any) */
-	va_list         args;
-	NEUIK_ListRow * row    = NULL; 
-	static char     funcName[] = "NEUIK_ListGroup_AddRows";
-	static char   * errMsgs[]  = {"",               // [0] no error
-		"Argument `lg` is not of ListGroup class.", // [1]
-		"Failure in `ListGroup_AddRow()`.",         // [2]
-	};
+    int             ctr;
+    int             vaOpen = 0;
+    int             eNum   = 0; /* which error to report (if any) */
+    va_list         args;
+    NEUIK_ListRow * row    = NULL; 
+    static char     funcName[] = "NEUIK_ListGroup_AddRows";
+    static char   * errMsgs[]  = {"",               // [0] no error
+        "Argument `lg` is not of ListGroup class.", // [1]
+        "Failure in `ListGroup_AddRow()`.",         // [2]
+    };
 
-	if (!neuik_Object_IsClass(lg, neuik__Class_ListGroup))
-	{
-		eNum = 1;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(lg, neuik__Class_ListGroup))
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	va_start(args, row0);
-	vaOpen = 1;
+    va_start(args, row0);
+    vaOpen = 1;
 
-	row = row0;
-	for (ctr = 0;; ctr++)
-	{
-		if (row == NULL) break;
+    row = row0;
+    for (ctr = 0;; ctr++)
+    {
+        if (row == NULL) break;
 
-		if (NEUIK_ListGroup_AddRow(lg, row))
-		{
-			eNum = 2;
-			goto out;
-		}
+        if (NEUIK_ListGroup_AddRow(lg, row))
+        {
+            eNum = 2;
+            goto out;
+        }
 
-		/* before starting */
-		row = va_arg(args, NEUIK_Element);
-	}
+        /* before starting */
+        row = va_arg(args, NEUIK_Element);
+    }
 out:
-	if (vaOpen) va_end(args);
+    if (vaOpen) va_end(args);
 
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -880,139 +880,140 @@ out:
  *
  ******************************************************************************/
 neuik_EventState neuik_Element_CaptureEvent__ListGroup(
-	NEUIK_Element   lgElem, 
-	SDL_Event     * ev)
+    NEUIK_Element   lgElem, 
+    SDL_Event     * ev)
 {
-	int                 ctr         = 0;
-	int                 indSelect   = 0;
-	int                 wasSelected = 0;
-	neuik_EventState    evCaputred  = NEUIK_EVENTSTATE_NOT_CAPTURED;
-	NEUIK_Element       elem        = NULL;
-	NEUIK_ElementBase * eBase       = NULL;
-	NEUIK_Container   * cBase       = NULL;
-	SDL_KeyboardEvent * keyEv       = NULL;
+    int                 ctr         = 0;
+    int                 indSelect   = 0;
+    int                 wasSelected = 0;
+    neuik_EventState    evCaputred  = NEUIK_EVENTSTATE_NOT_CAPTURED;
+    NEUIK_Element       elem        = NULL;
+    NEUIK_ElementBase * eBase       = NULL;
+    NEUIK_Container   * cBase       = NULL;
+    SDL_KeyboardEvent * keyEv       = NULL;
 
-	if (neuik_Object_GetClassObject_NoError(
-		lgElem, neuik__Class_Container, (void**)&cBase)) goto out;
+    if (neuik_Object_GetClassObject_NoError(
+        lgElem, neuik__Class_Container, (void**)&cBase)) goto out;
 
-	if (neuik_Object_GetClassObject_NoError(
-		lgElem, neuik__Class_Element, (void**)&eBase)) goto out;
+    if (neuik_Object_GetClassObject_NoError(
+        lgElem, neuik__Class_Element, (void**)&eBase)) goto out;
 
-	/*------------------------------------------------------------------------*/
-	/* Check if the event is captured by one of the contained rows.          */
-	/*------------------------------------------------------------------------*/
-	if (cBase->elems != NULL)
-	{
-		for (ctr = 0;; ctr++)
-		{
-			elem = cBase->elems[ctr];
-			if (elem == NULL) break;
+    /*------------------------------------------------------------------------*/
+    /* Check if the event is captured by one of the contained rows.          */
+    /*------------------------------------------------------------------------*/
+    if (cBase->elems != NULL)
+    {
+        for (ctr = 0;; ctr++)
+        {
+            elem = cBase->elems[ctr];
+            if (elem == NULL) break;
 
-			if (!NEUIK_Element_IsShown(elem)) continue;
+            if (!NEUIK_Element_IsShown(elem)) continue;
 
-			wasSelected = NEUIK_ListRow_IsSelected(elem);
-			evCaputred = neuik_Element_CaptureEvent(elem, ev);
-			if (evCaputred == NEUIK_EVENTSTATE_OBJECT_FREED)
-			{
-				goto out;
-			}
-			else if (evCaputred == NEUIK_EVENTSTATE_CAPTURED)
-			{
-				if (!wasSelected && NEUIK_ListRow_IsSelected(elem))
-				{
-					indSelect = ctr;
-					/*--------------------------------------------------------*/
-					/* This event just caused this row to be selected.        */
-					/* Deselect the other rows.                               */
-					/*--------------------------------------------------------*/
-					for (ctr = 0;; ctr++)
-					{
-						elem = cBase->elems[ctr];
-						if (elem == NULL) break;
-						if (ctr == indSelect) continue;
+            wasSelected = NEUIK_ListRow_IsSelected(elem);
+            evCaputred = neuik_Element_CaptureEvent(elem, ev);
+            if (evCaputred == NEUIK_EVENTSTATE_OBJECT_FREED)
+            {
+                goto out;
+            }
+            else if (evCaputred == NEUIK_EVENTSTATE_CAPTURED)
+            {
+                if (!wasSelected && NEUIK_ListRow_IsSelected(elem))
+                {
+                    indSelect = ctr;
+                    /*--------------------------------------------------------*/
+                    /* This event just caused this row to be selected.        */
+                    /* Deselect the other rows.                               */
+                    /*--------------------------------------------------------*/
+                    for (ctr = 0;; ctr++)
+                    {
+                        elem = cBase->elems[ctr];
+                        if (elem == NULL) break;
+                        if (ctr == indSelect) continue;
 
-						NEUIK_ListRow_SetSelected(elem, 0);
-					}
-				}
+                        NEUIK_ListRow_SetSelected(elem, 0);
+                    }
+                }
 
-				neuik_Element_SetActive(lgElem, 1);
-				goto out;
-			}
-		}
-	}
-	else
-	{
-		/*--------------------------------------------------------------------*/
-		/* If there are no contained elements, there is probably no possible  */
-		/* outcome to handling the event.                                     */
-		/*--------------------------------------------------------------------*/
-		goto out;
-	}
+                neuik_Element_SetActive(lgElem, 1);
+                goto out;
+            }
+        }
+    }
+    else
+    {
+        /*--------------------------------------------------------------------*/
+        /* If there are no contained elements, there is probably no possible  */
+        /* outcome to handling the event.                                     */
+        /*--------------------------------------------------------------------*/
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Check if the event is captured by the ListGroup itself.                */
-	/*------------------------------------------------------------------------*/
-	if (neuik_Element_IsActive(lgElem))
-	{
-		switch (ev->type)
-		{
-		case SDL_KEYDOWN:
-			keyEv = (SDL_KeyboardEvent*)(ev);
-			switch (keyEv->keysym.sym)
-			{
-			case SDLK_UP:
-				/*------------------------------------------------------------*/
-				/* Determine the where the first selected item is             */
-				/*------------------------------------------------------------*/
-				for (ctr = 0;; ctr++)
-				{
-					elem = cBase->elems[ctr];
-					if (elem == NULL) break;
+    /*------------------------------------------------------------------------*/
+    /* Check if the event is captured by the ListGroup itself.                */
+    /*------------------------------------------------------------------------*/
+    if (neuik_Element_IsActive(lgElem))
+    {
+        switch (ev->type)
+        {
+        case SDL_KEYDOWN:
+            keyEv = (SDL_KeyboardEvent*)(ev);
+            switch (keyEv->keysym.sym)
+            {
+            case SDLK_UP:
+                /*------------------------------------------------------------*/
+                /* Determine the where the first selected item is             */
+                /*------------------------------------------------------------*/
+                for (ctr = 0;; ctr++)
+                {
+                    elem = cBase->elems[ctr];
+                    if (elem == NULL) break;
 
-					if (!NEUIK_Element_IsShown(elem)) continue;
-					if (NEUIK_ListRow_IsSelected(elem))
-					{
-						indSelect = ctr;
-						break;
-					}
-				}
+                    if (!NEUIK_Element_IsShown(elem)) continue;
+                    if (NEUIK_ListRow_IsSelected(elem))
+                    {
+                        indSelect = ctr;
+                        break;
+                    }
+                }
 
-				if (indSelect > 0)
-				{
-					NEUIK_ListRow_SetSelected(cBase->elems[indSelect], 0);
-					indSelect--;
-					NEUIK_ListRow_SetSelected(cBase->elems[indSelect], 1);
-					neuik_Window_TakeFocus(eBase->eSt.window, cBase->elems[indSelect]);
-				}
-				break;
-			case SDLK_DOWN:
-				/*------------------------------------------------------------*/
-				/* Determine the where the first selected item is             */
-				/*------------------------------------------------------------*/
-				for (ctr = 0;; ctr++)
-				{
-					elem = cBase->elems[ctr];
-					if (elem == NULL) break;
+                if (indSelect > 0)
+                {
+                    NEUIK_ListRow_SetSelected(cBase->elems[indSelect], 0);
+                    indSelect--;
+                    NEUIK_ListRow_SetSelected(cBase->elems[indSelect], 1);
+                    neuik_Window_TakeFocus(eBase->eSt.window, cBase->elems[indSelect]);
+                }
+                break;
+            case SDLK_DOWN:
+                /*------------------------------------------------------------*/
+                /* Determine the where the first selected item is             */
+                /*------------------------------------------------------------*/
+                for (ctr = 0;; ctr++)
+                {
+                    elem = cBase->elems[ctr];
+                    if (elem == NULL) break;
 
-					if (!NEUIK_Element_IsShown(elem)) continue;
-					if (NEUIK_ListRow_IsSelected(elem))
-					{
-						indSelect = ctr;
-						break;
-					}
-				}
+                    if (!NEUIK_Element_IsShown(elem)) continue;
+                    if (NEUIK_ListRow_IsSelected(elem))
+                    {
+                        indSelect = ctr;
+                        break;
+                    }
+                }
 
-				if (cBase->elems[indSelect+1] != NULL)
-				{
-					NEUIK_ListRow_SetSelected(cBase->elems[indSelect], 0);
-					indSelect++;
-					NEUIK_ListRow_SetSelected(cBase->elems[indSelect], 1);
-					neuik_Window_TakeFocus(eBase->eSt.window, cBase->elems[indSelect]);
-				}
-				break;
-			}
-		}		
-	}
+                if (cBase->elems[indSelect+1] != NULL)
+                {
+                    NEUIK_ListRow_SetSelected(cBase->elems[indSelect], 0);
+                    indSelect++;
+                    NEUIK_ListRow_SetSelected(cBase->elems[indSelect], 1);
+                    neuik_Window_TakeFocus(eBase->eSt.window, cBase->elems[indSelect]);
+                }
+                break;
+            }
+        }       
+    }
 out:
-	return evCaputred;
+    return evCaputred;
 }
+

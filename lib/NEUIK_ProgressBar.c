@@ -39,37 +39,37 @@ int neuik_Object_Free__ProgressBar(void * wPtr);
 int neuik_Element_GetMinSize__ProgressBar(NEUIK_Element, RenderSize*);
 neuik_EventState neuik_Element_CaptureEvent__ProgressBar(NEUIK_Element, SDL_Event*);
 int neuik_Element_Render__ProgressBar(
-	NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
+    NEUIK_Element, RenderSize*, RenderLoc*, SDL_Renderer*, int);
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Object    Function Table                                             */
 /*----------------------------------------------------------------------------*/
 neuik_Class_BaseFuncs  neuik_ProgressBar_BaseFuncs = {
-	/* Init(): Class initialization (in most cases will not be needed) */
-	NULL, /* (unused) */
-	/* New(): Allocate and Initialize the object */
-	neuik_Object_New__ProgressBar,
-	/* Copy(): Copy the contents of one object into another */
-	NULL,
-	/* Free(): Free the allocated memory of an object */
-	neuik_Object_Free__ProgressBar,
+    /* Init(): Class initialization (in most cases will not be needed) */
+    NULL, /* (unused) */
+    /* New(): Allocate and Initialize the object */
+    neuik_Object_New__ProgressBar,
+    /* Copy(): Copy the contents of one object into another */
+    NULL,
+    /* Free(): Free the allocated memory of an object */
+    neuik_Object_Free__ProgressBar,
 };
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
 /*----------------------------------------------------------------------------*/
 NEUIK_Element_FuncTable neuik_ProgressBar_FuncTable = {
-	/* GetMinSize(): Get the minimum required size for the element  */
-	neuik_Element_GetMinSize__ProgressBar,
+    /* GetMinSize(): Get the minimum required size for the element  */
+    neuik_Element_GetMinSize__ProgressBar,
 
-	/* Render(): Redraw the element */
-	neuik_Element_Render__ProgressBar,
+    /* Render(): Redraw the element */
+    neuik_Element_Render__ProgressBar,
 
-	/* CaptureEvent(): Determine if this element caputures a given event */
-	neuik_Element_CaptureEvent__ProgressBar,
+    /* CaptureEvent(): Determine if this element caputures a given event */
+    neuik_Element_CaptureEvent__ProgressBar,
 
-	/* Defocus(): This function will be called when an element looses focus */
-	NULL,
+    /* Defocus(): This function will be called when an element looses focus */
+    NULL,
 };
 
 
@@ -84,42 +84,42 @@ NEUIK_Element_FuncTable neuik_ProgressBar_FuncTable = {
  ******************************************************************************/
 int neuik_RegisterClass_ProgressBar()
 {
-	int            eNum       = 0; /* which error to report (if any) */
-	static char    funcName[] = "neuik_RegisterClass_ProgressBar";
-	static char  * errMsgs[]  = {"",                       // [0] no error
-		"NEUIK library must be initialized first.",        // [1]
-		"Failed to register `ProgressBar` object class .", // [2]
-	};
+    int            eNum       = 0; /* which error to report (if any) */
+    static char    funcName[] = "neuik_RegisterClass_ProgressBar";
+    static char  * errMsgs[]  = {"",                       // [0] no error
+        "NEUIK library must be initialized first.",        // [1]
+        "Failed to register `ProgressBar` object class .", // [2]
+    };
 
-	if (!neuik__isInitialized)
-	{
-		eNum = 1;
-		goto out;
-	}
+    if (!neuik__isInitialized)
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Otherwise, register the object                                         */
-	/*------------------------------------------------------------------------*/
-	if (neuik_RegisterClass(
-		"ProgressBar",                             // className
-		"A GUI which displays activity progress.", // classDescription
-		neuik__Set_NEUIK,                          // classSet
-		neuik__Class_Element,                      // superClass
-		&neuik_ProgressBar_BaseFuncs,              // baseFuncs
-		NULL,                                      // classFuncs
-		&neuik__Class_ProgressBar))                // newClass
-	{
-		eNum = 2;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Otherwise, register the object                                         */
+    /*------------------------------------------------------------------------*/
+    if (neuik_RegisterClass(
+        "ProgressBar",                             // className
+        "A GUI which displays activity progress.", // classDescription
+        neuik__Set_NEUIK,                          // classSet
+        neuik__Class_Element,                      // superClass
+        &neuik_ProgressBar_BaseFuncs,              // baseFuncs
+        NULL,                                      // classFuncs
+        &neuik__Class_ProgressBar))                // newClass
+    {
+        eNum = 2;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -133,129 +133,129 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_New__ProgressBar(
-	void ** pbPtr)
+    void ** pbPtr)
 {
-	int                 eNum       = 0; /* which error to report (if any) */
-	NEUIK_ProgressBar * pb         = NULL;
-	NEUIK_Element     * sClassPtr  = NULL;
+    int                 eNum       = 0; /* which error to report (if any) */
+    NEUIK_ProgressBar * pb         = NULL;
+    NEUIK_Element     * sClassPtr  = NULL;
 
-	static char         funcName[] = "neuik_Object_New__ProgressBar";
-	static char       * errMsgs[]  = {"",                         // [0] no error
-		"Failure to allocate memory.",                            // [1]
-		"Failure in NEUIK_NewProgressBarConfig.",                 // [2]
-		"Output Argument `pbPtr` is NULL.",                       // [3]
-		"Failure in function `neuik_Object_New`.",                // [4]
-		"Failure in function `neuik_Element_SetFuncTable`.",      // [5]
-		"Failure in `neuik_GetObjectBaseOfClass`.",               // [6]
-		"Failure in `NEUIK_Element_SetBackgroundColorGradient`.", // [7]
-	};
+    static char         funcName[] = "neuik_Object_New__ProgressBar";
+    static char       * errMsgs[]  = {"",                         // [0] no error
+        "Failure to allocate memory.",                            // [1]
+        "Failure in NEUIK_NewProgressBarConfig.",                 // [2]
+        "Output Argument `pbPtr` is NULL.",                       // [3]
+        "Failure in function `neuik_Object_New`.",                // [4]
+        "Failure in function `neuik_Element_SetFuncTable`.",      // [5]
+        "Failure in `neuik_GetObjectBaseOfClass`.",               // [6]
+        "Failure in `NEUIK_Element_SetBackgroundColorGradient`.", // [7]
+    };
 
-	if (pbPtr == NULL)
-	{
-		eNum = 3;
-		goto out;
-	}
+    if (pbPtr == NULL)
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	(*pbPtr) = (NEUIK_ProgressBar*) malloc(sizeof(NEUIK_ProgressBar));
-	pb = *pbPtr;
-	if (pb == NULL)
-	{
-		eNum = 1;
-		goto out;
-	}
+    (*pbPtr) = (NEUIK_ProgressBar*) malloc(sizeof(NEUIK_ProgressBar));
+    pb = *pbPtr;
+    if (pb == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Successful allocation of Memory -- Create Base Class Object            */
-	/*------------------------------------------------------------------------*/
-	if (neuik_GetObjectBaseOfClass(
-			neuik__Set_NEUIK, 
-			neuik__Class_ProgressBar, 
-			NULL,
-			&(pb->objBase)))
-	{
-		eNum = 6;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Successful allocation of Memory -- Create Base Class Object            */
+    /*------------------------------------------------------------------------*/
+    if (neuik_GetObjectBaseOfClass(
+            neuik__Set_NEUIK, 
+            neuik__Class_ProgressBar, 
+            NULL,
+            &(pb->objBase)))
+    {
+        eNum = 6;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Create first level Base SuperClass Object                              */
-	/*------------------------------------------------------------------------*/
-	sClassPtr = (NEUIK_Element *) &(pb->objBase.superClassObj);
-	if (neuik_Object_New(neuik__Class_Element, sClassPtr))
-	{
-		eNum = 4;
-		goto out;
-	}
-	if (neuik_Element_SetFuncTable(*sClassPtr, &neuik_ProgressBar_FuncTable))
-	{
-		eNum = 5;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Create first level Base SuperClass Object                              */
+    /*------------------------------------------------------------------------*/
+    sClassPtr = (NEUIK_Element *) &(pb->objBase.superClassObj);
+    if (neuik_Object_New(neuik__Class_Element, sClassPtr))
+    {
+        eNum = 4;
+        goto out;
+    }
+    if (neuik_Element_SetFuncTable(*sClassPtr, &neuik_ProgressBar_FuncTable))
+    {
+        eNum = 5;
+        goto out;
+    }
 
-	/* Allocation successful */
-	pb->selected     = 0;
-	pb->wasSelected  = 0;
-	pb->isActive     = 0;
-	pb->clickOrigin  = 0;
-	pb->needsRedraw  = 1;
-	pb->cfg          = NULL;
-	pb->cfgPtr       = NULL;
+    /* Allocation successful */
+    pb->selected     = 0;
+    pb->wasSelected  = 0;
+    pb->isActive     = 0;
+    pb->clickOrigin  = 0;
+    pb->needsRedraw  = 1;
+    pb->cfg          = NULL;
+    pb->cfgPtr       = NULL;
 
 
-	if (NEUIK_NewProgressBarConfig(&pb->cfg))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (NEUIK_NewProgressBarConfig(&pb->cfg))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Set the new ProgressBar text contents                                  */
-	/*------------------------------------------------------------------------*/
-	pb->frac = 0.0;
-	if (pb->cfg->decimalPlaces == 0)
-	{
-		strcpy(pb->fracText, "0%");
-	}
-	else
-	{
-		strcpy(pb->fracText, "0.0%");
-	}
+    /*------------------------------------------------------------------------*/
+    /* Set the new ProgressBar text contents                                  */
+    /*------------------------------------------------------------------------*/
+    pb->frac = 0.0;
+    if (pb->cfg->decimalPlaces == 0)
+    {
+        strcpy(pb->fracText, "0%");
+    }
+    else
+    {
+        strcpy(pb->fracText, "0.0%");
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Set the default element background redraw styles.                      */
-	/*------------------------------------------------------------------------*/
-	if (NEUIK_Element_SetBackgroundColorGradient(pb, "normal", 'v',
-		"103,150,166,255,0.0",
-		"70,120,166,255,1.0",
-		NULL))
-	{
-		eNum = 7;
-		goto out;
-	}
-	if (NEUIK_Element_SetBackgroundColorGradient(pb, "selected", 'v',
-		"103,150,166,255,0.0",
-		"70,120,166,255,1.0",
-		NULL))
-	{
-		eNum = 7;
-		goto out;
-	}
-	if (NEUIK_Element_SetBackgroundColorGradient(pb, "hovered", 'v',
-		"103,150,166,255,0.0",
-		"70,120,166,255,1.0",
-		NULL))
-	{
-		eNum = 7;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Set the default element background redraw styles.                      */
+    /*------------------------------------------------------------------------*/
+    if (NEUIK_Element_SetBackgroundColorGradient(pb, "normal", 'v',
+        "103,150,166,255,0.0",
+        "70,120,166,255,1.0",
+        NULL))
+    {
+        eNum = 7;
+        goto out;
+    }
+    if (NEUIK_Element_SetBackgroundColorGradient(pb, "selected", 'v',
+        "103,150,166,255,0.0",
+        "70,120,166,255,1.0",
+        NULL))
+    {
+        eNum = 7;
+        goto out;
+    }
+    if (NEUIK_Element_SetBackgroundColorGradient(pb, "hovered", 'v',
+        "103,150,166,255,0.0",
+        "70,120,166,255,1.0",
+        NULL))
+    {
+        eNum = 7;
+        goto out;
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -269,53 +269,53 @@ out:
  *
  ******************************************************************************/
 int neuik_Object_Free__ProgressBar(
-	void * objPtr)  /* [out] the object to free */
+    void * objPtr)  /* [out] the object to free */
 {
-	int                 eNum       = 0; /* which error to report (if any) */
-	NEUIK_ProgressBar * pb         = NULL;
-	static char         funcName[] = "neuik_Object_Free__ProgressBar";
-	static char       * errMsgs[]  = {"",                 // [0] no error
-		"Argument `objPtr` is not of ProgressBar class.", // [1]
-		"Failure in function `neuik_Object_Free`.",       // [2]
-		"Argument `objPtr` is NULL.",                     // [3]
-	};
+    int                 eNum       = 0; /* which error to report (if any) */
+    NEUIK_ProgressBar * pb         = NULL;
+    static char         funcName[] = "neuik_Object_Free__ProgressBar";
+    static char       * errMsgs[]  = {"",                 // [0] no error
+        "Argument `objPtr` is not of ProgressBar class.", // [1]
+        "Failure in function `neuik_Object_Free`.",       // [2]
+        "Argument `objPtr` is NULL.",                     // [3]
+    };
 
-	if (objPtr == NULL)
-	{
-		eNum = 3;
-		goto out;
-	}
+    if (objPtr == NULL)
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	if (!neuik_Object_IsClass(objPtr, neuik__Class_ProgressBar))
-	{
-		eNum = 1;
-		goto out;
-	}
-	pb = (NEUIK_ProgressBar*)objPtr;
+    if (!neuik_Object_IsClass(objPtr, neuik__Class_ProgressBar))
+    {
+        eNum = 1;
+        goto out;
+    }
+    pb = (NEUIK_ProgressBar*)objPtr;
 
-	/*------------------------------------------------------------------------*/
-	/* The object is what it says it is and it is still allocated.            */
-	/*------------------------------------------------------------------------*/
-	if(neuik_Object_Free(pb->objBase.superClassObj))
-	{
-		eNum = 2;
-		goto out;
-	}
-	if(neuik_Object_Free((void**)pb->cfg))
-	{
-		eNum = 2;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* The object is what it says it is and it is still allocated.            */
+    /*------------------------------------------------------------------------*/
+    if(neuik_Object_Free(pb->objBase.superClassObj))
+    {
+        eNum = 2;
+        goto out;
+    }
+    if(neuik_Object_Free((void**)pb->cfg))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	free(pb);
+    free(pb);
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -329,85 +329,85 @@ out:
  *
  ******************************************************************************/
 int neuik_Element_GetMinSize__ProgressBar(
-	NEUIK_Element    elem,
-	RenderSize     * rSize)
+    NEUIK_Element    elem,
+    RenderSize     * rSize)
 {
-	int                       tW;
-	int                       tH;
-	int                       eNum = 0;    /* which error to report (if any) */
-	TTF_Font                * font = NULL;
-	NEUIK_ProgressBar       * pb   = NULL;
-	NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
-	static char               funcName[] = "neuik_Element_GetMinSize__ProgressBar";
-	static char * errMsgs[] = {"",                      // [0] no error
-		"Argument `elem` is not of ProgressBar class.", // [1]
-		"ProgressBarConfig* is NULL.",                  // [2]
-		"ProgressBarConfig->FontSet is NULL.",          // [3]
-		"FontSet_GetFont returned NULL.",               // [4]
-	};
+    int                       tW;
+    int                       tH;
+    int                       eNum = 0;    /* which error to report (if any) */
+    TTF_Font                * font = NULL;
+    NEUIK_ProgressBar       * pb   = NULL;
+    NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
+    static char               funcName[] = "neuik_Element_GetMinSize__ProgressBar";
+    static char * errMsgs[] = {"",                      // [0] no error
+        "Argument `elem` is not of ProgressBar class.", // [1]
+        "ProgressBarConfig* is NULL.",                  // [2]
+        "ProgressBarConfig->FontSet is NULL.",          // [3]
+        "FontSet_GetFont returned NULL.",               // [4]
+    };
 
-	/*------------------------------------------------------------------------*/
-	/* Calculate the required size of the resultant texture                   */
-	/*------------------------------------------------------------------------*/
-	if (!neuik_Object_IsClass(elem, neuik__Class_ProgressBar))
-	{
-		eNum = 1;
-		goto out;
-	}
-	pb = (NEUIK_ProgressBar*)elem;
-	
-	/* select the correct ProgressBar config to use (pointer or internal) */
-	if (pb->cfgPtr != NULL)
-	{
-		aCfg = pb->cfgPtr;
-	}
-	else 
-	{
-		aCfg = pb->cfg;
-	}
+    /*------------------------------------------------------------------------*/
+    /* Calculate the required size of the resultant texture                   */
+    /*------------------------------------------------------------------------*/
+    if (!neuik_Object_IsClass(elem, neuik__Class_ProgressBar))
+    {
+        eNum = 1;
+        goto out;
+    }
+    pb = (NEUIK_ProgressBar*)elem;
+    
+    /* select the correct ProgressBar config to use (pointer or internal) */
+    if (pb->cfgPtr != NULL)
+    {
+        aCfg = pb->cfgPtr;
+    }
+    else 
+    {
+        aCfg = pb->cfg;
+    }
 
-	if (aCfg == NULL)
-	{
-		eNum = 2;
-		goto out;
-	} 
+    if (aCfg == NULL)
+    {
+        eNum = 2;
+        goto out;
+    } 
 
-	if (aCfg->fontSet == NULL)
-	{
-		eNum = 3;
-		goto out;
-	}
+    if (aCfg->fontSet == NULL)
+    {
+        eNum = 3;
+        goto out;
+    }
 
-	font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize, 
-		aCfg->fontBold, aCfg->fontItalic);
-	if (font == NULL) 
-	{
-		eNum = 4;
-		goto out;
-	}
+    font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize, 
+        aCfg->fontBold, aCfg->fontItalic);
+    if (font == NULL) 
+    {
+        eNum = 4;
+        goto out;
+    }
 
-	if (strlen(pb->fracText) > 0)
-	{
-		/* this ProgressBar contains text */
-		TTF_SizeText(font, pb->fracText, &tW, &tH);
+    if (strlen(pb->fracText) > 0)
+    {
+        /* this ProgressBar contains text */
+        TTF_SizeText(font, pb->fracText, &tW, &tH);
 
-	}
-	else
-	{
-		/* this ProgressBar does not contain text */
-		TTF_SizeText(font, " ", &tW, &tH);
-	}
+    }
+    else
+    {
+        /* this ProgressBar does not contain text */
+        TTF_SizeText(font, " ", &tW, &tH);
+    }
 
-	rSize->w = tW + aCfg->fontEmWidth;
-	rSize->h = (int)(1.5 * (float)TTF_FontHeight(font));
+    rSize->w = tW + aCfg->fontEmWidth;
+    rSize->h = (int)(1.5 * (float)TTF_FontHeight(font));
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 /*******************************************************************************
@@ -420,9 +420,9 @@ out:
  *
  ******************************************************************************/
 int NEUIK_NewProgressBar(
-	NEUIK_ProgressBar ** pbPtr)  /* [out] The newly created object. */
+    NEUIK_ProgressBar ** pbPtr)  /* [out] The newly created object. */
 {
-	return neuik_Object_New__ProgressBar((void **)pbPtr);
+    return neuik_Object_New__ProgressBar((void **)pbPtr);
 }
 
 
@@ -436,30 +436,30 @@ int NEUIK_NewProgressBar(
  *
  ******************************************************************************/
 int NEUIK_ProgressBar_GetFraction(
-	NEUIK_ProgressBar  * pb,
-	double             * frac)
+    NEUIK_ProgressBar  * pb,
+    double             * frac)
 {
-	int           eNum = 0;    /* which error to report (if any) */
-	static char   funcName[] = "NEUIK_ProgressBar_GetFraction";
-	static char * errMsgs[] = {"",                    // [0] no error
-		"Argument `pb` is not of ProgressBar class.", // [1]
-	};
+    int           eNum = 0;    /* which error to report (if any) */
+    static char   funcName[] = "NEUIK_ProgressBar_GetFraction";
+    static char * errMsgs[] = {"",                    // [0] no error
+        "Argument `pb` is not of ProgressBar class.", // [1]
+    };
 
-	if (!neuik_Object_IsClass(pb, neuik__Class_ProgressBar))
-	{
-		eNum = 1;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(pb, neuik__Class_ProgressBar))
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	(*frac) = pb->frac;
+    (*frac) = pb->frac;
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -473,69 +473,69 @@ out:
  *
  ******************************************************************************/
 int NEUIK_ProgressBar_SetFraction(
-		NEUIK_ProgressBar * pb,
-		double              frac)
+    NEUIK_ProgressBar * pb,
+    double              frac)
 {
-	int                       eNum = 0;    /* which error to report (if any) */
-	RenderSize                rSize;
-	RenderLoc                 rLoc;
-	NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
-	static char               funcName[] = "NEUIK_ProgressBar_SetFraction";
-	static char             * errMsgs[] = {"",              // [0] no error
-		"Argument `pb` is not of ProgressBar class.",       // [1]
-		"Failure in `neuik_Element_GetSizeAndLocation()`.", // [2]
-	};
+    int                       eNum = 0;    /* which error to report (if any) */
+    RenderSize                rSize;
+    RenderLoc                 rLoc;
+    NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
+    static char               funcName[] = "NEUIK_ProgressBar_SetFraction";
+    static char             * errMsgs[] = {"",              // [0] no error
+        "Argument `pb` is not of ProgressBar class.",       // [1]
+        "Failure in `neuik_Element_GetSizeAndLocation()`.", // [2]
+    };
 
-	if (!neuik_Object_IsClass(pb, neuik__Class_ProgressBar))
-	{
-		eNum = 1;
-		goto out;
-	}
+    if (!neuik_Object_IsClass(pb, neuik__Class_ProgressBar))
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	if (frac != pb->frac)
-	{
-		/*--------------------------------------------------------------------*/
-		/* ProgressBar fraction value has changed, updated text and request a */
-		/* redraw.                                                            */
-		/*--------------------------------------------------------------------*/
-		pb->frac = frac;
+    if (frac != pb->frac)
+    {
+        /*--------------------------------------------------------------------*/
+        /* ProgressBar fraction value has changed, updated text and request a */
+        /* redraw.                                                            */
+        /*--------------------------------------------------------------------*/
+        pb->frac = frac;
 
-		/*--------------------------------------------------------------------*/
-		/* select the correct ProgressBar config to use (pointer or internal) */
-		/*--------------------------------------------------------------------*/
-		if (pb->cfgPtr != NULL)
-		{
-			aCfg = pb->cfgPtr;
-		}
-		else 
-		{
-			aCfg = pb->cfg;
-		}
+        /*--------------------------------------------------------------------*/
+        /* select the correct ProgressBar config to use (pointer or internal) */
+        /*--------------------------------------------------------------------*/
+        if (pb->cfgPtr != NULL)
+        {
+            aCfg = pb->cfgPtr;
+        }
+        else 
+        {
+            aCfg = pb->cfg;
+        }
 
-		if (aCfg->decimalPlaces == 0)
-		{
-			sprintf(pb->fracText, "%d%%", (unsigned int)(100.0*pb->frac));
-		}
-		else
-		{
-			sprintf(pb->fracText, "%.2f%%", 100.0*pb->frac);
-		}
+        if (aCfg->decimalPlaces == 0)
+        {
+            sprintf(pb->fracText, "%d%%", (unsigned int)(100.0*pb->frac));
+        }
+        else
+        {
+            sprintf(pb->fracText, "%.2f%%", 100.0*pb->frac);
+        }
 
-		if (neuik_Element_GetSizeAndLocation(pb, &rSize, &rLoc))
-		{
-			eNum = 2;
-			goto out;
-		}
-		neuik_Element_RequestRedraw(pb, rLoc, rSize);
-	}
+        if (neuik_Element_GetSizeAndLocation(pb, &rSize, &rLoc))
+        {
+            eNum = 2;
+            goto out;
+        }
+        neuik_Element_RequestRedraw(pb, rLoc, rSize);
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -549,270 +549,270 @@ out:
  *
  ******************************************************************************/
 int neuik_Element_Render__ProgressBar(
-	NEUIK_Element   elem,
-	RenderSize    * rSize, /* in/out the size the tex occupies when complete */
-	RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
-	SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
-	int             mock)  /* If true; calculate sizes/locations but don't draw */
+    NEUIK_Element   elem,
+    RenderSize    * rSize, /* in/out the size the tex occupies when complete */
+    RenderLoc     * rlMod, /* A relative location modifier (for rendering) */
+    SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
+    int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-	const NEUIK_Color       * fgClr  = NULL;
-	const NEUIK_Color       * bgClr  = NULL;
-	const NEUIK_Color       * bClr   = NULL; /* border color */
-	SDL_Renderer            * rend   = NULL;
-	int                       progW  = 0; /* pixel width of entire shadable region */
-	int                       shadeW = 0; /* width of shaded progress bar region */
-	int                       textW  = 0;
-	int                       textH  = 0;
-	int                       eNum   = 0; /* which error to report (if any) */
-	SDL_Texture             * gTex   = NULL; /* gradient progress texture */
-	SDL_Texture             * tTex   = NULL; /* text texture */
-	TTF_Font                * font   = NULL;
-	SDL_Rect                  rect;
-	NEUIK_ProgressBar       * pb     = NULL;
-	NEUIK_ElementBase       * eBase  = NULL;
-	colorDeltas             * deltaPP = NULL;
-	RenderLoc                 rl;
-	neuik_MaskMap           * maskMap = NULL;
-	NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
-	static char               funcName[] = "neuik_Element_Render__ProgressBar";
-	static char             * errMsgs[] = {"",                           // [0] no error
-		"Argument `elem` is not of ProgressBar class.",                  // [1]
-		"Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
-		"Invalid specified `rSize` (negative values).",                  // [3]
-		"Failure in `neuik_Element_RedrawBackground()`.",                // [4]
-		"FontSet_GetFont returned NULL.",                                // [5]
-		"RenderText returned NULL.",                                     // [6]
-		"Failure in `neuik_MakeMaskMap()`",                              // [7]
-	};
+    const NEUIK_Color       * fgClr  = NULL;
+    const NEUIK_Color       * bgClr  = NULL;
+    const NEUIK_Color       * bClr   = NULL; /* border color */
+    SDL_Renderer            * rend   = NULL;
+    int                       progW  = 0; /* pixel width of entire shadable region */
+    int                       shadeW = 0; /* width of shaded progress bar region */
+    int                       textW  = 0;
+    int                       textH  = 0;
+    int                       eNum   = 0; /* which error to report (if any) */
+    SDL_Texture             * gTex   = NULL; /* gradient progress texture */
+    SDL_Texture             * tTex   = NULL; /* text texture */
+    TTF_Font                * font   = NULL;
+    SDL_Rect                  rect;
+    NEUIK_ProgressBar       * pb     = NULL;
+    NEUIK_ElementBase       * eBase  = NULL;
+    colorDeltas             * deltaPP = NULL;
+    RenderLoc                 rl;
+    neuik_MaskMap           * maskMap = NULL;
+    NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
+    static char               funcName[] = "neuik_Element_Render__ProgressBar";
+    static char             * errMsgs[] = {"",                           // [0] no error
+        "Argument `elem` is not of ProgressBar class.",                  // [1]
+        "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
+        "Invalid specified `rSize` (negative values).",                  // [3]
+        "Failure in `neuik_Element_RedrawBackground()`.",                // [4]
+        "FontSet_GetFont returned NULL.",                                // [5]
+        "RenderText returned NULL.",                                     // [6]
+        "Failure in `neuik_MakeMaskMap()`",                              // [7]
+    };
 
-	if (!neuik_Object_IsClass(elem, neuik__Class_ProgressBar))
-	{
-		eNum = 1;
-		goto out;
-	}
-	pb = (NEUIK_ProgressBar*)elem;
+    if (!neuik_Object_IsClass(elem, neuik__Class_ProgressBar))
+    {
+        eNum = 1;
+        goto out;
+    }
+    pb = (NEUIK_ProgressBar*)elem;
 
-	if (neuik_Object_GetClassObject(pb, neuik__Class_Element, (void**)&eBase))
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (neuik_Object_GetClassObject(pb, neuik__Class_Element, (void**)&eBase))
+    {
+        eNum = 2;
+        goto out;
+    }
 
-	if (rSize->w < 0 || rSize->h < 0)
-	{
-		eNum = 3;
-		goto out;
-	}
-	if (mock)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This is a mock render operation; don't draw anything...            */
-		/*--------------------------------------------------------------------*/
-		goto out;
-	}
+    if (rSize->w < 0 || rSize->h < 0)
+    {
+        eNum = 3;
+        goto out;
+    }
+    if (mock)
+    {
+        /*--------------------------------------------------------------------*/
+        /* This is a mock render operation; don't draw anything...            */
+        /*--------------------------------------------------------------------*/
+        goto out;
+    }
 
-	eBase->eSt.rend = xRend;
-	rend = eBase->eSt.rend;
+    eBase->eSt.rend = xRend;
+    rend = eBase->eSt.rend;
 
-	/*------------------------------------------------------------------------*/
-	/* select the correct ProgressBar config to use (pointer or internal)     */
-	/*------------------------------------------------------------------------*/
-	aCfg = pb->cfg;
-	if (pb->cfgPtr != NULL)
-	{
-		aCfg = pb->cfgPtr;
-	}
+    /*------------------------------------------------------------------------*/
+    /* select the correct ProgressBar config to use (pointer or internal)     */
+    /*------------------------------------------------------------------------*/
+    aCfg = pb->cfg;
+    if (pb->cfgPtr != NULL)
+    {
+        aCfg = pb->cfgPtr;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Redraw the background surface before continuing.                       */
-	/*------------------------------------------------------------------------*/
-	rl = eBase->eSt.rLoc;
-	bgClr = &(aCfg->bgColor);
-	fgClr = &(aCfg->fgColor);
+    /*------------------------------------------------------------------------*/
+    /* Redraw the background surface before continuing.                       */
+    /*------------------------------------------------------------------------*/
+    rl = eBase->eSt.rLoc;
+    bgClr = &(aCfg->bgColor);
+    fgClr = &(aCfg->fgColor);
 
-	if (pb->frac == 0.0)
-	{
-		/*--------------------------------------------------------------------*/
-		/* Currently the progress bare is completely "unfinished".            */
-		/*--------------------------------------------------------------------*/
-		rect.x = rl.x + 1;
-		rect.y = rl.y + 1;
-		rect.w = rSize->w - 2;
-		rect.h = rSize->h - 2;
+    if (pb->frac == 0.0)
+    {
+        /*--------------------------------------------------------------------*/
+        /* Currently the progress bare is completely "unfinished".            */
+        /*--------------------------------------------------------------------*/
+        rect.x = rl.x + 1;
+        rect.y = rl.y + 1;
+        rect.w = rSize->w - 2;
+        rect.h = rSize->h - 2;
 
-		SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
-		SDL_RenderFillRect(rend, &rect);
-	}
-	else
-	{
-		/*--------------------------------------------------------------------*/
-		/* Create a MaskMap an mark off the trasnparent pixels.               */
-		/*--------------------------------------------------------------------*/
-		if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
-		{
-			eNum = 7;
-			goto out;
-		}
+        SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
+        SDL_RenderFillRect(rend, &rect);
+    }
+    else
+    {
+        /*--------------------------------------------------------------------*/
+        /* Create a MaskMap an mark off the trasnparent pixels.               */
+        /*--------------------------------------------------------------------*/
+        if (neuik_MakeMaskMap(&maskMap, rSize->w, rSize->h))
+        {
+            eNum = 7;
+            goto out;
+        }
 
-		/*--------------------------------------------------------------------*/
-		/* Mark off the rounded sections of the ProgressBar within the        */
-		/* MaskMap.                                                           */
-		/*--------------------------------------------------------------------*/
-		/* Apply transparent pixels to (round off) the upper-left corner */
-		neuik_MaskMap_MaskPoint(maskMap, 0, 0);
-		neuik_MaskMap_MaskPoint(maskMap, 0, 1);
-		neuik_MaskMap_MaskPoint(maskMap, 1, 0);
+        /*--------------------------------------------------------------------*/
+        /* Mark off the rounded sections of the ProgressBar within the        */
+        /* MaskMap.                                                           */
+        /*--------------------------------------------------------------------*/
+        /* Apply transparent pixels to (round off) the upper-left corner */
+        neuik_MaskMap_MaskPoint(maskMap, 0, 0);
+        neuik_MaskMap_MaskPoint(maskMap, 0, 1);
+        neuik_MaskMap_MaskPoint(maskMap, 1, 0);
 
-		/* Apply transparent pixels to (round off) the lower-left corner */
-		neuik_MaskMap_MaskPoint(maskMap, 0, rSize->h - 1);
-		neuik_MaskMap_MaskPoint(maskMap, 0, rSize->h - 2);
-		neuik_MaskMap_MaskPoint(maskMap, 1, rSize->h - 1);
+        /* Apply transparent pixels to (round off) the lower-left corner */
+        neuik_MaskMap_MaskPoint(maskMap, 0, rSize->h - 1);
+        neuik_MaskMap_MaskPoint(maskMap, 0, rSize->h - 2);
+        neuik_MaskMap_MaskPoint(maskMap, 1, rSize->h - 1);
 
-		/* Apply transparent pixels to (round off) the upper-right corner */
-		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, 0);
-		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, 1);
-		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 2, 0);
+        /* Apply transparent pixels to (round off) the upper-right corner */
+        neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, 0);
+        neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, 1);
+        neuik_MaskMap_MaskPoint(maskMap, rSize->w - 2, 0);
 
-		/* Apply transparent pixels to (round off) the lower-right corner */
-		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, rSize->h - 1);
-		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, rSize->h - 2);
-		neuik_MaskMap_MaskPoint(maskMap, rSize->w - 2, rSize->h - 1);
+        /* Apply transparent pixels to (round off) the lower-right corner */
+        neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, rSize->h - 1);
+        neuik_MaskMap_MaskPoint(maskMap, rSize->w - 1, rSize->h - 2);
+        neuik_MaskMap_MaskPoint(maskMap, rSize->w - 2, rSize->h - 1);
 
-		/*--------------------------------------------------------------------*/
-		/* The progress bar is "in-progress"; draw in the background gradient */
-		/*--------------------------------------------------------------------*/
-		if (neuik_Element_RedrawBackground(elem, rlMod, maskMap))
-		{
-			eNum = 4;
-			goto out;
-		}
+        /*--------------------------------------------------------------------*/
+        /* The progress bar is "in-progress"; draw in the background gradient */
+        /*--------------------------------------------------------------------*/
+        if (neuik_Element_RedrawBackground(elem, rlMod, maskMap))
+        {
+            eNum = 4;
+            goto out;
+        }
 
-		/*--------------------------------------------------------------------*/
-		/* Cover up the "unfinished" progress section of the progress bar.    */
-		/*--------------------------------------------------------------------*/
-		progW  = (rSize->w - 2);
-		shadeW = (int)((1.0 - pb->frac) * (double)(progW));
+        /*--------------------------------------------------------------------*/
+        /* Cover up the "unfinished" progress section of the progress bar.    */
+        /*--------------------------------------------------------------------*/
+        progW  = (rSize->w - 2);
+        shadeW = (int)((1.0 - pb->frac) * (double)(progW));
 
-		rect.x = (rl.x + 1 + progW) - shadeW;
-		rect.y = rl.y + 1;
-		rect.w = shadeW;
-		rect.h = (rSize->h - 2);
+        rect.x = (rl.x + 1 + progW) - shadeW;
+        rect.y = rl.y + 1;
+        rect.w = shadeW;
+        rect.h = (rSize->h - 2);
 
-		SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
-		SDL_RenderFillRect(rend, &rect);
-	}
+        SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
+        SDL_RenderFillRect(rend, &rect);
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Draw the border around the ProgressBar.                                */
-	/*------------------------------------------------------------------------*/
-	bClr = &(aCfg->borderColor);
-	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
+    /*------------------------------------------------------------------------*/
+    /* Draw the border around the ProgressBar.                                */
+    /*------------------------------------------------------------------------*/
+    bClr = &(aCfg->borderColor);
+    SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
-	/* Draw upper-left corner border pixels */
-	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 1);
-	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 2);
-	SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + 1);
+    /* Draw upper-left corner border pixels */
+    SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 1);
+    SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 2);
+    SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + 1);
 
-	/* Draw lower-left corner border pixels */
-	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 2));
-	SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 3));
-	SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + (rSize->h - 2));
+    /* Draw lower-left corner border pixels */
+    SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 2));
+    SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 3));
+    SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + (rSize->h - 2));
 
-	/* Draw upper-right corner border pixels */
-	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 1);
-	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 2);
-	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + 1);
+    /* Draw upper-right corner border pixels */
+    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 1);
+    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 2);
+    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + 1);
 
-	/* Draw upper-right corner border pixels */
-	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 2));
-	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 3));
-	SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
+    /* Draw upper-right corner border pixels */
+    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 2));
+    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 3));
+    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
 
 
-	/* upper border line */
-	SDL_RenderDrawLine(rend, 
-		rl.x + 2,              rl.y, 
-		rl.x + (rSize->w - 3), rl.y); 
-	/* left border line */
-	SDL_RenderDrawLine(rend, 
-		rl.x, rl.y + 2, 
-		rl.x, rl.y + (rSize->h - 3));
-	/* right border line */
-	SDL_RenderDrawLine(rend, 
-		rl.x + (rSize->w - 1), rl.y + 2, 
-		rl.x + (rSize->w - 1), rl.y + (rSize->h - 3));
+    /* upper border line */
+    SDL_RenderDrawLine(rend, 
+        rl.x + 2,              rl.y, 
+        rl.x + (rSize->w - 3), rl.y); 
+    /* left border line */
+    SDL_RenderDrawLine(rend, 
+        rl.x, rl.y + 2, 
+        rl.x, rl.y + (rSize->h - 3));
+    /* right border line */
+    SDL_RenderDrawLine(rend, 
+        rl.x + (rSize->w - 1), rl.y + 2, 
+        rl.x + (rSize->w - 1), rl.y + (rSize->h - 3));
 
-	/* lower border line */
-	bClr = &(aCfg->borderColorDark);
-	SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-	SDL_RenderDrawLine(rend, 
-		rl.x + 2,              rl.y + (rSize->h - 1), 
-		rl.x + (rSize->w - 3), rl.y + (rSize->h - 1));
+    /* lower border line */
+    bClr = &(aCfg->borderColorDark);
+    SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
+    SDL_RenderDrawLine(rend, 
+        rl.x + 2,              rl.y + (rSize->h - 1), 
+        rl.x + (rSize->w - 3), rl.y + (rSize->h - 1));
 
-	/*------------------------------------------------------------------------*/
-	/* Render the ProgressBar text                                            */
-	/*------------------------------------------------------------------------*/
-	if (strlen(pb->fracText) > 0)
-	{
-		font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
-			aCfg->fontBold, aCfg->fontItalic);
-		if (font == NULL) 
-		{
-			eNum = 5;
-			goto out;
-		}
+    /*------------------------------------------------------------------------*/
+    /* Render the ProgressBar text                                            */
+    /*------------------------------------------------------------------------*/
+    if (strlen(pb->fracText) > 0)
+    {
+        font = NEUIK_FontSet_GetFont(aCfg->fontSet, aCfg->fontSize,
+            aCfg->fontBold, aCfg->fontItalic);
+        if (font == NULL) 
+        {
+            eNum = 5;
+            goto out;
+        }
 
-		tTex = NEUIK_RenderText(pb->fracText, font, *fgClr, rend, &textW, &textH);
-		if (tTex == NULL)
-		{
-			eNum = 6;
-			goto out;
-		}
+        tTex = NEUIK_RenderText(pb->fracText, font, *fgClr, rend, &textW, &textH);
+        if (tTex == NULL)
+        {
+            eNum = 6;
+            goto out;
+        }
 
-		rect.x = rl.x;
-		rect.y = rl.y;
-		rect.w = textW;
-		rect.h = textH;
+        rect.x = rl.x;
+        rect.y = rl.y;
+        rect.w = textW;
+        rect.h = textH;
 
-		switch (eBase->eCfg.HJustify)
-		{
-			case NEUIK_HJUSTIFY_LEFT:
-				rect.x += 6;
-				rect.y += (int) ((float)(rSize->h - textH)/2.0);
-				break;
+        switch (eBase->eCfg.HJustify)
+        {
+            case NEUIK_HJUSTIFY_LEFT:
+                rect.x += 6;
+                rect.y += (int) ((float)(rSize->h - textH)/2.0);
+                break;
 
-			case NEUIK_HJUSTIFY_CENTER:
-			case NEUIK_HJUSTIFY_DEFAULT:
-				rect.x += (int) ((float)(rSize->w - textW)/2.0);
-				rect.y += (int) ((float)(rSize->h - textH)/2.0);
-				break;
+            case NEUIK_HJUSTIFY_CENTER:
+            case NEUIK_HJUSTIFY_DEFAULT:
+                rect.x += (int) ((float)(rSize->w - textW)/2.0);
+                rect.y += (int) ((float)(rSize->h - textH)/2.0);
+                break;
 
-			case NEUIK_HJUSTIFY_RIGHT:
-				rect.x += (int) (rSize->w - textW - 6);
-				rect.y += (int) ((float)(rSize->h - textH)/2.0);
-				break;
-		}
+            case NEUIK_HJUSTIFY_RIGHT:
+                rect.x += (int) (rSize->w - textW - 6);
+                rect.y += (int) ((float)(rSize->h - textH)/2.0);
+                break;
+        }
 
-		SDL_RenderCopy(rend, tTex, NULL, &rect);
-	}
+        SDL_RenderCopy(rend, tTex, NULL, &rect);
+    }
 out:
-	if (eBase != NULL)
-	{
-		if (!mock) eBase->eSt.doRedraw = 0;
-	}
+    if (eBase != NULL)
+    {
+        if (!mock) eBase->eSt.doRedraw = 0;
+    }
 
-	ConditionallyDestroyTexture(&tTex);
-	ConditionallyDestroyTexture(&gTex);
-	if (maskMap != NULL) neuik_Object_Free(maskMap);
-	if (deltaPP != NULL) free(deltaPP);
+    ConditionallyDestroyTexture(&tTex);
+    ConditionallyDestroyTexture(&gTex);
+    if (maskMap != NULL) neuik_Object_Free(maskMap);
+    if (deltaPP != NULL) free(deltaPP);
 
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
 
 
@@ -826,128 +826,128 @@ out:
  *
  ******************************************************************************/
 neuik_EventState neuik_Element_CaptureEvent__ProgressBar(
-	NEUIK_Element   elem,
-	SDL_Event     * ev)
+    NEUIK_Element   elem,
+    SDL_Event     * ev)
 {
-	neuik_EventState       evCaputred = NEUIK_EVENTSTATE_NOT_CAPTURED;
-	RenderSize             rSize;
-	RenderLoc              rLoc;
-	NEUIK_ProgressBar    * pb         = NULL;
-	NEUIK_ElementBase    * eBase      = NULL;
-	SDL_Event            * e;
-	SDL_MouseMotionEvent * mouseMotEv;
-	SDL_MouseButtonEvent * mouseButEv;
+    neuik_EventState       evCaputred = NEUIK_EVENTSTATE_NOT_CAPTURED;
+    RenderSize             rSize;
+    RenderLoc              rLoc;
+    NEUIK_ProgressBar    * pb         = NULL;
+    NEUIK_ElementBase    * eBase      = NULL;
+    SDL_Event            * e;
+    SDL_MouseMotionEvent * mouseMotEv;
+    SDL_MouseButtonEvent * mouseButEv;
 
-	if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
-	{
-		/* not the right type of object */
-		goto out;
-	}
-	pb = (NEUIK_ProgressBar *)elem;
+    if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
+    {
+        /* not the right type of object */
+        goto out;
+    }
+    pb = (NEUIK_ProgressBar *)elem;
 
-	/*------------------------------------------------------------------------*/
-	/* Check if the event is captured by the menu (mouseclick/mousemotion).   */
-	/*------------------------------------------------------------------------*/
-	e = (SDL_Event*)ev;
-	switch (e->type)
-	{
-	case SDL_MOUSEBUTTONDOWN:
-		mouseButEv = (SDL_MouseButtonEvent*)(e);
-		if (mouseButEv->y >= eBase->eSt.rLoc.y &&
-			mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
-		{
-			if (mouseButEv->x >= eBase->eSt.rLoc.x &&
-				mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
-			{
-				/* This mouse click originated within this ProgressBar */
-				pb->clickOrigin = 1;
-				pb->selected    = 1;
-				pb->wasSelected = 1;
-				neuik_Window_TakeFocus(eBase->eSt.window, pb);
+    /*------------------------------------------------------------------------*/
+    /* Check if the event is captured by the menu (mouseclick/mousemotion).   */
+    /*------------------------------------------------------------------------*/
+    e = (SDL_Event*)ev;
+    switch (e->type)
+    {
+    case SDL_MOUSEBUTTONDOWN:
+        mouseButEv = (SDL_MouseButtonEvent*)(e);
+        if (mouseButEv->y >= eBase->eSt.rLoc.y &&
+            mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+        {
+            if (mouseButEv->x >= eBase->eSt.rLoc.x &&
+                mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+            {
+                /* This mouse click originated within this ProgressBar */
+                pb->clickOrigin = 1;
+                pb->selected    = 1;
+                pb->wasSelected = 1;
+                neuik_Window_TakeFocus(eBase->eSt.window, pb);
 
-				rSize = eBase->eSt.rSize;
-				rLoc  = eBase->eSt.rLoc;
-				neuik_Element_RequestRedraw(pb, rLoc, rSize);
-				neuik_Element_TriggerCallback(pb, NEUIK_CALLBACK_ON_CLICK);
-				evCaputred = NEUIK_EVENTSTATE_CAPTURED;
-				if (!neuik_Object_IsNEUIKObject_NoError(pb))
-				{
-					/* The object was freed/corrupted by the callback */
-					evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
-					goto out;
-				}
-				goto out;
-			}
-		}
-		break;
-	case SDL_MOUSEBUTTONUP:
-		mouseButEv = (SDL_MouseButtonEvent*)(e);
-		if (pb->clickOrigin)
-		{
-			if (mouseButEv->y >= eBase->eSt.rLoc.y && 
-				mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
-			{
-				if (mouseButEv->x >= eBase->eSt.rLoc.x && 
-					mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
-				{
-					/* cursor is still within the ProgressBar, activate cbFunc */
-					neuik_Element_TriggerCallback(pb, NEUIK_CALLBACK_ON_CLICKED);
-					if (!neuik_Object_IsNEUIKObject_NoError(pb))
-					{
-						/* The object was freed/corrupted by the callback */
-						evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
-						goto out;
-					}
-				}
-			}
-			pb->selected    = 0;
-			pb->wasSelected = 0;
-			pb->clickOrigin = 0;
+                rSize = eBase->eSt.rSize;
+                rLoc  = eBase->eSt.rLoc;
+                neuik_Element_RequestRedraw(pb, rLoc, rSize);
+                neuik_Element_TriggerCallback(pb, NEUIK_CALLBACK_ON_CLICK);
+                evCaputred = NEUIK_EVENTSTATE_CAPTURED;
+                if (!neuik_Object_IsNEUIKObject_NoError(pb))
+                {
+                    /* The object was freed/corrupted by the callback */
+                    evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+                    goto out;
+                }
+                goto out;
+            }
+        }
+        break;
+    case SDL_MOUSEBUTTONUP:
+        mouseButEv = (SDL_MouseButtonEvent*)(e);
+        if (pb->clickOrigin)
+        {
+            if (mouseButEv->y >= eBase->eSt.rLoc.y && 
+                mouseButEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+            {
+                if (mouseButEv->x >= eBase->eSt.rLoc.x && 
+                    mouseButEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+                {
+                    /* cursor is still within the ProgressBar, activate cbFunc */
+                    neuik_Element_TriggerCallback(pb, NEUIK_CALLBACK_ON_CLICKED);
+                    if (!neuik_Object_IsNEUIKObject_NoError(pb))
+                    {
+                        /* The object was freed/corrupted by the callback */
+                        evCaputred = NEUIK_EVENTSTATE_OBJECT_FREED;
+                        goto out;
+                    }
+                }
+            }
+            pb->selected    = 0;
+            pb->wasSelected = 0;
+            pb->clickOrigin = 0;
 
-			rSize = eBase->eSt.rSize;
-			rLoc  = eBase->eSt.rLoc;
-			neuik_Element_RequestRedraw(pb, rLoc, rSize);
-			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
-			goto out;
-		}
-		break;
+            rSize = eBase->eSt.rSize;
+            rLoc  = eBase->eSt.rLoc;
+            neuik_Element_RequestRedraw(pb, rLoc, rSize);
+            evCaputred = NEUIK_EVENTSTATE_CAPTURED;
+            goto out;
+        }
+        break;
 
-	case SDL_MOUSEMOTION:
-		mouseMotEv = (SDL_MouseMotionEvent*)(e);
+    case SDL_MOUSEMOTION:
+        mouseMotEv = (SDL_MouseMotionEvent*)(e);
 
-		if (pb->clickOrigin)
-		{
-			/*----------------------------------------------------------------*/
-			/* The mouse was initially clicked within the ProgressBar. If the */
-			/* user moves the cursor out of the ProgressBar area, deselect    */
-			/* it.                                                            */
-			/*----------------------------------------------------------------*/
-			pb->selected = 0;
-			if (mouseMotEv->y >= eBase->eSt.rLoc.y && 
-				mouseMotEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
-			{
-				if (mouseMotEv->x >= eBase->eSt.rLoc.x && 
-					mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
-				{
-					pb->selected = 1;
-				}
-			}
+        if (pb->clickOrigin)
+        {
+            /*----------------------------------------------------------------*/
+            /* The mouse was initially clicked within the ProgressBar. If the */
+            /* user moves the cursor out of the ProgressBar area, deselect    */
+            /* it.                                                            */
+            /*----------------------------------------------------------------*/
+            pb->selected = 0;
+            if (mouseMotEv->y >= eBase->eSt.rLoc.y && 
+                mouseMotEv->y <= eBase->eSt.rLoc.y + eBase->eSt.rSize.h)
+            {
+                if (mouseMotEv->x >= eBase->eSt.rLoc.x && 
+                    mouseMotEv->x <= eBase->eSt.rLoc.x + eBase->eSt.rSize.w)
+                {
+                    pb->selected = 1;
+                }
+            }
 
-			if (pb->wasSelected != pb->selected)
-			{
-				rSize = eBase->eSt.rSize;
-				rLoc  = eBase->eSt.rLoc;
-				neuik_Element_RequestRedraw(pb, rLoc, rSize);
-			}
-			pb->wasSelected = pb->selected;
-			evCaputred = NEUIK_EVENTSTATE_CAPTURED;
-			goto out;
-		}
+            if (pb->wasSelected != pb->selected)
+            {
+                rSize = eBase->eSt.rSize;
+                rLoc  = eBase->eSt.rLoc;
+                neuik_Element_RequestRedraw(pb, rLoc, rSize);
+            }
+            pb->wasSelected = pb->selected;
+            evCaputred = NEUIK_EVENTSTATE_CAPTURED;
+            goto out;
+        }
 
-		break;
-	}
+        break;
+    }
 
 out:
-	return evCaputred;
+    return evCaputred;
 }
 

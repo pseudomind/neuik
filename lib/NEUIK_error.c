@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,65 +28,68 @@ int          errorDuplicates[11] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 int NEUIK_HasErrors()
 {
-	int rvErr = 0;
-	if (!inGUIBacktrace && errorList[0] != NULL) 
-	{
-		rvErr = 1;
-	}
-	else if (inGUIBacktrace && guiBacktraceFail)
-	{
-		rvErr = 1;
-	}
+    int rvErr = 0;
+    if (!inGUIBacktrace && errorList[0] != NULL) 
+    {
+        rvErr = 1;
+    }
+    else if (inGUIBacktrace && guiBacktraceFail)
+    {
+        rvErr = 1;
+    }
 
-	return rvErr;
+    return rvErr;
 }
+
 
 void NEUIK_ClearErrors()
 {
-	int ctr;
+    int ctr;
 
-	for (ctr = 0; ctr <= maxErrors; ctr++)
-	{
-		errorList[ctr] = 0;		
-	}
-	errorsOmitted = 0;
+    for (ctr = 0; ctr <= maxErrors; ctr++)
+    {
+        errorList[ctr] = 0;     
+    }
+    errorsOmitted = 0;
 }
+
 
 void NEUIK_RaiseError(
-	const char * funcName,
-	const char * err)
+    const char * funcName,
+    const char * err)
 {
-	int ctr;
-	int notSet = 1;
+    int ctr;
+    int notSet = 1;
 
-	if (inGUIBacktrace) 
-	{
-		guiBacktraceFail = 1;
-		return; /* ignore new errors during a backtrace */
-	}
+    if (inGUIBacktrace) 
+    {
+        guiBacktraceFail = 1;
+        return; /* ignore new errors during a backtrace */
+    }
 
-	for (ctr = 0; ctr <= maxErrors; ctr++)
-	{
-		if (errorList[ctr] == NULL)
-		{
-			if (ctr > 0)
-			{
-				if (errorList[ctr-1] == err)
-				{
-					/* A repeated error message */
-					errorDuplicates[ctr-1]++;
-					notSet = 0;
-					break;
-				}
-			}
-			errorList[ctr]    = err;
-			funcNameList[ctr] = funcName;
-			notSet = 0;
-			break;
-		}
-	}
-	if (notSet)
-	{
-		errorsOmitted += 1;
-	}
+    for (ctr = 0; ctr <= maxErrors; ctr++)
+    {
+        if (errorList[ctr] == NULL)
+        {
+            if (ctr > 0)
+            {
+                if (errorList[ctr-1] == err)
+                {
+                    /* A repeated error message */
+                    errorDuplicates[ctr-1]++;
+                    notSet = 0;
+                    break;
+                }
+            }
+            errorList[ctr]    = err;
+            funcNameList[ctr] = funcName;
+            notSet = 0;
+            break;
+        }
+    }
+    if (notSet)
+    {
+        errorsOmitted += 1;
+    }
 }
+

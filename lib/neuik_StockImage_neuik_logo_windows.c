@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,6 +17,7 @@
 // #include <SDL.h>
 #include "NEUIK_Image.h"
 
+
 /*******************************************************************************
  *
  *  Name:          neuik_GetStockImage_neuik_logo
@@ -27,7 +28,8 @@
  *
  ******************************************************************************/
 int neuik_GetStockImage_neuik_logo(
-	NEUIK_Image ** imgPtr)
+    NEUIK_Image ** imgPtr)
 {
-	return 1;
+    return 1;
 }
+

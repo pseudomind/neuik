@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,8 +28,8 @@ extern int neuik__Report_About;
 /* Typedef(s)                                                                 */
 /*----------------------------------------------------------------------------*/
 typedef struct {
-	int             cap;
-	NEUIK_Window ** windows;
+    int             cap;
+    NEUIK_Window ** windows;
 } neuik_WindowArray;
 
 /*----------------------------------------------------------------------------*/
@@ -50,46 +50,47 @@ neuik_WindowArray neuik_windows;
  ******************************************************************************/
 int neuik_FreeAllWindows()
 {
-	int           ctr;
-	int           eNum = 0; /* which error to report (if any) */
-	static char   funcName[] = "neuik_FreeAllWindows";
-	static char * errMsgs[] = {"",        // [0] no error
-		"Failed to free a NEUIK_Window.", // [1]
-	};
+    int           ctr;
+    int           eNum = 0; /* which error to report (if any) */
+    static char   funcName[] = "neuik_FreeAllWindows";
+    static char * errMsgs[] = {"",        // [0] no error
+        "Failed to free a NEUIK_Window.", // [1]
+    };
 
-	/*------------------------------------------------------------------------*/
-	/* The window pointer array is not initialized (do nothing)               */
-	/*------------------------------------------------------------------------*/
-	if (windowArrayInit)
-	{
-		eNum = 0;
-		goto out;
-	}
+    /*------------------------------------------------------------------------*/
+    /* The window pointer array is not initialized (do nothing)               */
+    /*------------------------------------------------------------------------*/
+    if (windowArrayInit)
+    {
+        eNum = 0;
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Find any valid window pointer and free the associated resources.       */
-	/*------------------------------------------------------------------------*/
-	for (ctr = 0;ctr < neuik_windows.cap; ctr++)
-	{
-		if (neuik_windows.windows[ctr] != NULL)
-		{
-			if (NEUIK_Window_Free(neuik_windows.windows[ctr]))
-			{
-				eNum = 1;
-				goto out;
-			}
-			neuik_windows.windows[ctr] = NULL;
-		}
-	}
+    /*------------------------------------------------------------------------*/
+    /* Find any valid window pointer and free the associated resources.       */
+    /*------------------------------------------------------------------------*/
+    for (ctr = 0;ctr < neuik_windows.cap; ctr++)
+    {
+        if (neuik_windows.windows[ctr] != NULL)
+        {
+            if (NEUIK_Window_Free(neuik_windows.windows[ctr]))
+            {
+                eNum = 1;
+                goto out;
+            }
+            neuik_windows.windows[ctr] = NULL;
+        }
+    }
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
+
 
 /*******************************************************************************
  *
@@ -102,74 +103,75 @@ out:
  *
  ******************************************************************************/
 int neuik_RegisterWindow(
-	NEUIK_Window * w)
+    NEUIK_Window * w)
 {
-	int           wasSet = 0;
-	int           ctr;
-	int           eNum = 0; /* which error to report (if any) */
-	static char   funcName[] = "neuik_RegisterWindow";
-	static char * errMsgs[] = {"",                          // [0] no error
-		"Failed allocate memory for windowArray.",          // [1]
-		"TODO Array reallocation not currently supported.", // [2]
-	};
+    int           wasSet = 0;
+    int           ctr;
+    int           eNum = 0; /* which error to report (if any) */
+    static char   funcName[] = "neuik_RegisterWindow";
+    static char * errMsgs[] = {"",                          // [0] no error
+        "Failed allocate memory for windowArray.",          // [1]
+        "TODO Array reallocation not currently supported.", // [2]
+    };
 
-	/*------------------------------------------------------------------------*/
-	/* Initialize the window pointer array (first run only)                   */
-	/*------------------------------------------------------------------------*/
-	if (windowArrayInit)
-	{
-		windowArrayInit = 0;
-		neuik_windows.cap = 11;
-		neuik_windows.windows = (NEUIK_Window**) malloc(11*sizeof(NEUIK_Window*));
-		if (neuik_windows.windows == NULL)
-		{
-			eNum = 1;
-			goto out;
-		}
+    /*------------------------------------------------------------------------*/
+    /* Initialize the window pointer array (first run only)                   */
+    /*------------------------------------------------------------------------*/
+    if (windowArrayInit)
+    {
+        windowArrayInit = 0;
+        neuik_windows.cap = 11;
+        neuik_windows.windows = (NEUIK_Window**) malloc(11*sizeof(NEUIK_Window*));
+        if (neuik_windows.windows == NULL)
+        {
+            eNum = 1;
+            goto out;
+        }
 
-		for (ctr = 0;ctr < neuik_windows.cap; ctr++)
-		{
-			neuik_windows.windows[ctr] = NULL;
-		}
-	}
-	if (w == NULL)
-	{
-		/*--------------------------------------------------------------------*/
-		/* This may happen if an error occurred prior to the creation of the  */
-		/* initial window                                                     */
-		/*--------------------------------------------------------------------*/
-		goto out;
-	}
+        for (ctr = 0;ctr < neuik_windows.cap; ctr++)
+        {
+            neuik_windows.windows[ctr] = NULL;
+        }
+    }
+    if (w == NULL)
+    {
+        /*--------------------------------------------------------------------*/
+        /* This may happen if an error occurred prior to the creation of the  */
+        /* initial window                                                     */
+        /*--------------------------------------------------------------------*/
+        goto out;
+    }
 
-	/*------------------------------------------------------------------------*/
-	/* Find an index in which to store the window pointer                     */
-	/*------------------------------------------------------------------------*/
-	for (ctr = 0;ctr < neuik_windows.cap; ctr++)
-	{
-		if (neuik_windows.windows[ctr] == NULL)
-		{
-			w->winID = ctr;
-			neuik_windows.windows[ctr] = w;
-			wasSet = 1;
-			break;
-		}
-	}
+    /*------------------------------------------------------------------------*/
+    /* Find an index in which to store the window pointer                     */
+    /*------------------------------------------------------------------------*/
+    for (ctr = 0;ctr < neuik_windows.cap; ctr++)
+    {
+        if (neuik_windows.windows[ctr] == NULL)
+        {
+            w->winID = ctr;
+            neuik_windows.windows[ctr] = w;
+            wasSet = 1;
+            break;
+        }
+    }
 
-	if (!wasSet)
-	{
-		eNum = 2;
-		goto out;
-	}
+    if (!wasSet)
+    {
+        eNum = 2;
+        goto out;
+    }
 
 out:
-	if (eNum > 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-		eNum = 1;
-	}
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
 
-	return eNum;
+    return eNum;
 }
+
 
 /*******************************************************************************
  *
@@ -181,148 +183,149 @@ out:
  *
  ******************************************************************************/
 void NEUIK_EventLoop(
-	int killOnError) /* (1/0): whether or not NEUIK_HasErrors kills this loop */
+    int killOnError) /* (1/0): whether or not NEUIK_HasErrors kills this loop */
 {
-	int                     ctr;
-	int                     checkCtr   = 0;
-	int                     checkMax   = 5;
-	int                     evCaptured = 0;
-	int                     didRedraw  = 0;
-	static int              first      = 1;
-	SDL_Event               event;
-	NEUIK_Window          * win;
+    int                     ctr;
+    int                     checkCtr   = 0;
+    int                     checkMax   = 5;
+    int                     evCaptured = 0;
+    int                     didRedraw  = 0;
+    static int              first      = 1;
+    SDL_Event               event;
+    NEUIK_Window          * win;
 
-	if (NEUIK_HasErrors()) 
-	{
-		NEUIK_BacktraceErrors();
-		NEUIK_ClearErrors();
-		if (killOnError) goto out;
-	}
-	
-	if (neuik__Report_About == 1)
-	{
-		neuik__Report_About = 2;
-		printf(
-			"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
-			"| Developed using NEUIK (Nuclear Engineer's User Interface Kit) |\n"
-			"|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|\n"
-			"| NOTE: The NEUIK project was started in 2014 by Michael Leimon |\n"
-			"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	}
+    if (NEUIK_HasErrors()) 
+    {
+        NEUIK_BacktraceErrors();
+        NEUIK_ClearErrors();
+        if (killOnError) goto out;
+    }
+    
+    if (neuik__Report_About == 1)
+    {
+        neuik__Report_About = 2;
+        printf(
+            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n"
+            "| Developed using NEUIK (Nuclear Engineer's User Interface Kit) |\n"
+            "|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|\n"
+            "| NOTE: The NEUIK project was started in 2014 by Michael Leimon |\n"
+            "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+    }
 
-	for (;;) {
-		didRedraw = 0;
-		SDL_PumpEvents();
-		for (checkCtr = 0; checkCtr < checkMax; checkCtr++)
-		{
-			if (!SDL_PollEvent(&event))
-			{
-				/*------------------------------------------------------------*/
-				/* No further events to handle, begin redraw.                 */
-				/*------------------------------------------------------------*/
-				break;
-			}
-			/*----------------------------------------------------------------*/
-			/* Otherwise, there is an event to handle                         */
-			/*----------------------------------------------------------------*/
-			switch (event.type)
-			{
-			case SDL_QUIT:
-				goto out;
-			}
+    for (;;) {
+        didRedraw = 0;
+        SDL_PumpEvents();
+        for (checkCtr = 0; checkCtr < checkMax; checkCtr++)
+        {
+            if (!SDL_PollEvent(&event))
+            {
+                /*------------------------------------------------------------*/
+                /* No further events to handle, begin redraw.                 */
+                /*------------------------------------------------------------*/
+                break;
+            }
+            /*----------------------------------------------------------------*/
+            /* Otherwise, there is an event to handle                         */
+            /*----------------------------------------------------------------*/
+            switch (event.type)
+            {
+            case SDL_QUIT:
+                goto out;
+            }
 
-			/*----------------------------------------------------------------*/
-			/* Check the windows to see if they can capture this event        */
-			/*----------------------------------------------------------------*/
-			for (ctr=0;;ctr++)
-			{
-				win = neuik_windows.windows[ctr];
-				if (win == NULL)
-				{
-					break;
-				}
+            /*----------------------------------------------------------------*/
+            /* Check the windows to see if they can capture this event        */
+            /*----------------------------------------------------------------*/
+            for (ctr=0;;ctr++)
+            {
+                win = neuik_windows.windows[ctr];
+                if (win == NULL)
+                {
+                    break;
+                }
 
-				evCaptured = NEUIK_Window_CaptureEvent(win, &event);
-				if (NEUIK_HasErrors()) 
-				{
-					NEUIK_BacktraceErrors();
-					NEUIK_ClearErrors();
-					if (killOnError) goto out;
-				}
-				if (evCaptured)
-				{
-					break;
-				}
-			}			
-		}
+                evCaptured = NEUIK_Window_CaptureEvent(win, &event);
+                if (NEUIK_HasErrors()) 
+                {
+                    NEUIK_BacktraceErrors();
+                    NEUIK_ClearErrors();
+                    if (killOnError) goto out;
+                }
+                if (evCaptured)
+                {
+                    break;
+                }
+            }           
+        }
 
-		if (!first)
-		{
-			/*----------------------------------------------------------------*/
-			/* Only redraw windows which need to be redrawn                   */
-			/*----------------------------------------------------------------*/
-			for (ctr=0;;ctr++)
-			{
-				win = neuik_windows.windows[ctr];
-				if (win == NULL) break;
+        if (!first)
+        {
+            /*----------------------------------------------------------------*/
+            /* Only redraw windows which need to be redrawn                   */
+            /*----------------------------------------------------------------*/
+            for (ctr=0;;ctr++)
+            {
+                win = neuik_windows.windows[ctr];
+                if (win == NULL) break;
 
-				if (win->doRedraw)
-				{
-					NEUIK_Window_Redraw(win);
-					if (NEUIK_HasErrors()) 
-					{
-						NEUIK_BacktraceErrors();
-						NEUIK_ClearErrors();
-						if (killOnError) goto out;
-					}
-					didRedraw = 1;
-				}
-				if (win->updateTitle)
-				{
-					SDL_SetWindowTitle(win->win, win->title);
-					win->updateTitle = 0;
-				}
-			}
-		}
-		else
-		{
-			/*----------------------------------------------------------------*/
-			/* First time in in the event loop, Redraw all the windows        */
-			/*----------------------------------------------------------------*/
-			for (ctr=0;;ctr++)
-			{
-				win = neuik_windows.windows[ctr];
-				if (win == NULL) break;
+                if (win->doRedraw)
+                {
+                    NEUIK_Window_Redraw(win);
+                    if (NEUIK_HasErrors()) 
+                    {
+                        NEUIK_BacktraceErrors();
+                        NEUIK_ClearErrors();
+                        if (killOnError) goto out;
+                    }
+                    didRedraw = 1;
+                }
+                if (win->updateTitle)
+                {
+                    SDL_SetWindowTitle(win->win, win->title);
+                    win->updateTitle = 0;
+                }
+            }
+        }
+        else
+        {
+            /*----------------------------------------------------------------*/
+            /* First time in in the event loop, Redraw all the windows        */
+            /*----------------------------------------------------------------*/
+            for (ctr=0;;ctr++)
+            {
+                win = neuik_windows.windows[ctr];
+                if (win == NULL) break;
 
-				if (win->doRedraw)
-				{
-					NEUIK_Window_Redraw(win);
-					if (NEUIK_HasErrors()) 
-					{
-						NEUIK_BacktraceErrors();
-						NEUIK_ClearErrors();
-						if (killOnError) goto out;
-					}
-					didRedraw = 1;
-				}
-			}
-			first = 0;
-		}
+                if (win->doRedraw)
+                {
+                    NEUIK_Window_Redraw(win);
+                    if (NEUIK_HasErrors()) 
+                    {
+                        NEUIK_BacktraceErrors();
+                        NEUIK_ClearErrors();
+                        if (killOnError) goto out;
+                    }
+                    didRedraw = 1;
+                }
+            }
+            first = 0;
+        }
 
 
-		if (!didRedraw)
-		{
-			/*----------------------------------------------------------------*/
-			/* There were no events handle, just wait for a brief moment.     */
-			/*----------------------------------------------------------------*/
+        if (!didRedraw)
+        {
+            /*----------------------------------------------------------------*/
+            /* There were no events handle, just wait for a brief moment.     */
+            /*----------------------------------------------------------------*/
 
-			SDL_Delay(4);
-			continue;
-		}
-	}
+            SDL_Delay(4);
+            continue;
+        }
+    }
 out:
-	return;
+    return;
 }
+
 
 /*******************************************************************************
  *
@@ -335,109 +338,110 @@ out:
  ******************************************************************************/
 void NEUIK_EventLoopNoErrHandling()
 {
-	int                     ctr;
-	int                     checkCtr   = 0;
-	int                     checkMax   = 5;
-	int                     evCaptured = 0;
-	int                     didRedraw  = 0;
-	static int              first      = 1;
-	SDL_Event               event;
-	NEUIK_Window          * win;
+    int                     ctr;
+    int                     checkCtr   = 0;
+    int                     checkMax   = 5;
+    int                     evCaptured = 0;
+    int                     didRedraw  = 0;
+    static int              first      = 1;
+    SDL_Event               event;
+    NEUIK_Window          * win;
 
-	for (;;) {
-		SDL_PumpEvents();
-		for (checkCtr = 0; checkCtr < checkMax; checkCtr++)
-		{
-			if (!SDL_PollEvent(&event))
-			{
-				/*------------------------------------------------------------*/
-				/* No further events to handle, begin redraw.                 */
-				/*------------------------------------------------------------*/
-				break;
-			}
-			/*----------------------------------------------------------------*/
-			/* Otherwise, there is an event to handle                         */
-			/*----------------------------------------------------------------*/
-			switch (event.type)
-			{
-			case SDL_QUIT:
-				goto out;
-			}
+    for (;;) {
+        SDL_PumpEvents();
+        for (checkCtr = 0; checkCtr < checkMax; checkCtr++)
+        {
+            if (!SDL_PollEvent(&event))
+            {
+                /*------------------------------------------------------------*/
+                /* No further events to handle, begin redraw.                 */
+                /*------------------------------------------------------------*/
+                break;
+            }
+            /*----------------------------------------------------------------*/
+            /* Otherwise, there is an event to handle                         */
+            /*----------------------------------------------------------------*/
+            switch (event.type)
+            {
+            case SDL_QUIT:
+                goto out;
+            }
 
-			/*----------------------------------------------------------------*/
-			/* Check the windows to see if they can capture this event        */
-			/*----------------------------------------------------------------*/
-			for (ctr=0;;ctr++)
-			{
-				win = neuik_windows.windows[ctr];
-				if (win == NULL)
-				{
-					break;
-				}
+            /*----------------------------------------------------------------*/
+            /* Check the windows to see if they can capture this event        */
+            /*----------------------------------------------------------------*/
+            for (ctr=0;;ctr++)
+            {
+                win = neuik_windows.windows[ctr];
+                if (win == NULL)
+                {
+                    break;
+                }
 
-				evCaptured = NEUIK_Window_CaptureEvent(win, &event);
-				if (evCaptured) 
-				{
-					break;
-				}
-			}			
-		}
+                evCaptured = NEUIK_Window_CaptureEvent(win, &event);
+                if (evCaptured) 
+                {
+                    break;
+                }
+            }           
+        }
 
 
-		if (!first)
-		{
-			/*----------------------------------------------------------------*/
-			/* Only redraw windows which need to be redrawn                   */
-			/*----------------------------------------------------------------*/
-			for (ctr=0;;ctr++)
-			{
-				win = neuik_windows.windows[ctr];
-				if (win == NULL) break;
+        if (!first)
+        {
+            /*----------------------------------------------------------------*/
+            /* Only redraw windows which need to be redrawn                   */
+            /*----------------------------------------------------------------*/
+            for (ctr=0;;ctr++)
+            {
+                win = neuik_windows.windows[ctr];
+                if (win == NULL) break;
 
-				if (win->doRedraw)
-				{
-					NEUIK_Window_Redraw(win);
-					didRedraw = 1;
-				}
-				if (win->updateTitle)
-				{
-					SDL_SetWindowTitle(win->win, win->title);
-					win->updateTitle = 0;
-				}
-			}
-		}
-		else
-		{
-			/*----------------------------------------------------------------*/
-			/* First time in in the event loop, Redraw all the windows        */
-			/*----------------------------------------------------------------*/
-			for (ctr=0;;ctr++)
-			{
-				win = neuik_windows.windows[ctr];
-				if (win == NULL) break;
+                if (win->doRedraw)
+                {
+                    NEUIK_Window_Redraw(win);
+                    didRedraw = 1;
+                }
+                if (win->updateTitle)
+                {
+                    SDL_SetWindowTitle(win->win, win->title);
+                    win->updateTitle = 0;
+                }
+            }
+        }
+        else
+        {
+            /*----------------------------------------------------------------*/
+            /* First time in in the event loop, Redraw all the windows        */
+            /*----------------------------------------------------------------*/
+            for (ctr=0;;ctr++)
+            {
+                win = neuik_windows.windows[ctr];
+                if (win == NULL) break;
 
-				if (win->doRedraw)
-				{
-					NEUIK_Window_Redraw(win);
-					didRedraw = 1;
-				}
-			}
-			first = 0;
-		}
+                if (win->doRedraw)
+                {
+                    NEUIK_Window_Redraw(win);
+                    didRedraw = 1;
+                }
+            }
+            first = 0;
+        }
 
-		if (!didRedraw)
-		{
-			/*----------------------------------------------------------------*/
-			/* There were no events handle, just wait for a brief moment.     */
-			/*----------------------------------------------------------------*/
+        if (!didRedraw)
+        {
+            /*----------------------------------------------------------------*/
+            /* There were no events handle, just wait for a brief moment.     */
+            /*----------------------------------------------------------------*/
 
-			SDL_Delay(4);
-			continue;
-		}
-	}
+            SDL_Delay(4);
+            continue;
+        }
+    }
 out:
-	return;
+    return;
 }
+
 
 /*******************************************************************************
  *
@@ -449,35 +453,36 @@ out:
  *
  ******************************************************************************/
 NEUIK_EventHandler * NEUIK_NewEventHandler(
-	void * eHFunc, 
-	void * eHArg1, 
-	void * eHArg2)
+    void * eHFunc, 
+    void * eHArg1, 
+    void * eHArg2)
 {
-	int                   eNum = 0; /* which error to report (if any) */
-	NEUIK_EventHandler  * eH   = NULL;
-	static char           funcName[] = "NEUIK_NewEventHandler";
-	static char         * errMsgs[] = {"",                // [0] no error
-		"Failure to allocate memory.\n", // [1]
-	};
+    int                   eNum = 0; /* which error to report (if any) */
+    NEUIK_EventHandler  * eH   = NULL;
+    static char           funcName[] = "NEUIK_NewEventHandler";
+    static char         * errMsgs[] = {"",                // [0] no error
+        "Failure to allocate memory.\n", // [1]
+    };
 
-	eH = (NEUIK_EventHandler*) malloc(sizeof(NEUIK_EventHandler));
-	if (eH == NULL)
-	{
-		eNum = 1;
-		goto out;
-	}
+    eH = (NEUIK_EventHandler*) malloc(sizeof(NEUIK_EventHandler));
+    if (eH == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
 
-	eH->eHFn   = eHFunc;
-	eH->eHArg1 = eHArg1;
-	eH->eHArg2 = eHArg2;
+    eH->eHFn   = eHFunc;
+    eH->eHArg1 = eHArg1;
+    eH->eHArg2 = eHArg2;
 out:
-	if (eNum != 0)
-	{
-		NEUIK_RaiseError(funcName, errMsgs[eNum]);
-	}
+    if (eNum != 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
 
-	return eH;
+    return eH;
 }
+
 
 /*******************************************************************************
  *
@@ -490,14 +495,15 @@ out:
  ******************************************************************************/
 NEUIK_EventHandlerTable NEUIK_NewEventHandlerTable()
 {
-	NEUIK_EventHandlerTable  eht;
+    NEUIK_EventHandlerTable  eht;
 
-	eht.Before   = NULL;
-	eht.After    = NULL;
-	eht.Override = NULL;
+    eht.Before   = NULL;
+    eht.After    = NULL;
+    eht.Override = NULL;
 
-	return eht;
+    return eht;
 }
+
 
 /*******************************************************************************
  *
@@ -509,22 +515,21 @@ NEUIK_EventHandlerTable NEUIK_NewEventHandlerTable()
  *
  ******************************************************************************/
 int NEUIK_EventHandler_Capture(
-	NEUIK_EventHandler  * eH,
-	void                * container,
-	int                 * captured,
-	ptrTo_SDL_Event       ev)
+    NEUIK_EventHandler  * eH,
+    void                * container,
+    int                 * captured,
+    ptrTo_SDL_Event       ev)
 {
-	int errRV = 0;
+    int errRV = 0;
 
-	if (eH != NULL)
-	{
-		if (eH->eHFn != NULL)
-		{
-			errRV = eH->eHFn(container, ev, captured, eH->eHArg1, eH->eHArg2);
-		}
-	}
+    if (eH != NULL)
+    {
+        if (eH->eHFn != NULL)
+        {
+            errRV = eH->eHFn(container, ev, captured, eH->eHArg1, eH->eHArg2);
+        }
+    }
 
-	return errRV;
+    return errRV;
 }
-
 
