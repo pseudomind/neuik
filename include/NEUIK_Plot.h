@@ -27,9 +27,11 @@ typedef enum {
 neuik_PlotRangeConfig;
 
 typedef struct {
-	char  * uniqueName;
-	char  * label;
-	float   lineThickness;
+	char        * uniqueName;
+	char        * label;
+	float         lineThickness;
+	int           lineColorSpecified;
+	NEUIK_Color   lineColor;
 } neuik_PlotDataConfig;
 
 typedef struct {

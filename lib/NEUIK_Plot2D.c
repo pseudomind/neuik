@@ -689,6 +689,21 @@ int neuik_Element_Render__Plot2D(
     double                 tic_x_adj    = 0.0;
     double                 tic_y_offset = 0.0;
     double                 tic_y_adj    = 0.0;
+    static NEUIK_Color     autoColors[] = {
+        COLOR_PLOTLINE_01,
+        COLOR_PLOTLINE_02,
+        COLOR_PLOTLINE_03,
+        COLOR_PLOTLINE_04,
+        COLOR_PLOTLINE_05,
+        COLOR_PLOTLINE_06,
+        COLOR_PLOTLINE_07,
+        COLOR_PLOTLINE_08,
+        COLOR_PLOTLINE_09,
+        COLOR_PLOTLINE_10,
+        COLOR_PLOTLINE_11,
+        COLOR_PLOTLINE_12,
+    };
+
     RenderLoc              rl;
     RenderLoc              rlRel      = {0, 0}; /* renderloc relative to parent */
     RenderLoc              dwg_loc;
@@ -1137,13 +1152,42 @@ int neuik_Element_Render__Plot2D(
         if (!data->boundsSet) continue;
 
         dataCfg = &(plot->data_configs[uCtr]);
-        if (uCtr == 0)
+
+        /*--------------------------------------------------------------------*/
+        /* Set the drawing line color.                                        */
+        /*--------------------------------------------------------------------*/
+        if (!dataCfg->lineColorSpecified)
         {
-            NEUIK_Canvas_SetDrawColor(dwg, 250, 0, 0, 255); /* dwg line color */
+            /*----------------------------------------------------------------*/
+            /* No color was specified; use one of the default colors.         */
+            /*----------------------------------------------------------------*/
+            if (uCtr < 11)
+            {
+                NEUIK_Canvas_SetDrawColor(dwg, 
+                    autoColors[uCtr].r, 
+                    autoColors[uCtr].g, 
+                    autoColors[uCtr].b, 
+                    autoColors[uCtr].a); /* dwg line color */
+            }
+            else
+            {
+                NEUIK_Canvas_SetDrawColor(dwg, 
+                    autoColors[11].r, 
+                    autoColors[11].g, 
+                    autoColors[11].b, 
+                    autoColors[11].a); /* dwg line color */
+            }
         }
         else
         {
-            NEUIK_Canvas_SetDrawColor(dwg, 0, 0, 250, 255); /* dwg line color */
+            /*----------------------------------------------------------------*/
+            /* A specific color was specified; use that.                      */
+            /*----------------------------------------------------------------*/
+            NEUIK_Canvas_SetDrawColor(dwg, 
+                dataCfg->lineColor.r, 
+                dataCfg->lineColor.g, 
+                dataCfg->lineColor.b, 
+                dataCfg->lineColor.a); /* dwg line color */
         }
 
         if (maskMap != NULL)
@@ -1842,6 +1886,7 @@ int NEUIK_Plot2D_AddPlotData(
     NEUIK_Plot           * plot       = NULL;
     RenderSize             rSize;
     RenderLoc              rLoc;
+    static NEUIK_Color     color0 = {0, 0, 0, 0};
     static char            funcName[] = "NEUIK_Plot2D_AddPlotData";
     static char          * errMsgs[]  = {"", // [0] no error
         "Argument `plot2d` is not of Plot2D class.",                       // [1]
@@ -1959,7 +2004,9 @@ int NEUIK_Plot2D_AddPlotData(
     /*------------------------------------------------------------------------*/
     /* Set standard default values for the PlotDataConfig.                    */
     /*------------------------------------------------------------------------*/
-    dataCfg->lineThickness = 1.0;
+    dataCfg->lineThickness      = 1.0;
+    dataCfg->lineColorSpecified = FALSE;
+    dataCfg->lineColor          = color0;
 
     if (neuik_Plot2D_UpdateAxesRanges(plot2d))
     {

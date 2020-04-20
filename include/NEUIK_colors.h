@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -34,6 +34,19 @@
 #define COLOR_DBLUE      { 45,  90, 220, 255}
 #define COLOR_PBAR_LBLUE {103, 150, 166, 255}
 #define COLOR_PBAR_DBLUE { 70, 120, 166, 255}
+
+#define COLOR_PLOTLINE_01 {  0,  69, 134, 255} // Dark Blue
+#define COLOR_PLOTLINE_02 {255,  66,  14, 255} // Dark Orange
+#define COLOR_PLOTLINE_03 {255, 211,  32, 255} // Gold
+#define COLOR_PLOTLINE_04 { 87, 157,  28, 255} // Green
+#define COLOR_PLOTLINE_05 {126,   0,  33, 255} // Dark Red
+#define COLOR_PLOTLINE_06 {131, 202, 255, 255} // Light Blue
+#define COLOR_PLOTLINE_07 { 49,  64,   4, 255} // Dark Green
+#define COLOR_PLOTLINE_08 {174, 207,   0, 255} // Light Green
+#define COLOR_PLOTLINE_09 { 75,  31, 111, 255} // Dark Purple
+#define COLOR_PLOTLINE_10 {255, 149,  14, 255} // Orange
+#define COLOR_PLOTLINE_11 {197,   0,  11, 255} // Red
+#define COLOR_PLOTLINE_12 {  0,   0,   0, 255} // BLACK
 
 #define COLOR_TRANSP     {243,   0, 100, 255}
 
