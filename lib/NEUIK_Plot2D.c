@@ -1199,7 +1199,7 @@ int neuik_Element_Render__Plot2D(
         maskW = dwg_rs.w;
         maskH = dwg_rs.h; /* yMax value is at the top of the plot */
 
-        lnThickness = 2;
+        lnThickness = dataCfg->lineThickness;
 
         ticZoneW = tic_xmax - tic_xmin;
         ticZoneH = tic_ymin - tic_ymax; /* yMax value is at the top of the plot */
@@ -2108,7 +2108,7 @@ int NEUIK_Plot2D_Configure(
     };
     static char   funcName[] = "NEUIK_Plot2D_Configure";
     static char * errMsgs[]  = {"", // [ 0] no error
-        "Argument `plot2d` does not implement Label class.",                 // [ 1]
+        "Argument `plot2d` does not implement NEUIK_Plot2D class.",          // [ 1]
         "`name=value` string is too long.",                                  // [ 2]
         "Invalid `name=value` string.",                                      // [ 3]
         "ValueType name used as BoolType, skipping.",                        // [ 4]
@@ -2671,6 +2671,386 @@ out:
         if (neuik_Element_GetSizeAndLocation(plot2d, &rSize, &rLoc))
         {
             eNum = 10;
+            NEUIK_RaiseError(funcName, errMsgs[eNum]);
+            eNum = 1;
+        }
+        else
+        {
+            neuik_Element_RequestRedraw(plot2d, rLoc, rSize);
+        }
+    }
+
+    return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Plot2D_ConfigurePlotData
+ *
+ *  Description:   Allows the user to set a number of configurable parameters 
+ *                 for the PlotData associated with the specified uniqueName.
+ *
+ *                 NOTE: This list of named sets must be terminated by a NULL 
+ *                 pointer
+ *
+ *  Returns:       Non-zero if an error occurs.
+ *
+ ******************************************************************************/
+int NEUIK_Plot2D_ConfigurePlotData(
+    NEUIK_Plot2D * plot2d,
+    const char   * uniqueName,
+    const char   * set0,
+    ...)
+{
+    int                    ns; /* number of items from sscanf */
+    int                    ctr;
+    int                    nCtr;
+    int                    eNum      = 0; /* which error to report (if any) */
+    int                    doRedraw  = FALSE;
+    int                    isBool    = FALSE;
+    int                    boolVal   = FALSE;
+    int                    typeMixup;
+    int                    valInt    = 0;
+    unsigned int           uCtr      = 0;
+    float                  valFloat  = 0.0;
+    double                 floatMin  = 0.0;
+    double                 floatMax  = 0.0;
+    char                   buf[4096];
+    RenderSize             rSize;
+    RenderLoc              rLoc;
+    va_list                args;
+    char                 * strPtr = NULL;
+    char                 * name   = NULL;
+    char                 * value  = NULL;
+    const char           * set    = NULL;
+    NEUIK_Plot           * plot   = NULL;
+    neuik_PlotDataConfig * cfg    = NULL;
+    NEUIK_Color            clr;
+    /*------------------------------------------------------------------------*/
+    /* If a `name=value` string with an unsupported name is found, check to   */
+    /* see if a boolName was mistakenly used instead.                         */
+    /*------------------------------------------------------------------------*/
+    static char * boolNames[] = {
+        "AutoLineColor",
+        NULL,
+    };
+    /*------------------------------------------------------------------------*/
+    /* If a boolName string with an unsupported name is found, check to see   */
+    /* if a supported nameValue type was mistakenly used instead.             */
+    /*------------------------------------------------------------------------*/
+    static char * valueNames[] = {
+        "LineColor",
+        "LineThickness",
+        NULL,
+    };
+    static char   funcName[] = "NEUIK_Plot2D_ConfigurePlotData";
+    static char * errMsgs[]  = {"", // [ 0] no error
+        "Argument `plot2d` does not implement NEUIK_Plot2D class.",         // [ 1]
+        "Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.",  // [ 2] 
+        "Argument `uniqueName` is NULL.",                                   // [ 3] 
+        "Argument `uniqueName` has a value not associated with this plot.", // [ 4] 
+        "`name=value` string is too long.",                                 // [ 5]
+        "Invalid `name=value` string.",                                     // [ 6]
+        "ValueType name used as BoolType, skipping.",                       // [ 7]
+        "BoolType name unknown, skipping.",                                 // [ 8]
+        "NamedSet.name is NULL, skipping..",                                // [ 9]
+        "NamedSet.name is blank, skipping..",                               // [10]
+        "LineColor value invalid; should be comma separated RGBA.",         // [11]
+        "LineColor value invalid; RGBA value range is 0-255.",              // [12]
+        "LineThickness value invalid; must be an float value.",             // [13]
+        "LineThickness value invalid; Valid float values are >=0.",         // [14]
+        "BoolType name used as ValueType, skipping.",                       // [15]
+        "NamedSet.name type unknown, skipping.",                            // [16]
+        "Failure in `neuik_Element_GetSizeAndLocation()`.",                 // [17]
+    };
+
+    if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
+    {
+        eNum = 1;
+        goto out;
+    }
+
+    if (neuik_Object_GetClassObject(plot2d, neuik__Class_Plot, (void**)&plot))
+    {
+        eNum = 2;
+        goto out;
+    }
+
+    if (uniqueName == NULL)
+    {
+        eNum = 3;
+        goto out;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Attempt to locate the PlotData with the specified unique name.         */
+    /*------------------------------------------------------------------------*/
+    for (uCtr = 0; uCtr < plot->n_used; uCtr++)
+    {
+        if (!strcmp(plot->data_configs[uCtr].uniqueName, uniqueName))
+        {
+            cfg = &(plot->data_configs[uCtr]);
+        }
+    }
+    if (cfg == NULL)
+    {
+        eNum = 4;
+        goto out;
+    }
+
+    set = set0;
+
+    va_start(args, set0);
+
+    for (ctr = 0;; ctr++)
+    {
+        if (ctr > 0)
+        {
+            /* before starting */
+            set = va_arg(args, const char *);
+        }
+
+        isBool = FALSE;
+        name   = NULL;
+        value  = NULL;
+
+        if (set == NULL) break;
+
+        if (strlen(set) > 4095)
+        {
+            NEUIK_RaiseError(funcName, errMsgs[5]);
+            set = va_arg(args, const char *);
+            continue;
+        }
+        else
+        {
+            strcpy(buf, set);
+            /* Find the equals and set it to '\0' */
+            strPtr = strchr(buf, '=');
+            if (strPtr == NULL)
+            {
+                /*------------------------------------------------------------*/
+                /* Bool type configuration (or a mistake)                     */
+                /*------------------------------------------------------------*/
+                if (buf[0] == 0)
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[6]);
+                }
+
+                isBool  = TRUE;
+                boolVal = TRUE;
+                name    = buf;
+                if (buf[0] == '!')
+                {
+                    boolVal = FALSE;
+                    name    = buf + 1;
+                }
+                if (boolVal)
+                {
+                    /*--------------------------------------------------------*/
+                    /* Do nothing; this is to resolve an unused var warning.  */
+                    /*--------------------------------------------------------*/
+                }
+            }
+            else
+            {
+                *strPtr = 0;
+                strPtr++;
+                if (*strPtr == 0)
+                {
+                    /* `name=value` string is missing a value */
+                    NEUIK_RaiseError(funcName, errMsgs[6]);
+                    set = va_arg(args, const char *);
+                    continue;
+                }
+                name  = buf;
+                value = strPtr;
+            }
+        }
+
+        if (isBool)
+        {
+            /*----------------------------------------------------------------*/
+            /* Check for boolean parameter setting.                           */
+            /*----------------------------------------------------------------*/
+            if (!strcmp("AutoLineColor", name))
+            {
+                if (cfg->lineColorSpecified == boolVal) continue;
+
+                /* else: The previous setting was changed */
+                cfg->lineColorSpecified = boolVal;
+                doRedraw = TRUE;
+            }
+            else
+            {
+                /*------------------------------------------------------------*/
+                /* Bool parameter not found; may be mixup or mistake.         */
+                /*------------------------------------------------------------*/
+                typeMixup = FALSE;
+                for (nCtr = 0;; nCtr++)
+                {
+                    if (valueNames[nCtr] == NULL) break;
+
+                    if (!strcmp(valueNames[nCtr], name))
+                    {
+                        typeMixup = TRUE;
+                        break;
+                    }
+                }
+
+                if (typeMixup)
+                {
+                    /* A value type was mistakenly used as a bool type */
+                    NEUIK_RaiseError(funcName, errMsgs[7]);
+                }
+                else
+                {
+                    /* An unsupported name was used as a bool type */
+                    NEUIK_RaiseError(funcName, errMsgs[8]);
+                }
+            }
+        }
+        else
+        {
+            if (name == NULL)
+            {
+                NEUIK_RaiseError(funcName, errMsgs[9]);
+            }
+            else if (name[0] == 0)
+            {
+                NEUIK_RaiseError(funcName, errMsgs[10]);
+            }
+            else if (!strcmp("LineColor", name))
+            {
+                /*------------------------------------------------------------*/
+                /* Check for empty value errors.                              */
+                /*------------------------------------------------------------*/
+                if (value == NULL)
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[11]);
+                    continue;
+                }
+                if (value[0] == '\0')
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[11]);
+                    continue;
+                }
+
+                ns = sscanf(value, "%d,%d,%d,%d", 
+                    &clr.r, &clr.g, &clr.b, &clr.a);
+                /*------------------------------------------------------------*/
+                /* Check for EOF, incorrect # of values, & out of range vals. */
+                /*------------------------------------------------------------*/
+                #ifndef WIN32
+                    if (ns == EOF || ns < 4)
+                #else
+                    if (ns < 4)
+                #endif /* WIN32 */
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[11]);
+                    continue;
+                }
+
+                if (clr.r < 0 || clr.r > 255 ||
+                    clr.g < 0 || clr.g > 255 ||
+                    clr.b < 0 || clr.b > 255 ||
+                    clr.a < 0 || clr.a > 255)
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[12]);
+                    continue;
+                }
+                if (cfg->lineColor.r == clr.r &&
+                    cfg->lineColor.g == clr.g &&
+                    cfg->lineColor.b == clr.b &&
+                    cfg->lineColor.a == clr.a) continue;
+
+                /* else: The previous setting was changed */
+                cfg->lineColor = clr;
+                cfg->lineColorSpecified = TRUE;
+                doRedraw = TRUE;
+            }
+            else if (!strcmp("LineThickness", name))
+            {
+                /*------------------------------------------------------------*/
+                /* Check for empty value errors.                              */
+                /*------------------------------------------------------------*/
+                if (value == NULL)
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[13]);
+                    continue;
+                }
+                if (value[0] == '\0')
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[13]);
+                    continue;
+                }
+
+                ns = sscanf(value, "%f", &valFloat);
+                /*------------------------------------------------------------*/
+                /* Check for EOF, incorrect # of values, & out of range vals. */
+                /*------------------------------------------------------------*/
+                #ifndef WIN32
+                    if (ns == EOF || ns < 1)
+                #else
+                    if (ns < 1)
+                #endif /* WIN32 */
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[13]);
+                    continue;
+                }
+
+                if (valInt < -1)
+                {
+                    NEUIK_RaiseError(funcName, errMsgs[14]);
+                    continue;
+                }
+
+                if (cfg->lineThickness == valFloat) continue;
+
+                /* else: The previous setting was changed */
+                cfg->lineThickness = valFloat;
+                doRedraw = TRUE;
+            }
+            else
+            {
+                typeMixup = FALSE;
+                for (nCtr = 0;; nCtr++)
+                {
+                    if (boolNames[nCtr] == NULL) break;
+
+                    if (!strcmp(boolNames[nCtr], name))
+                    {
+                        typeMixup = TRUE;
+                        break;
+                    }
+                }
+
+                if (typeMixup)
+                {
+                    /* A bool type was mistakenly used as a value type */
+                    NEUIK_RaiseError(funcName, errMsgs[15]);
+                }
+                else
+                {
+                    /* An unsupported name was used as a value type */
+                    NEUIK_RaiseError(funcName, errMsgs[16]);
+                }
+            }
+        }
+    }
+    va_end(args);
+out:
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
+    if (doRedraw)
+    {
+        if (neuik_Element_GetSizeAndLocation(plot2d, &rSize, &rLoc))
+        {
+            eNum = 17;
             NEUIK_RaiseError(funcName, errMsgs[eNum]);
             eNum = 1;
         }

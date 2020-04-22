@@ -71,4 +71,11 @@ int
 			const char   * set0,
 			...);
 
+int
+	NEUIK_Plot2D_ConfigurePlotData(
+			NEUIK_Plot2D * plot2d,
+			const char   * uniqueName,
+			const char   * set0,
+			...);
+
 #endif /* NEUIK_PLOT2D_H */
