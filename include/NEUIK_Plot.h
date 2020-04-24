@@ -39,6 +39,7 @@ typedef struct {
 		NEUIK_Element         * title;
 		NEUIK_Element         * x_label;
 		NEUIK_Element         * y_label;
+		NEUIK_Element         * y_label_trans;
 		NEUIK_HGroup          * hg_data;
 		NEUIK_Element         * drawing_background;
 		NEUIK_Element         * drawing_ticmarks;

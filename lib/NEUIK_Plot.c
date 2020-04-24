@@ -143,7 +143,6 @@ int neuik_Object_New__Plot(
     void ** plotPtr)
 {
     int             eNum       = 0;
-    NEUIK_Label   * ylabel     = NULL;
     NEUIK_Plot    * plot       = NULL;
     NEUIK_Element * sClassPtr  = NULL;
     static char     funcName[] = "neuik_Object_New__Plot";
@@ -227,24 +226,28 @@ int neuik_Object_New__Plot(
         goto out;
     }
 
-    if (NEUIK_NewTransformer((NEUIK_Transformer**)&plot->y_label))
+    if (NEUIK_NewTransformer((NEUIK_Transformer**)&plot->y_label_trans))
     {
         eNum = 10;
         goto out;
     }
-    if (NEUIK_Transformer_Configure((NEUIK_Transformer*)plot->y_label, 
+    if (NEUIK_Transformer_Configure((NEUIK_Transformer*)plot->y_label_trans, 
         "Rotation=270.0", NULL))
     {
         eNum = 12;
         goto out;
     }
-
-    if (NEUIK_MakeLabel((NEUIK_Label**)&ylabel, "Plot y_label"))
+    if (NEUIK_NewVGroup((NEUIK_VGroup**)&plot->y_label))
     {
-        eNum = 6;
+        eNum = 5;
         goto out;
     }
-    if (NEUIK_Container_SetElement(plot->y_label, ylabel))
+    if (NEUIK_VGroup_SetVSpacing((NEUIK_VGroup*)(plot->y_label), 0))
+    {
+        eNum = 14;
+        goto out;
+    }
+    if (NEUIK_Container_SetElement(plot->y_label_trans, plot->y_label))
     {
         eNum = 11;
         goto out;
@@ -267,7 +270,7 @@ int neuik_Object_New__Plot(
         goto out;
     }
     if (NEUIK_Container_AddElements(plot->hg_data, 
-        plot->y_label,
+        plot->y_label_trans,
         plot->drawing,
         plot->legend,
         NULL))
@@ -1039,7 +1042,7 @@ int NEUIK_Plot_SetXAxisLabel(
     }
 
     /*------------------------------------------------------------------------*/
-    /* Conditionally free Plot title before setting the new contents          */
+    /* Conditionally free Plot xAxisLabel before setting the new contents     */
     /*------------------------------------------------------------------------*/
     if (plot->x_label != NULL) {
         NEUIK_Container_DeleteElements(plot->x_label);
@@ -1096,6 +1099,139 @@ int NEUIK_Plot_SetXAxisLabel(
                 goto out;
             }
             if (NEUIK_Container_AddElement(plot->x_label, newLabel))
+            {
+                eNum = 6;
+                goto out;
+            }
+            strPtr0++;
+            strPtr1 = strPtr0;
+        }
+    }
+
+    if (neuik_Element_GetSizeAndLocation(plot, &rSize, &rLoc))
+    {
+        eNum = 7;
+        goto out;
+    }
+    neuik_Element_RequestRedraw(plot, rLoc, rSize);
+out:
+    if (textCopy != NULL) free(textCopy);
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
+out2:
+    return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Plot_SetYAxisLabel
+ *
+ *  Description:   Update the x-axis label of a NEUIK_Plot.
+ *
+ *  Returns:       1 if there is an error; 0 otherwise.
+ *
+ ******************************************************************************/
+int NEUIK_Plot_SetYAxisLabel(
+    NEUIK_Element   plotPtr,
+    const char    * text)
+{
+    int           eNum = 0; /* which error to report (if any) */
+    char *        textCopy = NULL; /* should be freed when done */
+    char *        strPtr0  = NULL;
+    char *        strPtr1  = NULL;
+    NEUIK_Label * newLabel = NULL;
+    NEUIK_Plot  * plot     = NULL;
+    RenderSize    rSize    = {0, 0};
+    RenderLoc     rLoc     = {0, 0};;
+    static char   funcName[] = "NEUIK_Plot_SetYAxisLabel";
+    static char * errMsgs[] = {"",                                         // [0] no error
+        "Argument `plot` does not implement Plot class.",                  // [1]
+        "Argument `plot` caused `neuik_Object_GetClassObject()` to fail.", // [2]
+        "Failure to allocate memory.",                                     // [3]
+        "Failure in `NEUIK_MakeLabel()`.",                                 // [4]
+        "Failure to `String_Duplicate()`.",                                // [5]
+        "Failure to `NEUIK_Container_AddElement()`.",                      // [6]
+        "Failure in `neuik_Element_GetSizeAndLocation()`.",                // [7]
+    };
+
+    if (!neuik_Object_ImplementsClass(plotPtr, neuik__Class_Plot))
+    {
+        eNum = 1;
+        goto out;
+    }
+    if (neuik_Object_GetClassObject(plotPtr, neuik__Class_Plot, (void**)&plot))
+    {
+        if (neuik_HasFatalError())
+        {
+            eNum = 1;
+            goto out2;
+        }
+        eNum = 2;
+        goto out;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Conditionally free Plot yAxisLabel before setting the new contents     */
+    /*------------------------------------------------------------------------*/
+    if (plot->y_label != NULL) {
+        NEUIK_Container_DeleteElements(plot->y_label);
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Set the new Label text contents                                        */
+    /*------------------------------------------------------------------------*/
+    if (text == NULL){
+        /* Title will contain no text */
+        goto out;
+    }
+    else if (text[0] == '\0')
+    {
+        /* Title will contain no text */
+        goto out;
+    }
+
+    String_Duplicate(&textCopy, text);
+
+    if (textCopy == NULL)
+    {
+        eNum = 5;
+        goto out;
+    }
+
+    strPtr1 = textCopy;
+    for (;;)
+    {
+        strPtr0 = strchr(strPtr1, '\n');
+        if (strPtr0 == NULL)
+        {
+            /*----------------------------------------------------------------*/
+            /* There are no more newlines in the string                       */
+            /*----------------------------------------------------------------*/
+            if (NEUIK_MakeLabel(&newLabel, strPtr1))
+            {
+                eNum = 4;
+                goto out;
+            }
+            if (NEUIK_Container_AddElement(plot->y_label, newLabel))
+            {
+                eNum = 6;
+                goto out;
+            }
+            break;
+        } 
+        else
+        {
+            *strPtr0 = '\0';
+            if (NEUIK_MakeLabel(&newLabel, strPtr1))
+            {
+                eNum = 4;
+                goto out;
+            }
+            if (NEUIK_Container_AddElement(plot->y_label, newLabel))
             {
                 eNum = 6;
                 goto out;
