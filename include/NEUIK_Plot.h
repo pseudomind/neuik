@@ -64,13 +64,13 @@ int
 
 int
 	NEUIK_Plot_SetXAxisLabel(
-			NEUIK_Plot * plot,
-			const char * text);
+			NEUIK_Element   plot,
+			const char    * text);
 
 int
 	NEUIK_Plot_SetYAxisLabel(
-			NEUIK_Plot * plot,
-			const char * text);
+			NEUIK_Element   plot,
+			const char    * text);
 
 int
 	NEUIK_Plot_AddXTic(

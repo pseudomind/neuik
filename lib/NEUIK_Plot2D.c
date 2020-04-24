@@ -1255,7 +1255,6 @@ int neuik_Element_Render__Plot2D(
         }
     }
 
-
     /*------------------------------------------------------------------------*/
     /* Finally, have the entire visual redraw itself. It will only redraw the */
     /* drawing portion and with the correct sizing.                           */
@@ -2714,8 +2713,6 @@ int NEUIK_Plot2D_ConfigurePlotData(
     int                    valInt    = 0;
     unsigned int           uCtr      = 0;
     float                  valFloat  = 0.0;
-    double                 floatMin  = 0.0;
-    double                 floatMax  = 0.0;
     char                   buf[4096];
     RenderSize             rSize;
     RenderLoc              rLoc;

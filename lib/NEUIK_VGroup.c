@@ -540,7 +540,7 @@ int neuik_Element_GetMinSize__VGroup(
         eCfg = elemsCfg[ctr];
         rs   = &elemsMinSz[ctr];
 
-        if (vctr > 0)
+        if (vctr > 1)
         {
             /* subsequent UI element is valid, add Horizontal Spacing */
             thisH += (float)(vg->VSpacing);

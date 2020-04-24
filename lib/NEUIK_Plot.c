@@ -162,6 +162,7 @@ int neuik_Object_New__Plot(
         "Failure in `NEUIK_Transformer_Configure()`.", // [12]
         "Failure in `NEUIK_NewCelGroup()`.",           // [13]
         "Failure in `NEUIK_Element_Configure()`.",     // [13]
+        "Failure in `NEUIK_VGroup_SetVSpacing()`.",    // [14]
     };
 
     if (plotPtr == NULL)
@@ -209,6 +210,12 @@ int neuik_Object_New__Plot(
         eNum = 5;
         goto out;
     }
+    if (NEUIK_VGroup_SetVSpacing((NEUIK_VGroup*)(plot->title), 0))
+    {
+        eNum = 14;
+        goto out;
+    }
+
     if (NEUIK_NewHGroup((NEUIK_HGroup**)&plot->hg_data))
     {
         eNum = 9;
@@ -268,9 +275,15 @@ int neuik_Object_New__Plot(
         eNum = 9;
         goto out;
     }
-    if (NEUIK_MakeLabel((NEUIK_Label**)&plot->x_label, "Plot x_label"))
+
+    if (NEUIK_NewVGroup((NEUIK_VGroup**)&plot->x_label))
     {
-        eNum = 6;
+        eNum = 5;
+        goto out;
+    }
+    if (NEUIK_VGroup_SetVSpacing((NEUIK_VGroup*)(plot->x_label), 0))
+    {
+        eNum = 14;
         goto out;
     }
 
@@ -929,7 +942,7 @@ int NEUIK_Plot_SetTitle(
             /*----------------------------------------------------------------*/
             /* There are no more newlines in the string                       */
             /*----------------------------------------------------------------*/
-            if (NEUIK_MakeLabel(&newLabel, strPtr0))
+            if (NEUIK_MakeLabel(&newLabel, strPtr1))
             {
                 eNum = 4;
                 goto out;
@@ -987,8 +1000,8 @@ out2:
  *
  ******************************************************************************/
 int NEUIK_Plot_SetXAxisLabel(
-    NEUIK_Plot * plotPtr,
-    const char * text)
+    NEUIK_Element   plotPtr,
+    const char    * text)
 {
     int           eNum = 0; /* which error to report (if any) */
     char *        textCopy = NULL; /* should be freed when done */
@@ -1062,7 +1075,7 @@ int NEUIK_Plot_SetXAxisLabel(
             /*----------------------------------------------------------------*/
             /* There are no more newlines in the string                       */
             /*----------------------------------------------------------------*/
-            if (NEUIK_MakeLabel(&newLabel, strPtr0))
+            if (NEUIK_MakeLabel(&newLabel, strPtr1))
             {
                 eNum = 4;
                 goto out;
