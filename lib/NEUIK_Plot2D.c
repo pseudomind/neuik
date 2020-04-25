@@ -164,6 +164,7 @@ int neuik_Object_New__Plot2D(
         "Failure in function `NEUIK_GridLayout_SetElementAt()`.",          // [15]
         "Failure in function `NEUIK_HGroup_SetHSpacing()`.",               // [16]
         "Failure in function `NEUIK_VGroup_SetVSpacing()`.",               // [17]
+        "Failure in function `neuik_Plot2D_UpdateAxesRanges()`.",          // [18]
     };
 
     if (pltPtr == NULL)
@@ -416,6 +417,11 @@ int neuik_Object_New__Plot2D(
     plot2d->yAxisCfg.colorGridline.b = 175;
     plot2d->yAxisCfg.colorGridline.a = 255;
 
+    if (neuik_Plot2D_UpdateAxesRanges(plot2d))
+    {
+        eNum = 18;
+        goto out;
+    }
 out:
     if (eNum > 0)
     {
@@ -1414,6 +1420,14 @@ int neuik_Plot2D_UpdateAxesRanges(
         }
 
         boundsSet = TRUE;
+    }
+
+    if (plot->n_used == 0)
+    {
+        xMin = 0.0;
+        xMax = 4.0;
+        yMin = 0.0;
+        yMax = 4.0;
     }
 
     /*------------------------------------------------------------------------*/
