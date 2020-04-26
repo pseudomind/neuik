@@ -1017,7 +1017,7 @@ int NEUIK_PlotData_SetValuesFromString(
                     /* Bounds are initially set after processing the first    */
                     /* point So this section is for the second point onwards. */
                     /*--------------------------------------------------------*/
-                    if (nextVal <= pd->bounds_32.x_min)
+                    if (nextVal < pd->bounds_32.x_min)
                     {
                         /*----------------------------------------------------*/
                         /* This would indicate that a subsequent data point   */
@@ -1027,7 +1027,7 @@ int NEUIK_PlotData_SetValuesFromString(
                         eNum = 5;
                         goto out;
                     }
-                    else if (nextVal <= pd->bounds_32.x_max)
+                    else if (nextVal < pd->bounds_32.x_max)
                     {
                         /*----------------------------------------------------*/
                         /* This would indicate that a subsequent data point   */
@@ -1118,7 +1118,7 @@ int NEUIK_PlotData_SetValuesFromString(
                     /* Bounds are initially set after processing the first    */
                     /* point So this section is for the second point onwards. */
                     /*--------------------------------------------------------*/
-                    if (nextF64Val <= pd->bounds_64.x_min)
+                    if (nextF64Val < pd->bounds_64.x_min)
                     {
                         /*----------------------------------------------------*/
                         /* This would indicate that a subsequent data point   */
@@ -1128,7 +1128,7 @@ int NEUIK_PlotData_SetValuesFromString(
                         eNum = 5;
                         goto out;
                     }
-                    else if (nextF64Val <= pd->bounds_64.x_max)
+                    else if (nextF64Val < pd->bounds_64.x_max)
                     {
                         /*----------------------------------------------------*/
                         /* This would indicate that a subsequent data point   */

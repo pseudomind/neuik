@@ -2076,10 +2076,11 @@ int NEUIK_Plot2D_Configure(
     int                  ns; /* number of items from sscanf */
     int                  ctr;
     int                  nCtr;
-    int                  eNum      = 0; /* which error to report (if any) */
-    int                  doRedraw  = FALSE;
-    int                  isBool    = FALSE;
-    int                  boolVal   = FALSE;
+    int                  eNum          = 0; /* which error to report (if any) */
+    int                  doRedraw      = FALSE;
+    int                  isBool        = FALSE;
+    int                  boolVal       = FALSE;
+    int                  updAxesRanges = FALSE;
     int                  typeMixup;
     int                  valInt    = 0;
     double               floatMin  = 0.0;
@@ -2148,6 +2149,7 @@ int NEUIK_Plot2D_Configure(
         "yAxisRange value invalid; must be comma separated float values.",   // [25]
         "yAxisRange value invalid; float values cannot be identical.",       // [26]
         "yAxisRange value invalid; `yMin` must be less than `yMax`.",        // [27]
+        "Failure in `neuik_Plot2D_UpdateAxesRanges()`.",                     // [28]
     };
 
     if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
@@ -2243,7 +2245,7 @@ int NEUIK_Plot2D_Configure(
 
                 /* else: The previous setting was changed */
                 plot2d->xAxisCfg.showGridlines = boolVal;
-                doRedraw = 1;
+                doRedraw = TRUE;
             }
             else if (!strcmp("yAxisGridlines", name))
             {
@@ -2251,7 +2253,7 @@ int NEUIK_Plot2D_Configure(
 
                 /* else: The previous setting was changed */
                 plot2d->yAxisCfg.showGridlines = boolVal;
-                doRedraw = 1;
+                doRedraw = TRUE;
             }
             else if (!strcmp("xAxisTicLabels", name))
             {
@@ -2259,7 +2261,8 @@ int NEUIK_Plot2D_Configure(
 
                 /* else: The previous setting was changed */
                 plot2d->xAxisCfg.showTicLabels = boolVal;
-                doRedraw = 1;
+                doRedraw      = TRUE;
+                updAxesRanges = TRUE;
             }
             else if (!strcmp("yAxisTicLabels", name))
             {
@@ -2267,7 +2270,8 @@ int NEUIK_Plot2D_Configure(
 
                 /* else: The previous setting was changed */
                 plot2d->yAxisCfg.showTicLabels = boolVal;
-                doRedraw = 1;
+                doRedraw      = TRUE;
+                updAxesRanges = TRUE;
             }
             else
             {
@@ -2499,7 +2503,8 @@ int NEUIK_Plot2D_Configure(
                 plot->x_range_min = floatMin;
                 plot->x_range_max = floatMax;
 
-                doRedraw = TRUE;
+                doRedraw      = TRUE;
+                updAxesRanges = TRUE;
             }
             else if (!strcmp("yAxisRange", name))
             {
@@ -2551,7 +2556,8 @@ int NEUIK_Plot2D_Configure(
                 plot->y_range_min = floatMin;
                 plot->y_range_max = floatMax;
 
-                doRedraw = TRUE;
+                doRedraw      = TRUE;
+                updAxesRanges = TRUE;
             }
             else if (!strcmp("xAxisNumTics", name))
             {
@@ -2597,7 +2603,8 @@ int NEUIK_Plot2D_Configure(
 
                 /* else: The previous setting was changed */
                 plot2d->xAxisCfg.nTicmarks = valInt;
-                doRedraw = TRUE;
+                doRedraw      = TRUE;
+                updAxesRanges = TRUE;
             }
             else if (!strcmp("yAxisNumTics", name))
             {
@@ -2643,7 +2650,8 @@ int NEUIK_Plot2D_Configure(
 
                 /* else: The previous setting was changed */
                 plot2d->yAxisCfg.nTicmarks = valInt;
-                doRedraw = TRUE;
+                doRedraw      = TRUE;
+                updAxesRanges = TRUE;
             }
             else
             {
@@ -2681,6 +2689,13 @@ out:
     }
     if (doRedraw)
     {
+        if (updAxesRanges)
+        {
+            if (neuik_Plot2D_UpdateAxesRanges(plot2d))
+            {
+                NEUIK_RaiseError(funcName, errMsgs[28]);
+            }
+        }
         if (neuik_Element_GetSizeAndLocation(plot2d, &rSize, &rLoc))
         {
             eNum = 10;
