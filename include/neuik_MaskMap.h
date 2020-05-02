@@ -90,6 +90,12 @@ int
 			int             x2,
 			int             y2);
 
+int
+	neuik_MaskMap_MaskUnboundedPoint(
+		    neuik_MaskMap * map, 
+		    int             x,
+		    int             y);
+
 int 
 	neuik_MaskMap_MaskRect(
 			neuik_MaskMap * map, 
@@ -119,6 +125,12 @@ int
 			int             y1,
 			int             x2,
 			int             y2);
+
+int
+	neuik_MaskMap_UnmaskUnboundedPoint(
+		    neuik_MaskMap * map, 
+		    int             x,
+		    int             y);
 
 int 
 	neuik_MaskMap_UnmaskRect(

@@ -47,6 +47,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
 {
     unsigned int  uCtr       = 0;
     int           firstPt    = TRUE;
+    int           isVert     = FALSE;
     int           lastPtOut  = FALSE;
     int           maskPtX    = 0;
     int           maskPtY    = 0;
@@ -78,7 +79,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
         "Output Argument `lineMask` is NULL.",                                 // [3]
         "Failure in `neuik_MakeMaskMap()`.",                                   // [4]
         "Failure in `neuik_MaskAll()`.",                                       // [5]
-        "Failure in `neuik_MaskMap_UnmaskPoint()`.",                           // [6]
+        "Failure in `neuik_MaskMap_UnmaskUnboundedPoint()`.",                  // [6]
         "Failure in `neuik_MaskMap_UnmaskLine()`.",                            // [7]
         "Argument `data` has an unsupported value for precision.",             // [8]
         "Argument `thickness` has an invalid value (values `1-4` are valid).", // [9]
@@ -142,6 +143,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
     /*------------------------------------------------------------------------*/
     for (uCtr = 0; uCtr < data->nPoints; uCtr++)
     {
+        isVert = FALSE;
         ptX_64 = data->data_64[uCtr*2];
         ptY_64 = data->data_64[(uCtr*2)+1];
 
@@ -160,7 +162,14 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                 dYmax_64 = ptY_64 - lst_ptY_64;
                 dX_64 = dXmax_64;
                 dY_64 = dYmax_64;
-                m_64  = dY_64/dX_64; /* slope */
+                if (dX_64 == 0.0)
+                {
+                    isVert = TRUE;
+                }
+                if (!isVert)
+                {
+                    m_64  = dY_64/dX_64; /* slope */
+                }
 
                 /*------------------------------------------------------------*/
                 /* Check if this point is outside of the displayed region     */
@@ -182,20 +191,29 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     /* Restrict the effective delta (for drawing lines to the */
                     /* region of supported values.                            */
                     /*--------------------------------------------------------*/
-                    if (ptX_64 > xRangeMax)
+                    if (!isVert)
                     {
-                        dX_64 = xRangeMax - lst_ptX_64;
-                        dY_64 = m_64*dX_64 + lst_ptY_64;
+                        if (ptX_64 > xRangeMax)
+                        {
+                            dX_64 = xRangeMax - lst_ptX_64;
+                            dY_64 = m_64*dX_64 + lst_ptY_64;
+                        }
                     }
                     if (ptY_64 < yRangeMin)
                     {
                         dY_64 = yRangeMin - lst_ptY_64;
-                        dX_64 = dY_64/m_64;
+                        if (!isVert)
+                        {
+                            dX_64 = dY_64/m_64;
+                        }
                     }
                     if (ptY_64 > yRangeMax)
                     {
                         dY_64 = yRangeMax - lst_ptY_64;
-                        dX_64 = dY_64/m_64;
+                        if (!isVert)
+                        {
+                            dX_64 = dY_64/m_64;
+                        }
                     }
                 }
 
@@ -210,30 +228,44 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                 /*------------------------------------------------------------*/
                 if (maskPtX2 == ticZoneW)
                 {
-                    if (dX_64 >= 0)
+                    if (isVert)
                     {
-                        dX_64 -= pxDeltaX;
+                        dX_64 = 0.0;
                     }
-                    else
+                    else 
                     {
-                        dX_64 += pxDeltaX;
+                        if (dX_64 >= 0)
+                        {
+                            dX_64 -= pxDeltaX;
+                        }
+                        else
+                        {
+                            dX_64 += pxDeltaX;
+                        }
+                        dY_64 = m_64*dX_64 + lst_ptY_64;
                     }
-                    dY_64 = m_64*dX_64 + lst_ptY_64;
 
                     maskPtX2 = 
                         (int)((lst_ptX_64 + dX_64 - xRangeMin)/pxDeltaX);
                 }
                 if (maskPtY2 < 0)
                 {
-                    if (dY_64 >= 0)
+                    if (isVert)
                     {
-                        dY_64 -= pxDeltaY;
+                        dX_64 = 0.0;
                     }
                     else
                     {
-                        dY_64 += pxDeltaY;
+                        if (dY_64 >= 0)
+                        {
+                            dY_64 -= pxDeltaY;
+                        }
+                        else
+                        {
+                            dY_64 += pxDeltaY;
+                        }
+                        dX_64 = dY_64/m_64 + lst_ptX_64;
                     }
-                    dX_64 = dY_64/m_64 + lst_ptX_64;
 
                     maskPtY2 = (ticZoneH-1) - 
                         (int)((lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
@@ -563,7 +595,14 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     dYmax_64 = ptY_64 - lst_ptY_64;
                     dX_64 = dXmax_64;
                     dY_64 = dYmax_64;
-                    m_64  = dY_64/dX_64; /* slope */
+                    if (dX_64 == 0.0)
+                    {
+                        isVert = TRUE;
+                    }
+                    if (!isVert)
+                    {
+                        m_64  = dY_64/dX_64; /* slope */
+                    }
 
                     /*--------------------------------------------------------*/
                     /* Restrict the effective delta (for drawing lines to the */
@@ -579,16 +618,22 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     }
                     if (lst_ptY_64 < yRangeMin)
                     {
-                        lst_ptX_64 = 
-                            lst_ptX_64 + (yRangeMin - lst_ptY_64)/m_64;
+                        if (!isVert)
+                        {
+                            lst_ptX_64 = 
+                                lst_ptX_64 + (yRangeMin - lst_ptY_64)/m_64;
+                        }
                         lst_ptY_64 = yRangeMin;
                         maskPtY1   = ticZoneH-1;
                     }
                     if (lst_ptY_64 > yRangeMax)
                     {
                         maskPtY1   = 0;
-                        lst_ptX_64 = 
-                            lst_ptX_64 + (yRangeMax - lst_ptY_64)/m_64;
+                        if (!isVert)
+                        {
+                            lst_ptX_64 = 
+                                lst_ptX_64 + (yRangeMax - lst_ptY_64)/m_64;
+                        }
                         lst_ptY_64 = yRangeMax;
                     }
                     if (ptY_64 > yRangeMax)
@@ -599,7 +644,10 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     {
                         dY_64 = ptY_64 - lst_ptY_64;
                     }
-                    dX_64 = dY_64/m_64;
+                    if (!isVert)
+                    {
+                        dX_64 = dY_64/m_64;
+                    }
 
                     maskPtX1 = (int)((lst_ptX_64 - xRangeMin)/pxDeltaX);
 
@@ -947,7 +995,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                 switch (thickness)
                 {
                 case 1:
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY))
                     {
@@ -956,28 +1004,28 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     }
                     break;
                 case 2:
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX - 1, 
                         maskPtY + ticZoneOffsetY))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX - 1, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
@@ -989,21 +1037,21 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     /*--------------------------------------------------------*/
                     /* Top y-axis row (of three).                             */
                     /*--------------------------------------------------------*/
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX - 1, 
                         maskPtY + ticZoneOffsetY - 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY - 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 1, 
                         maskPtY + ticZoneOffsetY - 1))
                     {
@@ -1014,21 +1062,21 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     /*--------------------------------------------------------*/
                     /* Middle y-axis row (of three).                          */
                     /*--------------------------------------------------------*/
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX - 1, 
                         maskPtY + ticZoneOffsetY))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 1, 
                         maskPtY + ticZoneOffsetY))
                     {
@@ -1039,21 +1087,21 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     /*--------------------------------------------------------*/
                     /* Bottom y-axis row (of three).                          */
                     /*--------------------------------------------------------*/
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX - 1, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 1, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
@@ -1065,14 +1113,14 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     /*--------------------------------------------------------*/
                     /* Top y-axis row (first of four).                        */
                     /*--------------------------------------------------------*/
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY - 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 1, 
                         maskPtY + ticZoneOffsetY - 1))
                     {
@@ -1083,28 +1131,28 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     /*--------------------------------------------------------*/
                     /* Upper-middle y-axis row (second of four).              */
                     /*--------------------------------------------------------*/
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX - 1, 
                         maskPtY + ticZoneOffsetY))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 1, 
                         maskPtY + ticZoneOffsetY))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 2, 
                         maskPtY + ticZoneOffsetY))
                     {
@@ -1115,28 +1163,28 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     /*--------------------------------------------------------*/
                     /* Lower-middle y-axis row (third of four).               */
                     /*--------------------------------------------------------*/
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX - 1, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 1, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 2, 
                         maskPtY + ticZoneOffsetY + 1))
                     {
@@ -1147,14 +1195,14 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                     /*--------------------------------------------------------*/
                     /* Bottom y-axis row (of four).                           */
                     /*--------------------------------------------------------*/
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX, 
                         maskPtY + ticZoneOffsetY + 2))
                     {
                         eNum = 6;
                         goto out;
                     }
-                    if (neuik_MaskMap_UnmaskPoint(*lineMask, 
+                    if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 
                         maskPtX + ticZoneOffsetX + 1, 
                         maskPtY + ticZoneOffsetY + 2))
                     {

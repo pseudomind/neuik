@@ -785,6 +785,14 @@ int neuik_Element_Render__VGroup(
     }
 
     /*------------------------------------------------------------------------*/
+    /* Zero out the values in the element minimum size array.                 */
+    /*------------------------------------------------------------------------*/
+    for (ctr = 0; ctr < nAlloc; ctr++)
+    {
+        elemsMinSz[ctr] = rsZero;
+    }
+
+    /*------------------------------------------------------------------------*/
     /* Store the current properties for the contained elements.               */
     /*------------------------------------------------------------------------*/
     for (ctr = 0;; ctr++)
@@ -802,7 +810,6 @@ int neuik_Element_Render__VGroup(
             goto out;
         }
 
-        elemsMinSz[ctr] = rsZero;
         if (neuik_Element_GetMinSize(elem, &elemsMinSz[ctr]))
         {
             eNum = 10;

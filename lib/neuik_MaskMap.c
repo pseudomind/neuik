@@ -931,12 +931,153 @@ int neuik_MaskMap_UnmaskPoint(
         goto out;
     }
 
-
     pos = map->sizeW*y + x;
     map->mapData[pos] = 0;
 out:
     if (eNum > 0)
     {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
+
+    return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_SetUnboundedMaskPoint
+ *
+ *  Description:   Set the mask setting for a point within the map. 
+ *                 Masked points are used to identify portions of an image that
+ *                 should not be rendered. The unbounded variant of this 
+ *                 function will only apply the setting if pixel actually lies
+ *                 within the mask bounds, the main difference being that it
+ *                 will not throw an error if the pixel is out of bounds.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_SetUnboundedMaskPoint(
+    neuik_MaskMap * map, 
+    int             maskVal, /* 0 (unmaksed) or 1 (masked) */
+    int             x,
+    int             y)
+{
+    int           pos      = 0; /* position of point within mapData */
+    int           eNum     = 0; /* which error to report (if any) */
+    int           inBounds = TRUE;
+    static char   funcName[] = "neuik_MaskMap_SetUnboundedMaskPoint";
+    static char * errMsgs[]  = {"", // [0] no error
+        "Argument `map` does not implement MaskMap class.", // [1]
+    };
+
+    if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+    {
+        eNum = 1;
+        goto out;
+    }
+
+    if (x < 0)
+    {
+        /* invalid x-value (<0) */
+        inBounds = FALSE;
+    }
+    else if (x >= map->sizeW)
+    {
+        /* x-value beyond bounds */
+        inBounds = FALSE;
+    }
+    if (y < 0)
+    {
+        /* invalid y-value */
+        inBounds = FALSE;
+    }
+    else if (y >= map->sizeH)
+    {
+        /* y-value beyond bounds */
+        inBounds = FALSE;
+    }
+
+    if (inBounds)
+    {
+        pos = map->sizeW*y + x;
+        map->mapData[pos] = maskVal;
+    }
+out:
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
+
+    return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_MaskUnboundedPoint
+ *
+ *  Description:   Flag a point within the map as masked. Masked points are used
+ *                 to identify portions of an image that should not be rendered.
+ *
+ *                 This unbounded variant of this function will only apply the 
+ *                 setting if pixel actually lies within the mask bounds, the 
+ *                 main difference being that it will not throw an error if the 
+ *                 pixel is out of bounds.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_MaskUnboundedPoint(
+    neuik_MaskMap * map, 
+    int             x,
+    int             y)
+{
+    int           eNum  = 0;   /* which error to report (if any) */
+    static char   funcName[] = "neuik_MaskMap_MaskUnboundedPoint";
+    static char * errMsgs[]  = {"", // [0] no error
+        "Failure in `neuik_MaskMap_SetUnboundedMaskPoint()`.", // [1]
+    };
+
+    if (neuik_MaskMap_SetUnboundedMaskPoint(map, 1, x, y))
+    {
+        eNum = 1;
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
+
+    return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_UnmaskUnboundedPoint
+ *
+ *  Description:   Flag a point within the map as masked. Masked points are used
+ *                 to identify portions of an image that should not be rendered.
+ *
+ *                 This unbounded variant of this function will only apply the 
+ *                 setting if pixel actually lies within the mask bounds, the 
+ *                 main difference being that it will not throw an error if the 
+ *                 pixel is out of bounds.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_UnmaskUnboundedPoint(
+    neuik_MaskMap * map, 
+    int             x,
+    int             y)
+{
+    int           eNum  = 0;   /* which error to report (if any) */
+    static char   funcName[] = "neuik_MaskMap_UnmaskUnboundedPoint";
+    static char * errMsgs[]  = {"", // [0] no error
+        "Failure in `neuik_MaskMap_SetUnboundedMaskPoint()`.", // [1]
+    };
+
+    if (neuik_MaskMap_SetUnboundedMaskPoint(map, 0, x, y))
+    {
+        eNum = 1;
         NEUIK_RaiseError(funcName, errMsgs[eNum]);
     }
 
@@ -968,6 +1109,10 @@ int neuik_MaskMap_SetMaskLine(
     int           eNum  = 0;   /* which error to report (if any) */
     int           idx   = 0;   /* delta x (x2 - x1); as an integer */
     int           idy   = 0;   /* delta y (y2 - y1); as an integer */
+    int           x1e   = 0;   /* effective point x1 (p1/p2 may be swapped)*/
+    int           y1e   = 0;   /* effective point y1 (p1/p2 may be swapped)*/
+    int           x2e   = 0;   /* effective point x2 (p1/p2 may be swapped)*/
+    int           y2e   = 0;   /* effective point y2 (p1/p2 may be swapped)*/
     double        dx    = 0.0; /* delta x (x2 - x1) */
     double        dy    = 0.0; /* delta y (y2 - y1) */
     double        dxInt = 0.0; /* dx resulting from a single loop interval */
@@ -1057,12 +1202,28 @@ int neuik_MaskMap_SetMaskLine(
         eNum = 9;
         goto out;
     }
+    x1e = x1;
+    y1e = y1;
+    x2e = x2;
+    y2e = y2;
+
+    if (y1 > y2)
+    {
+        /*--------------------------------------------------------------------*/
+        /* This would result in negative values for idy/dy, which will mess   */
+        /* up the draw loop, swap point one with point two.                   */
+        /*--------------------------------------------------------------------*/
+        x1e = x2;
+        y1e = y2;
+        x2e = x1;
+        y2e = y1;
+    }
 
     /*------------------------------------------------------------------------*/
     /* Mask a line of values between point (x1,y1) and (x2,y2).               */
     /*------------------------------------------------------------------------*/
-    idx = x2 - x1;
-    idy = y2 - y1;
+    idx = x2e - x1e;
+    idy = y2e - y1e;
     dx = (double)(idx);
     dy = (double)(idy);
 
@@ -1071,7 +1232,7 @@ int neuik_MaskMap_SetMaskLine(
         /*--------------------------------------------------------------------*/
         /* This line is actually just a point.                                */
         /*--------------------------------------------------------------------*/
-        pos = map->sizeW*y1 + x1;
+        pos = map->sizeW*y1e + x1e;
         map->mapData[pos] = 1;
         goto out;
     }
@@ -1104,11 +1265,11 @@ int neuik_MaskMap_SetMaskLine(
     /*------------------------------------------------------------------------*/
     /* Mark the first and final points of the line first.                     */
     /*------------------------------------------------------------------------*/
-    pos0 = map->sizeW*y1 + x1;
+    pos0 = map->sizeW*y1e + x1e;
     pos = pos0;
     map->mapData[pos] = maskVal;
 
-    pos = map->sizeW*y2 + x2;
+    pos = map->sizeW*y2e + x2e;
     map->mapData[pos] = maskVal;
 
     /*------------------------------------------------------------------------*/
@@ -1159,6 +1320,10 @@ int neuik_MaskMap_SetUnboundedMaskLine(
     int           eNum  = 0;   /* which error to report (if any) */
     int           idx   = 0;   /* delta x (x2 - x1); as an integer */
     int           idy   = 0;   /* delta y (y2 - y1); as an integer */
+    int           x1e   = 0;   /* effective point x1 (p1/p2 may be swapped)*/
+    int           y1e   = 0;   /* effective point y1 (p1/p2 may be swapped)*/
+    int           x2e   = 0;   /* effective point x2 (p1/p2 may be swapped)*/
+    int           y2e   = 0;   /* effective point y2 (p1/p2 may be swapped)*/
     double        dx    = 0.0; /* delta x (x2 - x1) */
     double        dy    = 0.0; /* delta y (y2 - y1) */
     double        dxInt = 0.0; /* dx resulting from a single loop interval */
@@ -1182,12 +1347,28 @@ int neuik_MaskMap_SetUnboundedMaskLine(
         eNum = 2;
         goto out;
     }
+    x1e = x1;
+    y1e = y1;
+    x2e = x2;
+    y2e = y2;
+
+    if (y1 > y2)
+    {
+        /*--------------------------------------------------------------------*/
+        /* This would result in negative values for idy/dy, which will mess   */
+        /* up the draw loop, swap point one with point two.                   */
+        /*--------------------------------------------------------------------*/
+        x1e = x2;
+        y1e = y2;
+        x2e = x1;
+        y2e = y1;
+    }
 
     /*------------------------------------------------------------------------*/
     /* Mask a line of values between point (x1,y1) and (x2,y2).               */
     /*------------------------------------------------------------------------*/
-    idx = x2 - x1;
-    idy = y2 - y1;
+    idx = x2e - x1e;
+    idy = y2e - y1e;
     dx = (double)(idx);
     dy = (double)(idy);
 
@@ -1196,10 +1377,10 @@ int neuik_MaskMap_SetUnboundedMaskLine(
         /*--------------------------------------------------------------------*/
         /* This line is actually just a point.                                */
         /*--------------------------------------------------------------------*/
-        if (!(y1 >= 0 && y1 < map->sizeH && x1 >= 0 && x1 < map->sizeW))
+        if (!(y1e >= 0 && y1e < map->sizeH && x1e >= 0 && x1e < map->sizeW))
         {
             /* this point lies within the mask bounds */
-            pos = map->sizeW*y1 + x1;
+            pos = map->sizeW*y1e + x1e;
             map->mapData[pos] = 1;
         }
         goto out;
@@ -1233,18 +1414,18 @@ int neuik_MaskMap_SetUnboundedMaskLine(
     /*------------------------------------------------------------------------*/
     /* Mark the first and final points of the line first.                     */
     /*------------------------------------------------------------------------*/
-    if (y1 >= 0 && y1 < map->sizeH && x1 >= 0 && x1 < map->sizeW)
+    if (y1e >= 0 && y1e < map->sizeH && x1e >= 0 && x1e < map->sizeW)
     {
         /* this point lies within the mask bounds */
-        pos0 = map->sizeW*y1 + x1;
+        pos0 = map->sizeW*y1e + x1e;
         pos = pos0;
         map->mapData[pos] = maskVal;
     }
 
-    if (y2 >= 0 && y2 < map->sizeH && x2 >= 0 && x2 < map->sizeW)
+    if (y2e >= 0 && y2e < map->sizeH && x2e >= 0 && x2e < map->sizeW)
     {
         /* this point lies within the mask bounds */
-        pos = map->sizeW*y2 + x2;
+        pos = map->sizeW*y2e + x2e;
         map->mapData[pos] = maskVal;
     }
 
@@ -1253,8 +1434,8 @@ int neuik_MaskMap_SetUnboundedMaskLine(
     /*------------------------------------------------------------------------*/
     for (fCtr = 1.0; fCtr < hyp; fCtr += 1.0)
     {
-        ptX = x1 + (int)(fCtr*dxInt);
-        ptY = y1 + (int)(fCtr*dyInt);
+        ptX = x1e + (int)(fCtr*dxInt);
+        ptY = y1e + (int)(fCtr*dyInt);
         if (ptY >= 0 && ptY < map->sizeH && ptX >= 0 && ptX < map->sizeW)
         {
             /* this point lies within the mask bounds */
