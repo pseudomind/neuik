@@ -20,6 +20,8 @@
 #include "NEUIK_error.h"
 #include "NEUIK_render.h"
 
+extern float neuik__HighDPI_Scaling;
+
 /*----------------------------------------------------------------------------*/
 /* The following is the list of default fonts that NEUIK will check for on    */
 /* the system.  Fonts higher up in the list are preferred to those lower in   */
@@ -174,15 +176,15 @@ NEUIK_FontSet * NEUIK_GetDefaultFontSet(
     static NEUIK_FontSet ** fontSets            = NULL; /* array of all font sets */
     NEUIK_FontSet         * fs                  = NULL;
     static char             funcName[]          = "NEUIK_GetDefaultFontSet";
-    static char           * errMsgs[]           = {"", // [0] no error
-        "Failed to allocate memory.",                  // [1]
-        "NEUIK_NewFontSet failed.",                    // [2]
-        "Failed to reallocate memory.",                // [3]
-        "Unable to locate any of the default fonts.",  // [4]
-        "Failure in GetTTFLocation().",                // [5]
-        "Failure in GetBoldTTFLocation().",            // [6]
-        "Failure in GetItalicTTFLocation().",          // [7]
-        "Failure in GetBoldItalicTTFLocation().",      // [8]
+    static char           * errMsgs[] = {"", // [0] no error
+        "Failed to allocate memory.",                 // [1]
+        "NEUIK_NewFontSet failed.",                   // [2]
+        "Failed to reallocate memory.",               // [3]
+        "Unable to locate any of the default fonts.", // [4]
+        "Failure in GetTTFLocation().",               // [5]
+        "Failure in GetBoldTTFLocation().",           // [6]
+        "Failure in GetItalicTTFLocation().",         // [7]
+        "Failure in GetBoldItalicTTFLocation().",     // [8]
     };
 
 
@@ -355,15 +357,15 @@ NEUIK_FontSet * NEUIK_GetDefaultMSFontSet(
     static NEUIK_FontSet ** fontSets            = NULL; /* array of all font sets */
     NEUIK_FontSet         * fs                  = NULL;
     static char             funcName[]          = "NEUIK_GetDefaultMSFontSet";
-    static char           * errMsgs[]           = {"", // [0] no error
-        "Failed to allocate memory.",                  // [1]
-        "NEUIK_NewFontSet failed.",                    // [2]
-        "Failed to reallocate memory.",                // [3]
-        "Unable to locate any of the default fonts.",  // [4]
-        "Failure in GetTTFLocation().",                // [5]
-        "Failure in GetBoldTTFLocation().",            // [6]
-        "Failure in GetItalicTTFLocation().",          // [7]
-        "Failure in GetBoldItalicTTFLocation().",      // [8]
+    static char           * errMsgs[] = {"", // [0] no error
+        "Failed to allocate memory.",                 // [1]
+        "NEUIK_NewFontSet failed.",                   // [2]
+        "Failed to reallocate memory.",               // [3]
+        "Unable to locate any of the default fonts.", // [4]
+        "Failure in GetTTFLocation().",               // [5]
+        "Failure in GetBoldTTFLocation().",           // [6]
+        "Failure in GetItalicTTFLocation().",         // [7]
+        "Failure in GetBoldItalicTTFLocation().",     // [8]
     };
 
 
@@ -480,7 +482,8 @@ NEUIK_FontSet * NEUIK_GetDefaultMSFontSet(
             }
         }
 
-        fontSets = (NEUIK_FontSet **)realloc(fontSets, len*sizeof(NEUIK_FontSet *));
+        fontSets = (NEUIK_FontSet **)realloc(fontSets, 
+            len*sizeof(NEUIK_FontSet *));
         if (fontSets == NULL)
         {
             eNum = 3;
@@ -529,10 +532,11 @@ neuik_ptrTo_TTF_Font NEUIK_FontSet_GetFont(
     int             useItalic) /* (bool) whether font should be italic */
 {
     unsigned int        ctr        = 0;
+    unsigned int        fSizeSc    = 0; /* HighDPI scaled font size */
     int                 eNum       = 0; /* which error to report (if any) */
     NEUIK_FontFileSet * ffs        = NULL;
     static char         funcName[] = "NEUIK_FontSet_GetFont";
-    static char       * errMsgs[]  = {"",              // [0] no error
+    static char       * errMsgs[]  = {"", // [0] no error
         "FontSet pointer is NULL.",              // [1]
         "An invalid fontSize of zero supplied.", // [2]
         "Failed to allocate memory.",            // [3]
@@ -552,6 +556,7 @@ neuik_ptrTo_TTF_Font NEUIK_FontSet_GetFont(
         eNum = 2;
         goto out;
     }
+    fSizeSc = (unsigned int)((float)(fSize)*neuik__HighDPI_Scaling);
 
     /*------------------------------------------------------------------------*/
     /* Set a pointer to the correct font style (std, bold, italic, bold-ital) */
@@ -585,14 +590,15 @@ neuik_ptrTo_TTF_Font NEUIK_FontSet_GetFont(
         /* This is the first time GetFont is called on this FontSet.          */
         /* Allocate and set initial array memory.                             */
         /*--------------------------------------------------------------------*/
-        ffs->NRef = (unsigned int *)malloc((fSize+1)*sizeof(unsigned int));
+        ffs->NRef = (unsigned int *)malloc((fSizeSc+1)*sizeof(unsigned int));
         if (ffs->NRef == NULL)
         {
             eNum = 3;
             goto out;
         }
 
-        ffs->Fonts = (neuik_ptrTo_TTF_Font *)malloc((fSize+1)*sizeof(TTF_Font*));
+        ffs->Fonts = (neuik_ptrTo_TTF_Font *)malloc(
+            (fSizeSc+1)*sizeof(TTF_Font*));
         if (ffs->Fonts == NULL)
         {
             eNum = 3;
@@ -600,39 +606,39 @@ neuik_ptrTo_TTF_Font NEUIK_FontSet_GetFont(
         }
 
         /* Zero/NULL out the initial values of each array */
-        for (ctr=0; ctr<fSize; ctr++)
+        for (ctr=0; ctr<fSizeSc; ctr++)
         {
             ffs->NRef[ctr]  = 0;
             ffs->Fonts[ctr] = NULL;
         }
 
         /* load the TTF_Font into the appropriate array index */
-        ffs->Fonts[fSize] = TTF_OpenFont(ffs->FontName, fSize);
-        if (ffs->Fonts[fSize] == NULL)
+        ffs->Fonts[fSizeSc] = TTF_OpenFont(ffs->FontName, fSizeSc);
+        if (ffs->Fonts[fSizeSc] == NULL)
         {
             eNum = 4;
             goto out;
         }
-        ffs->MaxSize = fSize;
-        rvFont = ffs->Fonts[fSize];
+        ffs->MaxSize = fSizeSc;
+        rvFont = ffs->Fonts[fSizeSc];
     }
-    else if (fSize <= ffs->MaxSize)
+    else if (fSizeSc <= ffs->MaxSize)
     {
         /*--------------------------------------------------------------------*/
         /* A subsequent call to GetFont. Check if the font has already been   */
         /* loaded and if so just return the pointer.  Otherwise, load the     */
         /* into the specified array index.                                    */
         /*--------------------------------------------------------------------*/
-        if (ffs->Fonts[fSize] == NULL)
+        if (ffs->Fonts[fSizeSc] == NULL)
         {
-            ffs->Fonts[fSize] = TTF_OpenFont(ffs->FontName, fSize);
-            if (ffs->Fonts[fSize] == NULL)
+            ffs->Fonts[fSizeSc] = TTF_OpenFont(ffs->FontName, fSizeSc);
+            if (ffs->Fonts[fSizeSc] == NULL)
             {
                 eNum = 4;
                 goto out;
             }
         }
-        rvFont = ffs->Fonts[fSize];
+        rvFont = ffs->Fonts[fSizeSc];
     }
     else
     {
@@ -641,14 +647,16 @@ neuik_ptrTo_TTF_Font NEUIK_FontSet_GetFont(
         /* previously loaded font variants.  The array will need to be        */
         /* reallocated and only the new array values must be initialized.     */
         /*--------------------------------------------------------------------*/
-        ffs->NRef = (unsigned int *)realloc(ffs->NRef, (fSize+1)*sizeof(unsigned int));
+        ffs->NRef = (unsigned int *)realloc(
+            ffs->NRef, (fSizeSc+1)*sizeof(unsigned int));
         if (ffs->NRef == NULL)
         {
             eNum = 5;
             goto out;
         }
 
-        ffs->Fonts = (neuik_ptrTo_TTF_Font *)realloc(ffs->Fonts, (fSize+1)*sizeof(TTF_Font*));
+        ffs->Fonts = (neuik_ptrTo_TTF_Font *)realloc(
+            ffs->Fonts, (fSizeSc+1)*sizeof(TTF_Font*));
         if (ffs->Fonts == NULL)
         {
             eNum = 5;
@@ -656,21 +664,21 @@ neuik_ptrTo_TTF_Font NEUIK_FontSet_GetFont(
         }
 
         /* Zero/NULL out the addtional values of each array */
-        for (ctr=ffs->MaxSize+1; ctr<fSize; ctr++)
+        for (ctr=ffs->MaxSize+1; ctr<fSizeSc; ctr++)
         {
             ffs->NRef[ctr]  = 0;
             ffs->Fonts[ctr] = NULL;
         }
 
         /* load the TTF_Font into the appropriate array index */
-        ffs->Fonts[fSize] = TTF_OpenFont(ffs->FontName, fSize);
-        if (ffs->Fonts[fSize] == NULL)
+        ffs->Fonts[fSizeSc] = TTF_OpenFont(ffs->FontName, fSizeSc);
+        if (ffs->Fonts[fSizeSc] == NULL)
         {
             eNum = 4;
             goto out;
         }
-        ffs->MaxSize = fSize;
-        rvFont = ffs->Fonts[fSize];
+        ffs->MaxSize = fSizeSc;
+        rvFont = ffs->Fonts[fSizeSc];
     }
 out:
     if (eNum > 0)

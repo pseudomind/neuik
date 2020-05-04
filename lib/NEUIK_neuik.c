@@ -30,11 +30,13 @@ char          neuik__AppName[2048];
 int           neuik__Report_About = 0;
 int           neuik__Report_Debug = 0;
 int           neuik__Report_Frametime = 0;
+float         neuik__HighDPI_Scaling = 1.0;
 
 
 int NEUIK_Init()
 {
     int           eNum   = 0;
+    int           nRead  = 0;
     int           rvErr  = 0;
     char        * envVar = NULL;
     static char   funcName[] = "NEUIK_Init";
@@ -138,6 +140,26 @@ int NEUIK_Init()
         if (envVar != NULL) neuik__Report_Debug = 1;
         envVar = getenv("NEUIK_REPORT_ABOUT");
         if (envVar != NULL) neuik__Report_About = 1;
+        envVar = getenv("NEUIK_HIGHDPI_SCALING");
+        if (envVar != NULL)
+        {
+            nRead = sscanf(envVar, "%f", &neuik__HighDPI_Scaling);
+            if (nRead == 0)
+            {
+                printf("NOTE: Invalid ENVIRONMENT setting for "
+                    "`NEUIK_HIGHDPI_SCALING`; it should be a float value "
+                    ">= 1.0 .\n");
+                neuik__HighDPI_Scaling = 1.0;
+            }
+            if (neuik__HighDPI_Scaling < 0.5)
+            {
+                /*------------------------------------------------------------*/
+                /* Even though this totally isn't the intended use of this    */
+                /* feature, it does make for an interesting capability.       */
+                /*------------------------------------------------------------*/
+                neuik__HighDPI_Scaling = 0.5;
+            }
+        }
 
     }
 out:

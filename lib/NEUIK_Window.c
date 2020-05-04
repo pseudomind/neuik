@@ -35,6 +35,7 @@
 extern int neuik__isInitialized;
 extern int neuik__Report_Debug;
 extern int neuik__Report_Frametime;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -184,8 +185,8 @@ int NEUIK_NewWindow(
     w->redrawAll   = 1;
     w->posX        = -1;
     w->posY        = -1;
-    w->sizeW       = 320;
-    w->sizeH       = 320;
+    w->sizeW       = (int)(320.0*neuik__HighDPI_Scaling);
+    w->sizeH       = (int)(320.0*neuik__HighDPI_Scaling);
     w->shown       = 1;
     w->updateTitle = 0;
     w->updateIcon  = 0;
@@ -1170,7 +1171,7 @@ int NEUIK_Window_Create(
             }
         }
 
-        if (doResize) NEUIK_Window_SetSize(w, newW, newH);
+        if (doResize) neuik_Window_SetSizeNoScaling(w, newW, newH);
     }
 
     /*------------------------------------------------------------------------*/
@@ -1950,7 +1951,7 @@ int NEUIK_Window_Redraw(
 
         if (doResize)
         {
-            NEUIK_Window_SetSize(w, newW, newH);
+            neuik_Window_SetSizeNoScaling(w, newW, newH);
             neuik_Element_ForceRedraw(w->elem);
         }
 
@@ -2222,27 +2223,28 @@ void NEUIK_Window_SetShown(
 
 /*******************************************************************************
  *
- *  Name:          NEUIK_Window_SetSize
+ *  Name:          neuik_Window_SetSizeNoScaling
  *
  *  Description:   Set the size to be used for a window that is yet-to-be 
  *                 created or change the size of a previously created window.
  *
+ *                 This variant will not apply the effect of HighDPI scaling.
+ *
  *  Returns:       A non-zero value if there was an error.
  *
  ******************************************************************************/
-int NEUIK_Window_SetSize(
-    NEUIK_Window  * w, 
-    int             width,
-    int             height)
+int neuik_Window_SetSizeNoScaling(
+    NEUIK_Window * w, 
+    int            width,
+    int            height)
 {
-    int           eNum = 0;   /* which error to report (if any) */
-    static char   funcName[] = "NEUIK_Window_SetSize";
+    int           eNum       = 0; /* which error to report (if any) */
+    static char   funcName[] = "neuik_Window_SetSizeNoScaling";
     static char * errMsgs[]  = {"", // [0] no error
         "Argument `w` does not implement Window class.",  // [1]
         "Invalid window width (<=0) supplied.",           // [2]
         "Invalid window height (<=0) supplied.",          // [3]
         "Failure in `neuik_MakeMask_Resize()`",           // [4]
-        "Failure in `neuik_Window_RequestFullRedraw()`.", // [5]
     };
 
     if (!neuik_Object_IsClass(w, neuik__Class_Window))
@@ -2292,6 +2294,68 @@ int NEUIK_Window_SetSize(
                 goto out;
             }
         }
+    }
+out:
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
+
+    return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          NEUIK_Window_SetSize
+ *
+ *  Description:   Set the size to be used for a window that is yet-to-be 
+ *                 created or change the size of a previously created window.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int NEUIK_Window_SetSize(
+    NEUIK_Window  * w, 
+    int             width,
+    int             height)
+{
+    int           eNum     = 0; /* which error to report (if any) */
+    int           widthSc  = 0; /* HighDPI scaled width */ 
+    int           heightSc = 0; /* HighDPI scaled height */
+    static char   funcName[] = "NEUIK_Window_SetSize";
+    static char * errMsgs[]  = {"", // [0] no error
+        "Argument `w` does not implement Window class.", // [1]
+        "Invalid window width (<=0) supplied.",          // [2]
+        "Invalid window height (<=0) supplied.",         // [3]
+        "Failure in `neuik_Window_SetSizeNoScaling()`.", // [4]
+    };
+
+    if (!neuik_Object_IsClass(w, neuik__Class_Window))
+    {
+        eNum = 1;
+        goto out;
+    }
+
+    if (width <= 0)
+    {
+        /* invalid window width */
+        eNum = 2;
+        goto out;
+    }
+    if (height <= 0)
+    {
+        /* invalid window height */
+        eNum = 3;
+        goto out;
+    }
+    widthSc  = (int)((float)(width)*neuik__HighDPI_Scaling);
+    heightSc = (int)((float)(height)*neuik__HighDPI_Scaling);
+
+    if (neuik_Window_SetSizeNoScaling(w, widthSc, heightSc))
+    {
+        eNum = 4;
+        goto out;
     }
 out:
     if (eNum > 0)

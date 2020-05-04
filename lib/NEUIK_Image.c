@@ -32,6 +32,7 @@
 #include "neuik_classes.h"
 
 extern int neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -620,7 +621,9 @@ int neuik_Element_GetMinSize__Image(
     {
         /* this Image contains data */
         imW = ((SDL_Surface *)img->image)->w;
+        imW = (int)((float)(imW)*neuik__HighDPI_Scaling);
         imH = ((SDL_Surface *)img->image)->h;
+        imH = (int)((float)(imH)*neuik__HighDPI_Scaling);
     }
 
     rSize->w = imW;
@@ -718,8 +721,8 @@ int neuik_Element_Render__Image(
     /*------------------------------------------------------------------------*/
     if (imgSurf != NULL)
     {
-        imW = imgSurf->w;
-        imH = imgSurf->h;
+        imW = (int)((float)(imgSurf->w)*neuik__HighDPI_Scaling);
+        imH = (int)((float)(imgSurf->h)*neuik__HighDPI_Scaling);
         imgTex = SDL_CreateTextureFromSurface(rend, imgSurf);
         if (imgTex == NULL)
         {
