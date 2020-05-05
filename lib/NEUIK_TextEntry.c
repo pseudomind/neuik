@@ -33,7 +33,8 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-extern int neuik__Report_Debug;
+extern int   neuik__Report_Debug;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* neuik_Element    Function Table                                            */
@@ -514,6 +515,16 @@ int neuik_Element_GetMinSize__TextEntry(
 
     rSize->w = tW + aCfg->fontEmWidth;
     rSize->h = 2 + (int)(1.5 * (float)TTF_FontHeight(font));
+
+    if (neuik__HighDPI_Scaling >= 2.0)
+    {
+        /*--------------------------------------------------------------------*/
+        /* Add in additional pixels of width/height to accomodate for thicker */
+        /* button borders.                                                    */
+        /*--------------------------------------------------------------------*/
+        rSize->w += 2*(int)(neuik__HighDPI_Scaling/2.0);
+        rSize->h += 2*(int)(neuik__HighDPI_Scaling/2.0);
+    }
 out:
     if (eNum > 0)
     {
@@ -875,14 +886,16 @@ int neuik_Element_Render__TextEntry(
     SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
     int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-    char                    tempChar;          /* a temporary character */
+    char                    tempChar   = 0; /* a temporary character */
+    int                     borderW    = 1; /* width of entry border line */
+    int                     ctr        = 0;
+    int                     eNum       = 0; /* which error to report (if any) */
     int                     textW      = 0;
     int                     textH      = 0;
     int                     textWFull  = 0;
     int                     textHFull  = 0;
     int                     normWidth  = 0;
-    int                     hlWidth    = 0;    /* highlight bg Width */
-    int                     eNum       = 0;    /* which error to report (if any) */
+    int                     hlWidth    = 0; /* highlight bg Width */
     SDL_Rect                rect;
     SDL_Rect                srcRect;
     const NEUIK_Color     * fgClr      = NULL;
@@ -936,6 +949,11 @@ int neuik_Element_Render__TextEntry(
 
     eBase->eSt.rend = xRend;
     rend = eBase->eSt.rend;
+
+    if (neuik__HighDPI_Scaling >= 2.0)
+    {
+        borderW = 2*(int)(neuik__HighDPI_Scaling/2.0);
+    }
 
     /*------------------------------------------------------------------------*/
     /* Select the correct entry config to use (pointer or internal)           */
@@ -1217,79 +1235,108 @@ int neuik_Element_Render__TextEntry(
 
     if (eBase->eSt.hasFocus)
     {
+        /*--------------------------------------------------------------------*/
+        /* Draw the border in its selected way.                               */
+        /*--------------------------------------------------------------------*/
         bgClr = &(aCfg->bgColorSelect);
 
-        /* Draw the border in its selected way */
-
-        /*--------------------------------------------------------------------*/
-        /* Draw the border around the button.                                 */
-        /*--------------------------------------------------------------------*/
         SDL_SetRenderDrawColor(rend, bgClr->r, bgClr->g, bgClr->b, 255);
 
-        /*------------------------*/
-        /* Outermost Border lines */
-        /*------------------------*/
-        /* upper border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 1,              rl.y, 
-            rl.x + (rSize->w - 2), rl.y); 
-        /* left border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x, rl.y + 1, 
-            rl.x, rl.y + (rSize->h - 2));
-        /* right border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + (rSize->w - 1), rl.y + 1, 
-            rl.x + (rSize->w - 1), rl.y + (rSize->h - 2));
-        /* lower border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 1,              rl.y + (rSize->h - 1), 
-            rl.x + (rSize->w - 2), rl.y + (rSize->h - 1));
+        /*--------------------------------------------------------------------*/
+        /* Draw the Upper Border Line.                                        */
+        /*--------------------------------------------------------------------*/
+        for (ctr = 0; ctr < borderW + 2; ctr++)
+        {
+            if (ctr != 0)
+            {
+                SDL_RenderDrawLine(rend, 
+                    rl.x + 1,              rl.y + ctr, 
+                    rl.x + (rSize->w - 2), rl.y + ctr); 
+            }
+            else
+            {
+                SDL_RenderDrawLine(rend, 
+                    rl.x + 2,              rl.y, 
+                    rl.x + (rSize->w - 3), rl.y); 
+            }
+        }
 
-        /*---------------------*/
-        /* Middle Border lines */
-        /*---------------------*/
-        /* upper border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 1,              rl.y + 1, 
-            rl.x + (rSize->w - 2), rl.y + 1); 
-        /* left border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 1, rl.y + 1, 
-            rl.x + 1, rl.y + (rSize->h - 2));
-        /* right border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + (rSize->w - 2), rl.y + 1, 
-            rl.x + (rSize->w - 2), rl.y + (rSize->h - 2)); 
-        /* lower border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 2,              rl.y + (rSize->h - 2), 
-            rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
+        /*--------------------------------------------------------------------*/
+        /* Draw the Left Border Line.                                         */
+        /*--------------------------------------------------------------------*/
+        for (ctr = 0; ctr < borderW + 2; ctr++)
+        {
+            if (ctr != 0)
+            {
+                SDL_RenderDrawLine(rend, 
+                    rl.x + ctr, rl.y + 1,  
+                    rl.x + ctr, rl.y + (rSize->h - 2)); 
+            }
+            else
+            {
+                SDL_RenderDrawLine(rend, 
+                    rl.x , rl.y + 1,  
+                    rl.x , rl.y + (rSize->h - 3));
+            }
+        }
 
-        /*------------------------*/
-        /* Innermost Border lines */
-        /*------------------------*/
-        /* upper border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 2,              rl.y + 2, 
-            rl.x + (rSize->w - 3), rl.y + 2); 
-        /* left border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 2, rl.y + 2, 
-            rl.x + 2, rl.y + (rSize->h - 3));
-        /* right border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + (rSize->w - 3), rl.y + 2, 
-            rl.x + (rSize->w - 3), rl.y + (rSize->h - 3));
-        /* lower border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 3,              rl.y + (rSize->h - 3), 
-            rl.x + (rSize->w - 3), rl.y + (rSize->h - 3));
+        /*--------------------------------------------------------------------*/
+        /* Draw the Right Border Line.                                        */
+        /*--------------------------------------------------------------------*/
+        for (ctr = 0; ctr < borderW + 2; ctr++)
+        {
+            if (ctr != 0)
+            {
+                SDL_RenderDrawLine(rend, 
+                    rl.x + (rSize->w - 1) - ctr, rl.y + 1,
+                    rl.x + (rSize->w - 1) - ctr, rl.y + (rSize->h - 2)); 
+            }
+            else
+            {
+                SDL_RenderDrawLine(rend, 
+                    rl.x + (rSize->w - 1), rl.y + 2,
+                    rl.x + (rSize->w - 1), rl.y + (rSize->h - 3));
+            }
+        }
 
-        SDL_RenderDrawPoint(rend, rl.x + 3,              rl.y + 3);
-        SDL_RenderDrawPoint(rend, rl.x + 3,              rl.y + (rSize->h - 4));
-        SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 4), rl.y + 3);
-        SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 4), rl.y + (rSize->h - 4));
+        /*--------------------------------------------------------------------*/
+        /* Draw the Lower Border Line.                                        */
+        /*--------------------------------------------------------------------*/
+        for (ctr = 0; ctr < borderW + 2; ctr++)
+        {
+            if (ctr != 0)
+            {
+                SDL_RenderDrawLine(rend, 
+                    rl.x + 1,              rl.y + (rSize->h - 1) - ctr, 
+                    rl.x + (rSize->w - 2), rl.y + (rSize->h - 1) - ctr); 
+            }
+            else
+            {
+                SDL_RenderDrawLine(rend, 
+                    rl.x + 2,              rl.y + (rSize->h - 1), 
+                    rl.x + (rSize->w - 3), rl.y + (rSize->h - 1)); 
+            }
+        }
+
+        /*--------------------------------------------------------------------*/
+        /* Draw the inner rounding selected pixels.                           */
+        /*--------------------------------------------------------------------*/
+        /* upper left */
+        SDL_RenderDrawPoint(rend, 
+            rl.x + (borderW + 2), 
+            rl.y + (borderW + 2));
+        /* lower left */
+        SDL_RenderDrawPoint(rend, 
+            rl.x + (borderW + 2), 
+            rl.y + rSize->h - (1 + (borderW + 2)));
+        /* upper right */
+        SDL_RenderDrawPoint(rend, 
+            rl.x + rSize->w - (1 + (borderW + 2)),
+            rl.y + (borderW + 2));
+        /* lower right */
+        SDL_RenderDrawPoint(rend, 
+            rl.x + rSize->w - (1 + (borderW + 2)),
+            rl.y + rSize->h - (1 + (borderW + 2)));
     }
     else
     {
@@ -1300,24 +1347,38 @@ int neuik_Element_Render__TextEntry(
         SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
         /* upper border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 1,              rl.y + 1, 
-            rl.x + (rSize->w - 2), rl.y + 1); 
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                rl.x + 1,              (rl.y + 1) + ctr, 
+                rl.x + (rSize->w - 2), (rl.y + 1) + ctr); 
+        }
         /* left border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + 1, rl.y + 1, 
-            rl.x + 1, rl.y + (rSize->h - 2));
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                (rl.x + 1) + ctr, rl.y + 1, 
+                (rl.x + 1) + ctr, rl.y + (rSize->h - 2));
+        }
+
         /* right border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + (rSize->w - 2), rl.y + 1, 
-            rl.x + (rSize->w - 2), rl.y + (rSize->h - 2)); 
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                rl.x + (rSize->w - 2) - ctr, rl.y + 1, 
+                rl.x + (rSize->w - 2) - ctr, rl.y + (rSize->h - 2));
+        }
 
         /* lower border line */
         bClr = &(aCfg->borderColorDark);
         SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-        SDL_RenderDrawLine(rend, 
-            rl.x + 2,              rl.y + (rSize->h - 2), 
-            rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                rl.x + 2 + ctr,              rl.y + (rSize->h - 2) - ctr, 
+                rl.x + (rSize->w - 3) - ctr, rl.y + (rSize->h - 2) - ctr);
+        }
+
     }
 out:
     if (eBase != NULL)
