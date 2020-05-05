@@ -26,6 +26,7 @@
 #include "neuik_classes.h"
 
 extern int neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -409,11 +410,25 @@ int neuik_Element_GetMinSize__Line(
     {
         rSize->w = 5;
         rSize->h = line->thickness;
+        if (neuik__HighDPI_Scaling > 1.0)
+        {
+            /*----------------------------------------------------------------*/
+            /* Add in additional pixels of height for a scaled thicker line.  */
+            /*----------------------------------------------------------------*/
+            rSize->h = (int)((float)(rSize->h)*neuik__HighDPI_Scaling);
+        }
     }
     else if (line->orientation == 1)
     {
         rSize->w = line->thickness;
         rSize->h = 5;
+        if (neuik__HighDPI_Scaling > 1.0)
+        {
+            /*----------------------------------------------------------------*/
+            /* Add in additional pixels of width for a scaled thicker line.   */
+            /*----------------------------------------------------------------*/
+            rSize->w = (int)((float)(rSize->h)*neuik__HighDPI_Scaling);
+        }
     }
     else
     {
@@ -452,15 +467,16 @@ int neuik_Element_Render__Line(
     SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
     int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-    int                 eNum       = 0; /* which error to report (if any) */
-    const NEUIK_Color * lClr       = NULL;
-    SDL_Renderer      * rend       = NULL;
+    int                 eNum        = 0; /* which error to report (if any) */
+    int                 thicknessSc = 0; /* scaled line thickness */
+    const NEUIK_Color * lClr        = NULL;
+    SDL_Renderer      * rend        = NULL;
     SDL_Rect            rect;
     RenderLoc           rl;
-    NEUIK_Line        * line       = NULL;
-    NEUIK_ElementBase * eBase      = NULL;
-    static char         funcName[] = "neuik_Element_Render__Line";
-    static char       * errMsgs[]  = {"", // [0] no error
+    NEUIK_Line        * line        = NULL;
+    NEUIK_ElementBase * eBase       = NULL;
+    static char         funcName[]  = "neuik_Element_Render__Line";
+    static char       * errMsgs[]   = {"", // [0] no error
         "Argument `elem` is not of Line class.",                         // [1]
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
         "", // [3]
@@ -512,39 +528,44 @@ int neuik_Element_Render__Line(
     lClr = &(line->color);
     SDL_SetRenderDrawColor(rend, lClr->r, lClr->g, lClr->b, 255);
 
+    thicknessSc = line->thickness;
+    if (neuik__HighDPI_Scaling > 1.0)
+    {
+        thicknessSc = (int)((float)(thicknessSc)*neuik__HighDPI_Scaling);
+    }
 
     if (line->orientation == 0)
     {
         /* HLine */
-        if (line->thickness == 1)
+        if (thicknessSc == 1)
         {
             SDL_RenderDrawLine(rend, 
                 rl.x,                  rl.y, 
                 rl.x + (rSize->w - 1), rl.y); 
         }
-        else if (line->thickness > 1)
+        else if (thicknessSc > 1)
         {
             rect.x = rl.x;
             rect.y = rl.y;
             rect.w = rSize->w - 1;
-            rect.h = line->thickness;
+            rect.h = thicknessSc;
             SDL_RenderFillRect(rend, &rect);
         }
     }
     else if (line->orientation == 1)
     {
         /* VLine */
-        if (line->thickness == 1)
+        if (thicknessSc == 1)
         {
             SDL_RenderDrawLine(rend, 
                 rl.x, rl.y, 
                 rl.x, rl.y + (rSize->h - 1));
         }
-        else if (line->thickness > 1)
+        else if (thicknessSc > 1)
         {
             rect.x = rl.x;
             rect.y = rl.y;
-            rect.w = line->thickness;
+            rect.w = thicknessSc;
             rect.h = rSize->h - 1;
             SDL_RenderFillRect(rend, &rect);
         }
@@ -555,7 +576,6 @@ int neuik_Element_Render__Line(
         eNum = 6;
         goto out;
     }
-
 out:
     if (eBase != NULL)
     {

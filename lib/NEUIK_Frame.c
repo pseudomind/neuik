@@ -28,6 +28,7 @@
 #include "neuik_classes.h"
 
 extern int neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -385,6 +386,25 @@ int neuik_Element_GetMinSize__Frame(
 
         rSize->w = rs.w + (2 * frame->thickness) + eCfg->PadLeft + eCfg->PadRight;
         rSize->h = rs.h + (2 * frame->thickness) + eCfg->PadTop  + eCfg->PadBottom;
+
+        /*--------------------------------------------------------------------*/
+        /* Include the contribution from the border thickness.                */
+        /*--------------------------------------------------------------------*/
+        if (neuik__HighDPI_Scaling <= 1.0)
+        {
+            rSize->w += (2 * frame->thickness);
+            rSize->h += (2 * frame->thickness);
+        }
+        if (neuik__HighDPI_Scaling > 1.0)
+        {
+            /*----------------------------------------------------------------*/
+            /* The border thickness might be scaled, add it in now.           */
+            /*----------------------------------------------------------------*/
+            rSize->w += 
+                2*(int)((float)(frame->thickness)*neuik__HighDPI_Scaling);
+            rSize->h += 
+                2*(int)((float)(frame->thickness)*neuik__HighDPI_Scaling);
+        }
     }
 out:
     if (eNum > 0)
@@ -417,7 +437,9 @@ int neuik_Element_Render__Frame(
     SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
     int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
+    int                   ctr        = 0;
     int                   eNum       = 0; /* which error to report (if any) */
+    int                   borderW    = 1; /* width of button border line */
     int                   offLeft    = 0;
     int                   offRight   = 0;
     int                   offTop     = 0;
@@ -521,6 +543,12 @@ int neuik_Element_Render__Frame(
     bClr = &(frame->color);
     SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
+    borderW = frame->thickness;
+    if (neuik__HighDPI_Scaling > 1.0)
+    {
+        borderW = (int)((float)(frame->thickness)*neuik__HighDPI_Scaling);
+    }
+
     offLeft   = rl.x;
     offRight  = rl.x + (rSize->w - 1);
     offTop    = rl.y;
@@ -529,13 +557,37 @@ int neuik_Element_Render__Frame(
     if (!mock)
     {
         /* upper border line */
-        SDL_RenderDrawLine(rend, offLeft, offTop, offRight, offTop); 
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                offLeft,  offTop + ctr, 
+                offRight, offTop + ctr); 
+        }
+
         /* left border line */
-        SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
+        // SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                offLeft + ctr, offTop, 
+                offLeft + ctr, offBottom); 
+        }
+
         /* right border line */
-        SDL_RenderDrawLine(rend, offRight, offTop, offRight, offBottom); 
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                offRight - ctr, offTop, 
+                offRight - ctr, offBottom); 
+        }
+
         /* lower border line */
-        SDL_RenderDrawLine(rend, offLeft, offBottom, offRight, offBottom);
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                offLeft,  offBottom - ctr, 
+                offRight, offBottom - ctr); 
+        }
     }
 
     /*------------------------------------------------------------------------*/
@@ -564,8 +616,8 @@ int neuik_Element_Render__Frame(
         if (eCfg->HFill && eCfg->VFill)
         {
             /* The element fills the window vertically and horizonatally */
-            rs.w = rSize->w - (2*frame->thickness + eCfg->PadLeft + eCfg->PadRight);
-            rs.h = rSize->h - (2*frame->thickness + eCfg->PadTop  + eCfg->PadBottom);
+            rs.w = rSize->w - (2*borderW + eCfg->PadLeft + eCfg->PadRight);
+            rs.h = rSize->h - (2*borderW + eCfg->PadTop  + eCfg->PadBottom);
         }
         else
         {
@@ -578,12 +630,12 @@ int neuik_Element_Render__Frame(
             if (eCfg->HFill)
             {
                 /* The element fills the window only horizonatally */
-                rs.w = rSize->w - (2*frame->thickness + eCfg->PadLeft + eCfg->PadRight);
+                rs.w = rSize->w - (2*borderW + eCfg->PadLeft + eCfg->PadRight);
             }
             else
             {
                 /* The element fills the window only vertically  */
-                rs.h = rSize->h - (2*frame->thickness + eCfg->PadTop  + eCfg->PadBottom);
+                rs.h = rSize->h - (2*borderW + eCfg->PadTop  + eCfg->PadBottom);
             }
         }
     }
