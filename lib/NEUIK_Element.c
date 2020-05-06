@@ -2570,7 +2570,7 @@ int neuik_Element_RequestRedraw(
     static char          funcName[] = "neuik_Element_RequestRedraw";
     static char        * errMsgs[] = {"", // [0] no error
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
-        "Failure in `neuik_MaskMap_UnmaskRect()`",                       // [2]
+        "Failure in `neuik_MaskMap_UnmaskUnboundedRect()`",              // [2]
     };
 
 
@@ -2611,7 +2611,7 @@ int neuik_Element_RequestRedraw(
                     printf("RequestRedraw: umasking[x,y,w,h]: %d, %d, %d, %d\n",
                         rLoc.x, rLoc.y, rSize.w, rSize.h);
                 }
-                if (neuik_MaskMap_UnmaskRect(win->redrawMask,
+                if (neuik_MaskMap_UnmaskUnboundedRect(win->redrawMask,
                     rLoc.x, rLoc.y, rSize.w, rSize.h))
                 {
                     eNum = 2;

@@ -137,7 +137,7 @@ int NEUIK_BacktraceErrors_GUI()
     if (NEUIK_NewWindow(&btWin)) goto out;
     NEUIK_Window_SetTitle(btWin, "NEUIK Crash Reporter");
     NEUIK_Window_SetSize(btWin, 20, 20);
-    NEUIK_Window_Configure(btWin, "Resizable", NULL);
+    NEUIK_Window_Configure(btWin, "Resizable", "AutoResize=any", NULL);
 
     if (NEUIK_MakeLabel(&btTitle, "Crash Report")) goto out;
     NEUIK_Label_Configure(btTitle, "FontBold", "FontSize=18", NULL);
@@ -171,7 +171,7 @@ int NEUIK_BacktraceErrors_GUI()
     NEUIK_Element_Configure(btMsg3, "HJustify=left", NULL);
 
     if (NEUIK_NewHLine(&hLn1)) goto out;
-    NEUIK_Element_Configure(hLn1, "PadTop=5", "PadBottom=5", NULL);
+    NEUIK_Element_Configure(hLn1, "PadTop=5", NULL);
 
     if (NEUIK_MakeToggleButton(&btnDetails, "Show Crash Details")) goto out;
     if (NEUIK_MakeButton(&btnCopyDetails, "Copy to Clipboard")) goto out;

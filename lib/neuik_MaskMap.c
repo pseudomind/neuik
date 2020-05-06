@@ -1650,7 +1650,7 @@ int neuik_MaskMap_SetMaskRect(
     if (h < 0)
     {
         /* invalid h-value */
-        eNum = y;
+        eNum = 7;
         goto out;
     }
 
@@ -1728,6 +1728,154 @@ out:
 
 /*******************************************************************************
  *
+ *  Name:          neuik_MaskMap_SetUnboundedMaskRect
+ *
+ *  Description:   Set the mask setting for a rect of points within the map. 
+ *                 Masked points are used to identify portions of an image that
+ *                 not be rendered. The unbounded variant of this function does
+ *                 not check perform bounds checking on the region to be 
+ *                 unmasked. Instead the individual pixels of the resulting area
+ *                 are bounds checked and are applied only if they are actually
+ *                 within the mask bounds.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_SetUnboundedMaskRect(
+    neuik_MaskMap * map,
+    int             maskVal, /* 0 (unmaksed) or 1 (masked) */
+    int             x,
+    int             y,
+    int             w,
+    int             h)
+{
+    int           pos   = 0;   /* position of point within mapData */
+    int           eNum  = 0;   /* which error to report (if any) */
+    int           xCtr  = 0;
+    int           yCtr  = 0;
+    int           xf    = 0;   /* final x-position for the rect */
+    int           yf    = 0;   /* final y-position for the rect */
+    static char   funcName[] = "neuik_MaskMap_SetUnboundedMaskRect";
+    static char * errMsgs[]  = {"", // [0] no error
+        "Argument `map` does not implement MaskMap class.",    // [1]
+        "Argument `maskVal` invalid; value must be 0 or 1.",   // [2]
+        "Argument `w` invalid; value (<=0) supplied.",         // [3]
+        "Argument `h` invalid; value (<=0) supplied.",         // [4]
+        "Failure in `neuik_MaskMap_SetUnboundedMaskPoint()`.", // [5]
+        "Failure in `neuik_MaskMap_SetUnboundedMaskLine()`.",  // [6]
+    };
+
+    if (!neuik_Object_IsClass(map, neuik__Class_MaskMap))
+    {
+        eNum = 1;
+        goto out;
+    }
+
+    if (!(maskVal == 0 || maskVal == 1))
+    {
+        eNum = 2;
+        goto out;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Check the w,h values.                                                  */
+    /*------------------------------------------------------------------------*/
+    if (w < 0)
+    {
+        /* invalid w-value (<0) */
+        eNum = 3;
+        goto out;
+    }
+    if (h < 0)
+    {
+        /* invalid h-value */
+        eNum = 4;
+        goto out;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Determine the actual final bounds of the rect.                         */
+    /*------------------------------------------------------------------------*/
+    xf = x + w;
+    if (xf >= map->sizeW)
+    {
+        xf = map->sizeW - 1;
+    }
+
+    yf = y + h;
+    if (yf >= map->sizeH)
+    {
+        yf = map->sizeH - 1;
+    }
+
+    if (w == 0 && h == 0)
+    {
+        /*--------------------------------------------------------------------*/
+        /* This rect is actually just a point.                                */
+        /*--------------------------------------------------------------------*/
+        if (neuik_MaskMap_SetUnboundedMaskPoint(map, maskVal, x, y))
+        {
+            eNum = 5;
+            goto out;
+        }
+        goto out;
+    }
+    else if (w == 0 && h > 0)
+    {
+        /*--------------------------------------------------------------------*/
+        /* This rect is actually just a vertical line.                        */
+        /*--------------------------------------------------------------------*/
+        if (neuik_MaskMap_SetUnboundedMaskLine(map, maskVal, x, y, x, yf))
+        {
+            eNum = 6;
+            goto out;
+        }
+        goto out;
+    }
+    else if (w > 0 && h == 0)
+    {
+        /*--------------------------------------------------------------------*/
+        /* This rect is actually just a horizontal line.                      */
+        /*--------------------------------------------------------------------*/
+        if (neuik_MaskMap_SetUnboundedMaskLine(map, maskVal, x, y, xf, y))
+        {
+            eNum = 6;
+            goto out;
+        }
+        goto out;
+    }
+    else
+    {
+        /*--------------------------------------------------------------------*/
+        /* This is a proper rect (non-zero w & h).                            */
+        /*--------------------------------------------------------------------*/
+        for (yCtr = y; yCtr <= yf; yCtr++)
+        {
+            if (y < 0) continue; /* invalid y-value */
+            if (y >= map->sizeH) continue; /* y-value beyond bounds */
+
+            for (xCtr = x; xCtr <= xf; xCtr++)
+            {
+                if (x < 0) continue; /* invalid x-value (<0) */
+                if (x >= map->sizeW) continue; /* x-value beyond bounds */
+
+                pos = map->sizeW*yCtr + xCtr;
+                map->mapData[pos] = maskVal;
+            }
+        }
+    }
+out:
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
+
+    return eNum;
+}
+
+
+/*******************************************************************************
+ *
  *  Name:          neuik_MaskMap_MaskRect
  *
  *  Description:   Flag a rect of points within the map as masked. Masked points
@@ -1765,7 +1913,7 @@ int neuik_MaskMap_MaskRect(
  *  Name:          neuik_MaskMap_UnmaskRect
  *
  *  Description:   Flag a rect of points within the map as unmasked. Masked 
- *                 pointsare used to identify portions of an image that should 
+ *                 points are used to identify portions of an image that should 
  *                 not be rendered.
  *
  *  Returns:       A non-zero value if there was an error.
@@ -1785,6 +1933,44 @@ int neuik_MaskMap_UnmaskRect(
     };
 
     if (neuik_MaskMap_SetMaskRect(map, 0, x, y, w, h))
+    {
+        eNum = 1;
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+    }
+
+    return eNum;
+}
+
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_MaskMap_UnmaskUnboundedRect
+ *
+ *  Description:   Flag a rect of points within the map as unmasked. Masked 
+ *                 points are used to identify portions of an image that should 
+ *                 not be rendered. The unbounded variant of this function does
+ *                 not check perform bounds checking on the region to be 
+ *                 unmasked. Instead the individual pixels of the resulting area
+ *                 are bounds checked and are applied only if they are actually
+ *                 within the mask bounds.
+ *
+ *  Returns:       A non-zero value if there was an error.
+ *
+ ******************************************************************************/
+int neuik_MaskMap_UnmaskUnboundedRect(
+    neuik_MaskMap * map, 
+    int             x,
+    int             y,
+    int             w,
+    int             h)
+{
+    int           eNum  = 0;   /* which error to report (if any) */
+    static char   funcName[] = "neuik_MaskMap_UnmaskUnboundedRect";
+    static char * errMsgs[]  = {"", // [0] no error
+        "Failure in `neuik_MaskMap_SetUnboundedMaskRect()`.", // [1]
+    };
+
+    if (neuik_MaskMap_SetUnboundedMaskRect(map, 0, x, y, w, h))
     {
         eNum = 1;
         NEUIK_RaiseError(funcName, errMsgs[eNum]);

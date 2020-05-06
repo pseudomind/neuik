@@ -883,6 +883,12 @@ int neuik_Element_Render__VGroup(
     /*------------------------------------------------------------------------*/
     for (ctr = 0; ctr < nAlloc; ctr++)
     {
+        elem = (NEUIK_Element)cont->elems[ctr];
+        if (elem == NULL) break;
+
+        if (!elemsShown[ctr]) continue; /* this elem isn't shown */
+
+        eCfg  = elemsCfg[ctr];
         rs    = &elemsMinSz[ctr];
         tempH = rs->h + (eCfg->PadTop + eCfg->PadBottom);
         allMaxMinH[ctr] = tempH;
