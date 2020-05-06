@@ -1378,7 +1378,6 @@ int neuik_Element_Render__TextEntry(
                 rl.x + 2 + ctr,              rl.y + (rSize->h - 2) - ctr, 
                 rl.x + (rSize->w - 3) - ctr, rl.y + (rSize->h - 2) - ctr);
         }
-
     }
 out:
     if (eBase != NULL)

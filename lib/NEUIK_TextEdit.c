@@ -32,7 +32,8 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-extern int neuik__isInitialized;
+extern int   neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 #define CURSORPAN_TEXT_INSERTED   0
 #define CURSORPAN_TEXT_DELTETED   1
@@ -496,6 +497,16 @@ int neuik_Element_GetMinSize__TextEdit(
 
     rSize->w = tW + aCfg->fontEmWidth;
     rSize->h = 2 + (int)(1.5 * (float)TTF_FontHeight(font));
+
+    if (neuik__HighDPI_Scaling >= 2.0)
+    {
+        /*--------------------------------------------------------------------*/
+        /* Add in additional pixels of width/height to accomodate for thicker */
+        /* border lines.                                                      */
+        /*--------------------------------------------------------------------*/
+        rSize->w += 2*(int)(neuik__HighDPI_Scaling/2.0);
+        rSize->h += 2*(int)(neuik__HighDPI_Scaling/2.0);
+    }
 out:
     if (eNum > 0)
     {
@@ -1154,6 +1165,8 @@ int neuik_Element_Render__TextEdit(
     float                  yPos        = 0;
     float                  blankH      = 0;
     int                    blankW      = 0;
+    int                    borderW     = 1; /* width of button border line */
+    int                    ctr         = 0;
     int                    textW       = 0;
     int                    textH       = 0;
     int                    textWFull   = 0;
@@ -1232,6 +1245,11 @@ int neuik_Element_Render__TextEdit(
 
     eBase->eSt.rend = xRend;
     rend = eBase->eSt.rend;
+
+    if (neuik__HighDPI_Scaling >= 2.0)
+    {
+        borderW = 2*(int)(neuik__HighDPI_Scaling/2.0);
+    }
 
     /*------------------------------------------------------------------------*/
     /* Select the correct entry config to use (pointer or internal)           */
@@ -1731,11 +1749,23 @@ int neuik_Element_Render__TextEdit(
         SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
         /* Fill in the whole scrollbar area with its background color */
-        scrollX = rl.x + (rSize->w - 12);
+        if (neuik__HighDPI_Scaling <= 1.0)
+        {
+            scrollX = rl.x + (rSize->w - 12);
+        }
+        else
+        {
+            scrollX = rl.x + (rSize->w - 
+                (2 + (int)(10.0*neuik__HighDPI_Scaling)));
+        }
 
         scrollRect.x = scrollX;
         scrollRect.y = rl.y + (1);
         scrollRect.w = 10;
+        if (neuik__HighDPI_Scaling > 1.0)
+        {
+            scrollRect.w = (int)(10.0*neuik__HighDPI_Scaling);
+        }
         scrollRect.h = rSize->h - 2;
 
         SDL_RenderFillRect(rend, &scrollRect); 
@@ -1754,6 +1784,10 @@ int neuik_Element_Render__TextEdit(
         scrollRect.x = scrollX;
         scrollRect.y = scrollY;
         scrollRect.w = 10;
+        if (neuik__HighDPI_Scaling > 1.0)
+        {
+            scrollRect.w = (int)(10.0*neuik__HighDPI_Scaling);
+        }
         scrollRect.h = (int)(viewFrac*(double)(rSize->h - 2));
         SDL_RenderFillRect(rend, &scrollRect); 
 
@@ -1787,28 +1821,41 @@ draw_border:
     }
 
     /* upper border line */
-    SDL_RenderDrawLine(rend, 
-        rl.x + 1, rl.y + 1, 
-        borderX,  rl.y + 1);
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawLine(rend, 
+            rl.x + 1, (rl.y + 1) + ctr, 
+            borderX,  (rl.y + 1) + ctr); 
+    }
     /* left border line */
-    SDL_RenderDrawLine(rend, 
-        rl.x + 1, rl.y + 1, 
-        rl.x + 1, rl.y + (rSize->h - 2));
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawLine(rend, 
+            (rl.x + 1) + ctr, rl.y + 1, 
+            (rl.x + 1) + ctr, rl.y + (rSize->h - 2));
+
+    }
 
     if (!scrollDrawn)
     {
         /* right border line */
-        SDL_RenderDrawLine(rend, 
-            rl.x + (rSize->w - 2), rl.y + (1), 
-            rl.x + (rSize->w - 2), rl.y + (rSize->h - 2)); 
+        for (ctr = 0; ctr < borderW; ctr++)
+        {
+            SDL_RenderDrawLine(rend, 
+                rl.x + (rSize->w - 2) - ctr, rl.y + 1, 
+                rl.x + (rSize->w - 2) - ctr, rl.y + (rSize->h - 2));
+        }
     }
 
     /* lower border line */
     bClr = &(aCfg->borderColorDark);
     SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-    SDL_RenderDrawLine(rend, 
-        rl.x + 2,              rl.y + (rSize->h - 2),
-        rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawLine(rend, 
+            rl.x + 2 + ctr,              rl.y + (rSize->h - 2) - ctr, 
+            rl.x + (rSize->w - 3) - ctr, rl.y + (rSize->h - 2) - ctr);
+    }
 out:
     if (eBase != NULL)
     {
