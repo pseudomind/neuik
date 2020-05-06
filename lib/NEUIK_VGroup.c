@@ -27,7 +27,8 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-extern int neuik__isInitialized;
+extern int   neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -367,15 +368,14 @@ int neuik_Element_GetMinSize__VGroup(
     NEUIK_Element    vgElem,
     RenderSize     * rSize)
 {
-    int                   tempW;
-    int                   ctr        = 0;
-    int                   vctr       = 0;   /* valid counter; for elements shown */
-    int                   maxMinH    = 0;   /* largest min-height of all VFill elements */
-    int                   thisMinH   = 0;   /* this VFill element's min-height */
-    int                   eNum       = 0; /* which error to report (if any) */
-    float                 thisH      = 0.0;
-
+    int                    tempW;
+    int                    ctr        = 0;
+    int                    vctr       = 0; /* valid counter; for elements shown */
+    int                    maxMinH    = 0; /* largest min-height of all VFill elements */
+    int                    thisMinH   = 0; /* this VFill element's min-height */
+    int                    eNum       = 0; /* which error to report (if any) */
     int                    nAlloc     = 0;
+    float                  thisH      = 0.0;
     int                  * elemsShown = NULL; // Free upon returning.
     RenderSize           * elemsMinSz = NULL; // Free upon returning.
     NEUIK_ElementConfig ** elemsCfg   = NULL; // Free upon returning.
@@ -542,13 +542,20 @@ int neuik_Element_GetMinSize__VGroup(
 
         if (vctr > 1)
         {
-            /* subsequent UI element is valid, add Horizontal Spacing */
-            thisH += (float)(vg->VSpacing);
+            /* subsequent UI element is valid, add Vertical Spacing */
+            if (neuik__HighDPI_Scaling <= 1.0)
+            {
+                thisH += (float)(vg->VSpacing);
+            }
+            else
+            {
+                thisH += (float)(vg->VSpacing)*neuik__HighDPI_Scaling;
+            }
         }
 
         if (eCfg->VFill)
         {
-            /* This element is fills space horizontally */
+            /* This element fills space vertically */
             thisH += (eCfg->VScale)*(float)(maxMinH);
         }
         else
@@ -594,7 +601,6 @@ int neuik_Element_Render__VGroup(
     int                    tempH         = 0;
     int                    tempW         = 0;
     int                    ctr           = 0;
-    int                    yPos          = 0;
     int                    yFree         = 0; // px of space free for vFill elems
     int                    dH            = 0; // Change in height [px]
     int                    eNum          = 0; // which error to report (if any)
@@ -613,6 +619,8 @@ int neuik_Element_Render__VGroup(
     int                  * rendRowH      = NULL; // Free upon returning; 
                                                  // Rendered row height (per row)
     int                  * elemsShown    = NULL; // Free upon returning.
+    float                  fltVspacingSc = 0.0;  // float VSpacing HighDPI scaled
+    float                  yPos          = 0.0;
     RenderSize           * elemsMinSz    = NULL; // Free upon returning.
     NEUIK_ElementConfig ** elemsCfg      = NULL; // Free upon returning.
     RenderLoc              rl            = {0, 0};
@@ -670,6 +678,15 @@ int neuik_Element_Render__VGroup(
 
     eBase->eSt.rend = xRend;
     rend = eBase->eSt.rend;
+
+    if (neuik__HighDPI_Scaling <= 1.0)
+    {
+        fltVspacingSc = (float)(vg->VSpacing);
+    }
+    else
+    {
+        fltVspacingSc = (float)(vg->VSpacing)*neuik__HighDPI_Scaling;
+    }
 
     /*------------------------------------------------------------------------*/
     /* Redraw the background surface before continuing.                       */
@@ -875,7 +892,7 @@ int neuik_Element_Render__VGroup(
     }
     if (nAlloc > 1)
     {
-        rsMin.h += vg->VSpacing*(nAlloc - 1);
+        rsMin.h += (int)(fltVspacingSc*(float)(nAlloc - 1));
     }
 
     /*------------------------------------------------------------------------*/
@@ -1002,12 +1019,12 @@ int neuik_Element_Render__VGroup(
     /*========================================================================*/
     /* Render and place the child elements                                    */
     /*========================================================================*/
-    yPos = 0;
+    yPos = 0.0;
     for (ctr = 0; ctr < nAlloc; ctr++)
     {
         if (ctr > 0)
         {
-            yPos += rendRowH[ctr-1] + vg->VSpacing;
+            yPos += (float)(rendRowH[ctr-1]) + fltVspacingSc;
         }
         if (!elemsShown[ctr]) continue; /* this elem isn't shown */
 
@@ -1069,26 +1086,26 @@ int neuik_Element_Render__VGroup(
                 switch (cont->VJustify)
                 {
                     case NEUIK_VJUSTIFY_TOP:
-                        rect.y = yPos + eCfg->PadTop;
+                        rect.y = (int)(yPos) + eCfg->PadTop;
                         break;
                     case NEUIK_VJUSTIFY_CENTER:
                     case NEUIK_VJUSTIFY_DEFAULT:
-                        rect.y = (yPos + rendRowH[ctr]/2) - (tempH/2);
+                        rect.y = ((int)(yPos) + rendRowH[ctr]/2) - (tempH/2);
                         break;
                     case NEUIK_VJUSTIFY_BOTTOM:
-                        rect.y = (yPos + rendRowH[ctr]) - 
+                        rect.y = ((int)(yPos) + rendRowH[ctr]) - 
                             (rs->h + eCfg->PadBottom);
                         break;
                 }
                 break;
             case NEUIK_VJUSTIFY_TOP:
-                rect.y = yPos + eCfg->PadTop;
+                rect.y = (int)(yPos) + eCfg->PadTop;
                 break;
             case NEUIK_VJUSTIFY_CENTER:
-                rect.y = (yPos + rendRowH[ctr]/2) - (tempH/2);
+                rect.y = ((int)(yPos) + rendRowH[ctr]/2) - (tempH/2);
                 break;
             case NEUIK_VJUSTIFY_BOTTOM:
-                rect.y = (yPos + rendRowH[ctr]) - 
+                rect.y = ((int)(yPos) + rendRowH[ctr]) - 
                     (rs->h + eCfg->PadBottom);
                 break;
         }
