@@ -29,7 +29,8 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-extern int neuik__isInitialized;
+extern int   neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -400,6 +401,16 @@ int neuik_Element_GetMinSize__ProgressBar(
 
     rSize->w = tW + aCfg->fontEmWidth;
     rSize->h = (int)(1.5 * (float)TTF_FontHeight(font));
+
+    if (neuik__HighDPI_Scaling >= 2.0)
+    {
+        /*--------------------------------------------------------------------*/
+        /* Add in additional pixels of width/height to accomodate for thicker */
+        /* border lines.                                                      */
+        /*--------------------------------------------------------------------*/
+        rSize->w += 2*(int)(neuik__HighDPI_Scaling/2.0);
+        rSize->h += 2*(int)(neuik__HighDPI_Scaling/2.0);
+    }
 out:
     if (eNum > 0)
     {
@@ -555,27 +566,29 @@ int neuik_Element_Render__ProgressBar(
     SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
     int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-    const NEUIK_Color       * fgClr  = NULL;
-    const NEUIK_Color       * bgClr  = NULL;
-    const NEUIK_Color       * bClr   = NULL; /* border color */
-    SDL_Renderer            * rend   = NULL;
-    int                       progW  = 0; /* pixel width of entire shadable region */
-    int                       shadeW = 0; /* width of shaded progress bar region */
-    int                       textW  = 0;
-    int                       textH  = 0;
-    int                       eNum   = 0; /* which error to report (if any) */
-    SDL_Texture             * gTex   = NULL; /* gradient progress texture */
-    SDL_Texture             * tTex   = NULL; /* text texture */
-    TTF_Font                * font   = NULL;
+    int                       ctr     = 0;
+    int                       borderW = 1; /* width of button border line */
+    int                       progW   = 0; /* pixel width of entire shadable region */
+    int                       shadeW  = 0; /* width of shaded progress bar region */
+    int                       textW   = 0;
+    int                       textH   = 0;
+    int                       eNum    = 0; /* which error to report (if any) */
+    SDL_Renderer            * rend    = NULL;
+    SDL_Texture             * gTex    = NULL; /* gradient progress texture */
+    SDL_Texture             * tTex    = NULL; /* text texture */
+    TTF_Font                * font    = NULL;
     SDL_Rect                  rect;
-    NEUIK_ProgressBar       * pb     = NULL;
-    NEUIK_ElementBase       * eBase  = NULL;
+    NEUIK_ProgressBar       * pb      = NULL;
+    NEUIK_ElementBase       * eBase   = NULL;
     colorDeltas             * deltaPP = NULL;
     RenderLoc                 rl;
     neuik_MaskMap           * maskMap = NULL;
-    NEUIK_ProgressBarConfig * aCfg = NULL; /* the active ProgressBar config */
+    const NEUIK_Color       * fgClr   = NULL;
+    const NEUIK_Color       * bgClr   = NULL;
+    const NEUIK_Color       * bClr    = NULL; /* border color */
+    NEUIK_ProgressBarConfig * aCfg    = NULL; /* the active ProgressBar config */
     static char               funcName[] = "neuik_Element_Render__ProgressBar";
-    static char             * errMsgs[] = {"",                           // [0] no error
+    static char             * errMsgs[] = {"", // [0] no error
         "Argument `elem` is not of ProgressBar class.",                  // [1]
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
         "Invalid specified `rSize` (negative values).",                  // [3]
@@ -613,6 +626,11 @@ int neuik_Element_Render__ProgressBar(
 
     eBase->eSt.rend = xRend;
     rend = eBase->eSt.rend;
+
+    if (neuik__HighDPI_Scaling >= 2.0)
+    {
+        borderW = 2*(int)(neuik__HighDPI_Scaling/2.0);
+    }
 
     /*------------------------------------------------------------------------*/
     /* select the correct ProgressBar config to use (pointer or internal)     */
@@ -709,45 +727,75 @@ int neuik_Element_Render__ProgressBar(
     SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
 
     /* Draw upper-left corner border pixels */
-    SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 1);
-    SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + 2);
-    SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + 1);
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawPoint(rend, rl.x + 1 + ctr, rl.y + 1 + ctr);
+        SDL_RenderDrawPoint(rend, rl.x + 1 + ctr, rl.y + 2 + ctr);
+        SDL_RenderDrawPoint(rend, rl.x + 2 + ctr, rl.y + 1 + ctr);
+    }
 
     /* Draw lower-left corner border pixels */
-    SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 2));
-    SDL_RenderDrawPoint(rend, rl.x + 1, rl.y + (rSize->h - 3));
-    SDL_RenderDrawPoint(rend, rl.x + 2, rl.y + (rSize->h - 2));
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawPoint(rend, rl.x + 1 + ctr, rl.y + (rSize->h - 2) - ctr);
+        SDL_RenderDrawPoint(rend, rl.x + 1 + ctr, rl.y + (rSize->h - 3) - ctr);
+        SDL_RenderDrawPoint(rend, rl.x + 2 + ctr, rl.y + (rSize->h - 2) - ctr);
+    }
 
     /* Draw upper-right corner border pixels */
-    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 1);
-    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + 2);
-    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + 1);
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2) - ctr, rl.y + 1 + ctr);
+        SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2) - ctr, rl.y + 2 + ctr);
+        SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3) - ctr, rl.y + 1 + ctr);
+    }
 
-    /* Draw upper-right corner border pixels */
-    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 2));
-    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 2), rl.y + (rSize->h - 3));
-    SDL_RenderDrawPoint(rend, rl.x + (rSize->w - 3), rl.y + (rSize->h - 2));
-
+    /* Draw lower-right corner border pixels */
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawPoint(rend, 
+            rl.x + (rSize->w - 2) - ctr, 
+            rl.y + (rSize->h - 2) - ctr);
+        SDL_RenderDrawPoint(rend, 
+            rl.x + (rSize->w - 2) - ctr, 
+            rl.y + (rSize->h - 3) - ctr);
+        SDL_RenderDrawPoint(rend, 
+            rl.x + (rSize->w - 3) - ctr, 
+            rl.y + (rSize->h - 2) - ctr);
+    }
 
     /* upper border line */
-    SDL_RenderDrawLine(rend, 
-        rl.x + 2,              rl.y, 
-        rl.x + (rSize->w - 3), rl.y); 
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawLine(rend, 
+            rl.x + 2,              rl.y + ctr, 
+            rl.x + (rSize->w - 3), rl.y + ctr); 
+    }
+
     /* left border line */
-    SDL_RenderDrawLine(rend, 
-        rl.x, rl.y + 2, 
-        rl.x, rl.y + (rSize->h - 3));
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawLine(rend, 
+            rl.x + ctr, rl.y + 2, 
+            rl.x + ctr, rl.y + (rSize->h - 3));
+    }
     /* right border line */
-    SDL_RenderDrawLine(rend, 
-        rl.x + (rSize->w - 1), rl.y + 2, 
-        rl.x + (rSize->w - 1), rl.y + (rSize->h - 3));
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawLine(rend, 
+            rl.x + (rSize->w - 1) - ctr, rl.y + 2, 
+            rl.x + (rSize->w - 1) - ctr, rl.y + (rSize->h - 3));
+    }
 
     /* lower border line */
     bClr = &(aCfg->borderColorDark);
     SDL_SetRenderDrawColor(rend, bClr->r, bClr->g, bClr->b, 255);
-    SDL_RenderDrawLine(rend, 
-        rl.x + 2,              rl.y + (rSize->h - 1), 
-        rl.x + (rSize->w - 3), rl.y + (rSize->h - 1));
+    for (ctr = 0; ctr < borderW; ctr++)
+    {
+        SDL_RenderDrawLine(rend, 
+            rl.x + 2 + ctr,              rl.y + (rSize->h - 1) - ctr, 
+            rl.x + (rSize->w - 3) - ctr, rl.y + (rSize->h - 1) - ctr);
+    }
 
     /*------------------------------------------------------------------------*/
     /* Render the ProgressBar text                                            */
