@@ -27,7 +27,8 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-extern int neuik__isInitialized;
+extern int   neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -539,7 +540,14 @@ int neuik_Element_GetMinSize__HGroup(
         if (vctr > 1)
         {
             /* subsequent UI element is valid, add Horizontal Spacing */
-            thisW += (float)(hg->HSpacing);
+            if (neuik__HighDPI_Scaling <= 1.0)
+            {
+                thisW += (float)(hg->HSpacing);
+            }
+            else
+            {
+                thisW += (float)(hg->HSpacing)*neuik__HighDPI_Scaling;
+            }
         }
 
         if (eCfg->HFill)
@@ -590,7 +598,6 @@ int neuik_Element_Render__HGroup(
     int                    tempH         = 0;
     int                    tempW         = 0;
     int                    ctr           = 0;
-    int                    xPos          = 0;
     int                    xFree         = 0; // px of space free for hFill elems
     int                    dW            = 0; // Change in width [px]
     int                    eNum          = 0; // which error to report (if any)
@@ -609,6 +616,8 @@ int neuik_Element_Render__HGroup(
     int                  * rendColW      = NULL; // Free upon returning; 
                                                  // Rendered col width (per column)
     int                  * elemsShown    = NULL; // Free upon returning.
+    float                  fltHspacingSc = 0.0;  // float HSpacing HighDPI scaled
+    float                  xPos          = 0.0;
     RenderSize           * elemsMinSz    = NULL; // Free upon returning.
     NEUIK_ElementConfig ** elemsCfg      = NULL; // Free upon returning.
     RenderLoc              rl            = {0, 0};
@@ -666,6 +675,15 @@ int neuik_Element_Render__HGroup(
 
     eBase->eSt.rend = xRend;
     rend = eBase->eSt.rend;
+
+    if (neuik__HighDPI_Scaling <= 1.0)
+    {
+        fltHspacingSc = (float)(hg->HSpacing);
+    }
+    else
+    {
+        fltHspacingSc = (float)(hg->HSpacing)*neuik__HighDPI_Scaling;
+    }
 
     /*------------------------------------------------------------------------*/
     /* Redraw the background surface before continuing.                       */
@@ -874,7 +892,7 @@ int neuik_Element_Render__HGroup(
     }
     if (nAlloc > 1)
     {
-        rsMin.w += hg->HSpacing*(nAlloc - 1);
+        rsMin.w += (int)(fltHspacingSc*(float)(nAlloc - 1));
     }
 
     /*------------------------------------------------------------------------*/
@@ -988,12 +1006,12 @@ int neuik_Element_Render__HGroup(
     /*========================================================================*/
     /* Render and place the child elements                                    */
     /*========================================================================*/
-    xPos = 0;
+    xPos = 0.0;
     for (ctr = 0; ctr < nAlloc; ctr++)
     {
         if (ctr > 0)
         {
-            xPos += rendColW[ctr-1] + hg->HSpacing;
+            xPos += (float)(rendColW[ctr-1]) + fltHspacingSc;
         }
         if (!elemsShown[ctr]) continue; /* this elem isn't shown */
 
@@ -1028,26 +1046,26 @@ int neuik_Element_Render__HGroup(
                 switch (cont->HJustify)
                 {
                     case NEUIK_HJUSTIFY_LEFT:
-                        rect.x = xPos + eCfg->PadLeft;
+                        rect.x = (int)(xPos) + eCfg->PadLeft;
                         break;
                     case NEUIK_HJUSTIFY_CENTER:
                     case NEUIK_HJUSTIFY_DEFAULT:
-                        rect.x = (xPos + rendColW[ctr]/2) - (tempW/2);
+                        rect.x = ((int)(xPos) + rendColW[ctr]/2) - (tempW/2);
                         break;
                     case NEUIK_HJUSTIFY_RIGHT:
-                        rect.x = (xPos + rendColW[ctr]) - 
+                        rect.x = ((int)(xPos) + rendColW[ctr]) - 
                             (rs->w + eCfg->PadRight);
                         break;
                 }
                 break;
             case NEUIK_HJUSTIFY_LEFT:
-                rect.x = xPos + eCfg->PadLeft;
+                rect.x = (int)(xPos) + eCfg->PadLeft;
                 break;
             case NEUIK_HJUSTIFY_CENTER:
-                rect.x = (xPos + rendColW[ctr]/2) - (tempW/2);
+                rect.x = ((int)(xPos) + rendColW[ctr]/2) - (tempW/2);
                 break;
             case NEUIK_HJUSTIFY_RIGHT:
-                rect.x = (xPos + rendColW[ctr]) - 
+                rect.x = ((int)(xPos) + rendColW[ctr]) - 
                     (rs->w + eCfg->PadRight);
                 break;
         }
