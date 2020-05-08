@@ -27,7 +27,7 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-extern int neuik__isInitialized;
+extern int   neuik__isInitialized;
 extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
@@ -421,13 +421,9 @@ out:
  *
  *  Name:          neuik_Element_Render__Frame
  *
- *  Description:   Renders a single button as an SDL_Texture*.
+ *  Description:   Renders a border frame around the contained element.
  *
- *                 If `*rSize = (0, 0)`; use the native GetSize function to 
- *                 determine the rendered object size. Otherwise use the 
- *                 specified rSize.
- *
- *  Returns:       NULL if there is a problem, otherwise a valid SDL_Texture*.
+ *  Returns:       0 if there were no issues; otherwise 1.
  *
  ******************************************************************************/
 int neuik_Element_Render__Frame(
@@ -439,7 +435,7 @@ int neuik_Element_Render__Frame(
 {
     int                   ctr        = 0;
     int                   eNum       = 0; /* which error to report (if any) */
-    int                   borderW    = 1; /* width of button border line */
+    int                   borderW    = 1; /* width of border line */
     int                   offLeft    = 0;
     int                   offRight   = 0;
     int                   offTop     = 0;
@@ -565,7 +561,6 @@ int neuik_Element_Render__Frame(
         }
 
         /* left border line */
-        // SDL_RenderDrawLine(rend, offLeft, offTop, offLeft, offBottom); 
         for (ctr = 0; ctr < borderW; ctr++)
         {
             SDL_RenderDrawLine(rend, 

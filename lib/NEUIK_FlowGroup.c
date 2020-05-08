@@ -27,7 +27,8 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-extern int neuik__isInitialized;
+extern int   neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -346,31 +347,33 @@ int neuik_Element_Render__FlowGroup(
     int                    elemCount;
     int                    nextInd;
     int                    finalInd;
-    int                    ctr        = 0;
-    int                    vctr       = 0;    /* valid counter; for elements shown */
-    int                    yPos       = 0;
-    int                    elHeight   = 0;
-    int                    eNum       = 0;    /* which error to report (if any) */
-    int                  * eShown     = NULL;
-    float                  xPos       = 0.0;
-    float                  xSize      = 0.0;
-    float                  xFree      = 0.0;  /* px of space for hFill elems */
-    NEUIK_ElementConfig  * eCfg       = NULL;
-    NEUIK_ElementConfig ** eCfgs      = NULL;
-    NEUIK_Element          elem       = NULL;
-    NEUIK_Container      * cont       = NULL;
-    NEUIK_ElementBase    * eBase      = NULL;
-    NEUIK_FlowGroup      * fg         = NULL;
-    SDL_Renderer         * rend       = NULL;
+    int                    ctr           = 0;
+    int                    vctr          = 0;    /* valid counter; for elements shown */
+    int                    elHeight      = 0;
+    int                    eNum          = 0;    /* which error to report (if any) */
+    int                  * eShown        = NULL;
+    float                  xPos          = 0.0;
+    float                  xSize         = 0.0;
+    float                  xFree         = 0.0;  /* px of space for hFill elems */
+    float                  yPos          = 0.0;
+    float                  fltHspacingSc = 0.0;  // float VSpacing HighDPI scaled
+    float                  fltVspacingSc = 0.0;  // float VSpacing HighDPI scaled
+    NEUIK_ElementConfig  * eCfg          = NULL;
+    NEUIK_ElementConfig ** eCfgs         = NULL;
+    NEUIK_Element          elem          = NULL;
+    NEUIK_Container      * cont          = NULL;
+    NEUIK_ElementBase    * eBase         = NULL;
+    NEUIK_FlowGroup      * fg            = NULL;
+    SDL_Renderer         * rend          = NULL;
     SDL_Rect               rect;
     RenderLoc              rl;
-    RenderLoc              rlRel      = {0, 0}; /* renderloc relative to parent */
+    RenderLoc              rlRel         = {0, 0}; /* renderloc relative to parent */
     RenderSize             rs;
-    RenderSize           * eSizes     = NULL;
-    neuik_MaskMap        * maskMap    = NULL; /* FREE upon return */
+    RenderSize           * eSizes        = NULL;
+    neuik_MaskMap        * maskMap       = NULL; /* FREE upon return */
     enum neuik_bgstyle     bgStyle;
     static char            funcName[] = "neuik_Element_Render__FlowGroup";
-    static char          * errMsgs[]  = {"",                               // [ 0] no error
+    static char          * errMsgs[]  = {"", // [ 0] no error
         "Argument `fgElem` is not of FlowGroup class.",                    // [ 1]
         "Failure in `neuik_Element_GetCurrentBGStyle()`.",                 // [ 2]
         "Element_GetConfig returned NULL.",                                // [ 3]
@@ -441,6 +444,17 @@ int neuik_Element_Render__FlowGroup(
 
     eBase->eSt.rend = xRend;
     rend = eBase->eSt.rend;
+
+    if (neuik__HighDPI_Scaling <= 1.0)
+    {
+        fltHspacingSc = (float)(fg->HSpacing);
+        fltVspacingSc = (float)(fg->VSpacing);
+    }
+    else
+    {
+        fltHspacingSc = (float)(fg->HSpacing)*neuik__HighDPI_Scaling;
+        fltVspacingSc = (float)(fg->VSpacing)*neuik__HighDPI_Scaling;
+    }
 
     /*------------------------------------------------------------------------*/
     /* Redraw the background surface before continuing.                       */
@@ -519,8 +533,8 @@ int neuik_Element_Render__FlowGroup(
         /* necessary as the location of this object will propagate to its     */
         /* child objects.                                                     */
         /*--------------------------------------------------------------------*/
-        rect.x = (int)(xPos + eCfg->PadLeft);
-        rect.y = (int)(yPos + eCfg->PadTop);
+        rect.x = (int)(xPos + (float)(eCfg->PadLeft));
+        rect.y = (int)(yPos + (float)(eCfg->PadTop));
         rect.w = rs.w;
         rect.h = rs.h;
         rl.x = (eBase->eSt.rLoc).x + rect.x;
@@ -588,13 +602,13 @@ int neuik_Element_Render__FlowGroup(
         /*--------------------------------------------------------------------*/
         /* Continue looping over elements until they have all been placed.    */
         /*--------------------------------------------------------------------*/
-        yPos  = 0;
+        yPos = 0.0;
         for (nextInd = 0; nextInd < elemCount;)
         {
             if (cont->elems[nextInd] == NULL) break;
 
             vctr  = 0;        /* valid element counter */
-            xPos  = 0;
+            xPos  = 0.0;
             xFree = (float)(rSize->w); /* free X-px: start @ full width; deduct as used */
             finalInd = nextInd;
             
@@ -611,10 +625,10 @@ int neuik_Element_Render__FlowGroup(
                 if (!eShown[ctr]) continue;
                 vctr += 1;
 
-                if (vctr > 0)
+                if (vctr > 1)
                 {
                     /* subsequent UI element is valid, deduct Horiz. Spacing */
-                    xFree -= fg->HSpacing;
+                    xFree -= fltHspacingSc;
                 }
 
                 eCfg = eCfgs[ctr];
@@ -657,10 +671,10 @@ int neuik_Element_Render__FlowGroup(
                 if (!eShown[ctr]) continue;
                 vctr += 1;
 
-                if (vctr > 0)
+                if (vctr > 1)
                 {
                     /* add horizontal spacing between subsequent elements */
-                    xPos += fg->HSpacing;
+                    xPos += fltHspacingSc;
                 }
 
                 eCfg = eCfgs[ctr];
@@ -672,8 +686,8 @@ int neuik_Element_Render__FlowGroup(
                 /* This is necessary as the location of this object will      */
                 /* propagate to its child objects.                            */
                 /*------------------------------------------------------------*/
-                rect.x = (int)(xPos) + eCfg->PadLeft;
-                rect.y = yPos + eCfg->PadTop;
+                rect.x = (int)(xPos + (float)(eCfg->PadLeft));
+                rect.y = (int)(yPos + (float)(eCfg->PadTop));
                 rect.w = rs.w;
                 rect.h = rs.h;
                 rl.x = (eBase->eSt.rLoc).x + rect.x;
@@ -688,13 +702,12 @@ int neuik_Element_Render__FlowGroup(
                     goto out;
                 }
 
-                xPos += xSize + (eCfg->PadLeft + eCfg->PadRight) ;
+                xPos += xSize + (float)(eCfg->PadLeft + eCfg->PadRight) ;
             }
 
-            yPos += elHeight + fg->VSpacing;
+            yPos += (float)(elHeight) + fltVspacingSc;
         }
     }
-
 out2:
     if (!mock) eBase->eSt.doRedraw = 0;
 out:
