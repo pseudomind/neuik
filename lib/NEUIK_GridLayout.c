@@ -29,7 +29,8 @@
 #include "neuik_internal.h"
 #include "neuik_classes.h"
 
-extern int neuik__isInitialized;
+extern int   neuik__isInitialized;
+extern float neuik__HighDPI_Scaling;
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */
@@ -1285,28 +1286,31 @@ int neuik_Element_GetMinSize__GridLayout(
     NEUIK_Element   gridElem,
     RenderSize    * rSize)
 {
-    // static int             nCalled    = 0;
-    int                    eNum       = 0; /* which error to report (if any) */
+    int                    eNum          = 0; /* which error to report (if any) */
     int                    tempH;
     int                    tempW;
-    int                    nAlloc     = 0;
-    int                    rowCtr     = 0;
-    int                    colCtr     = 0;
-    int                    offset     = 0;
-    int                    ctr        = 0;
-    int                    maxMin     = 0;    // Max Min (of widths and heights)
-    RenderSize           * rs         = NULL;
-    NEUIK_Element          elem       = NULL;
-    NEUIK_ElementBase    * eBase      = NULL;
-    NEUIK_ElementConfig  * eCfg       = NULL;
-    int                  * allMaxMinH = NULL; // Free upon returning; 
-                                              // The max min width (per row)
-    int                  * allMaxMinW = NULL; // Free upon returning; 
-                                              // The max min width (per column)
-    int                  * elemsValid = NULL; // Free upon returning.
-    int                  * elemsShown = NULL; // Free upon returning.
-    RenderSize           * elemsMinSz = NULL; // Free upon returning.
-    NEUIK_ElementConfig ** elemsCfg   = NULL; // Free upon returning.
+    int                    nAlloc        = 0;
+    int                    rowCtr        = 0;
+    int                    colCtr        = 0;
+    int                    offset        = 0;
+    int                    ctr           = 0;
+    int                    maxMin        = 0;    // Max Min (of widths and heights)
+    float                  fltH          = 0.0;  // Floating point elem height
+    float                  fltW          = 0.0;  // Floating point elem width
+    float                  fltHspacingSc = 0.0;  // float VSpacing HighDPI scaled
+    float                  fltVspacingSc = 0.0;  // float VSpacing HighDPI scaled
+    RenderSize           * rs            = NULL;
+    NEUIK_Element          elem          = NULL;
+    NEUIK_ElementBase    * eBase         = NULL;
+    NEUIK_ElementConfig  * eCfg          = NULL;
+    int                  * allMaxMinH    = NULL; // Free upon returning; 
+                                                 // The max min width (per row)
+    int                  * allMaxMinW    = NULL; // Free upon returning; 
+                                                 // The max min width (per column)
+    int                  * elemsValid    = NULL; // Free upon returning.
+    int                  * elemsShown    = NULL; // Free upon returning.
+    RenderSize           * elemsMinSz    = NULL; // Free upon returning.
+    NEUIK_ElementConfig ** elemsCfg      = NULL; // Free upon returning.
 
     static RenderSize     rsZero      = {0, 0};
     NEUIK_Container      * cont       = NULL;
@@ -1347,6 +1351,17 @@ int neuik_Element_GetMinSize__GridLayout(
     if (cont->elems == NULL) {
         /* there are no UI elements contained by this GridLayout */
         goto out;
+    }
+
+    if (neuik__HighDPI_Scaling <= 1.0)
+    {
+        fltHspacingSc = (float)(grid->HSpacing);
+        fltVspacingSc = (float)(grid->VSpacing);
+    }
+    else
+    {
+        fltHspacingSc = (float)(grid->HSpacing)*neuik__HighDPI_Scaling;
+        fltVspacingSc = (float)(grid->VSpacing)*neuik__HighDPI_Scaling;
     }
 
     /*------------------------------------------------------------------------*/
@@ -1505,10 +1520,10 @@ int neuik_Element_GetMinSize__GridLayout(
         /*--------------------------------------------------------------------*/
         /* Square element sizing is required.                                 */
         /*--------------------------------------------------------------------*/
-        rSize->w = grid->xDim*maxMin;
+        fltW = (float)(grid->xDim*maxMin);
         if (grid->xDim > 1)
         {
-            rSize->w += grid->HSpacing*(grid->xDim - 1);
+            fltW += fltHspacingSc * (float)(grid->xDim - 1);
         }
     }
     else
@@ -1518,13 +1533,14 @@ int neuik_Element_GetMinSize__GridLayout(
         /*--------------------------------------------------------------------*/
         for (ctr = 0; ctr < grid->xDim; ctr++)
         {
-            rSize->w += allMaxMinW[ctr];
+            fltW += (float)(allMaxMinW[ctr]);
         }
         if (grid->xDim > 1)
         {
-            rSize->w += grid->HSpacing*(grid->xDim - 1);
+            fltW += fltHspacingSc * (float)(grid->xDim - 1);
         }
     }
+    rSize->w = (int)(fltW);
 
     /*------------------------------------------------------------------------*/
     /* Determine the required minimum height.                                 */
@@ -1534,10 +1550,10 @@ int neuik_Element_GetMinSize__GridLayout(
         /*--------------------------------------------------------------------*/
         /* Square element sizing is required.                                 */
         /*--------------------------------------------------------------------*/
-        rSize->h = grid->yDim*maxMin;
+        fltH = (float)(grid->yDim*maxMin);
         if (grid->yDim > 1)
         {
-            rSize->h += grid->VSpacing*(grid->yDim - 1);
+            fltH += fltVspacingSc * (float)(grid->yDim - 1);
         }
     }
     else
@@ -1547,13 +1563,14 @@ int neuik_Element_GetMinSize__GridLayout(
         /*--------------------------------------------------------------------*/
         for (ctr = 0; ctr < grid->yDim; ctr++)
         {
-            rSize->h += allMaxMinH[ctr];
+            fltH += (float)(allMaxMinH[ctr]);
         }
         if (grid->yDim > 1)
         {
-            rSize->h += grid->VSpacing*(grid->yDim - 1);
+            fltH += fltVspacingSc * (float)(grid->yDim - 1);
         }
     }
+    rSize->h = (int)(fltH);
 out:
     if (allMaxMinW != NULL) free(allMaxMinW);
     if (allMaxMinH != NULL) free(allMaxMinH);
@@ -1568,8 +1585,6 @@ out:
         eNum = 1;
     }
 
-    // printf("[%3d] GridLayout MinSize= [%d,%d]\n", nCalled, rSize->w, rSize->h);
-    // nCalled++;
     return eNum;
 }
 
@@ -1597,8 +1612,6 @@ int neuik_Element_Render__GridLayout(
     int                    colCtr        = 0;
     int                    offset        = 0;
     int                    ctr           = 0;
-    int                    xPos          = 0;
-    int                    yPos          = 0;
     int                    squarePadH    = 0; // px of height lost to keep aspect
     int                    squarePadW    = 0; // px of width lost to keep aspect
     int                    xFree         = 0; // px of space free for hFill elems
@@ -1616,6 +1629,10 @@ int neuik_Element_Render__GridLayout(
     int                    vfillMaxMinH  = 0; // largest minimum row height 
                                               // among vertically filling rows.
     int                    maxSideLen    = 0; // Maximum side length (square-elems)
+    float                  xPos          = 0.0;
+    float                  yPos          = 0.0;
+    float                  fltHspacingSc = 0.0;  // float VSpacing HighDPI scaled
+    float                  fltVspacingSc = 0.0;  // float VSpacing HighDPI scaled
     int                  * allHFill      = NULL; // Free upon returning; 
                                                  // Cols fills vertically? (per col)
     int                  * allVFill      = NULL; // Free upon returning; 
@@ -1687,6 +1704,17 @@ int neuik_Element_Render__GridLayout(
 
     eBase->eSt.rend = xRend;
     rend = eBase->eSt.rend;
+
+    if (neuik__HighDPI_Scaling <= 1.0)
+    {
+        fltHspacingSc = (float)(grid->HSpacing);
+        fltVspacingSc = (float)(grid->VSpacing);
+    }
+    else
+    {
+        fltHspacingSc = (float)(grid->HSpacing)*neuik__HighDPI_Scaling;
+        fltVspacingSc = (float)(grid->VSpacing)*neuik__HighDPI_Scaling;
+    }
 
     /*------------------------------------------------------------------------*/
     /* Redraw the background surface before continuing.                       */
@@ -1968,7 +1996,7 @@ int neuik_Element_Render__GridLayout(
     }
     if (grid->xDim > 1)
     {
-        rsMin.w += grid->HSpacing*(grid->xDim - 1);
+        rsMin.w += (int)(fltHspacingSc*(float)(grid->xDim - 1));
     }
 
     /*------------------------------------------------------------------------*/
@@ -2006,7 +2034,7 @@ int neuik_Element_Render__GridLayout(
     }
     if (grid->yDim > 1)
     {
-        rsMin.h += grid->VSpacing*(grid->yDim - 1);
+        rsMin.h += (int)(fltVspacingSc * (float)(grid->yDim - 1));
     }
 
     /*------------------------------------------------------------------------*/
@@ -2225,13 +2253,13 @@ int neuik_Element_Render__GridLayout(
     /*========================================================================*/
     /* Render and place the child elements                                    */
     /*========================================================================*/
-    yPos = 0;
+    yPos = 0.0;
     for (rowCtr = 0; rowCtr < grid->yDim; rowCtr++)
     {
-        xPos = 0;
+        xPos = 0.0;
         if (rowCtr > 0)
         {
-            yPos += rendRowH[rowCtr-1] + grid->VSpacing;
+            yPos += (float)(rendRowH[rowCtr-1]) + fltVspacingSc;
         }
 
         for (colCtr = 0; colCtr < grid->xDim; colCtr++)
@@ -2240,7 +2268,7 @@ int neuik_Element_Render__GridLayout(
 
             if (colCtr > 0)
             {
-                xPos += rendColW[colCtr-1] + grid->HSpacing;
+                xPos += (float)(rendColW[colCtr-1]) + fltHspacingSc;
             }
 
             if (!elemsValid[offset]) continue; /* no elem at this location */
@@ -2278,28 +2306,28 @@ int neuik_Element_Render__GridLayout(
                     switch (cont->HJustify)
                     {
                         case NEUIK_HJUSTIFY_LEFT:
-                            rect.x = xPos + eCfg->PadLeft;
+                            rect.x = (int)(xPos) + eCfg->PadLeft;
                             break;
                         case NEUIK_HJUSTIFY_CENTER:
                         case NEUIK_HJUSTIFY_DEFAULT:
-                            rect.x = (xPos + squarePadW/2 + rendColW[colCtr]/2) 
-                                - (tempW/2);
+                            rect.x = ((int)(xPos) + squarePadW/2 
+                                + rendColW[colCtr]/2) - (tempW/2);
                             break;
                         case NEUIK_HJUSTIFY_RIGHT:
-                            rect.x = (xPos + squarePadW + rendColW[colCtr]) - 
-                                (rs->w + eCfg->PadRight);
+                            rect.x = ((int)(xPos) + squarePadW 
+                                + rendColW[colCtr]) - (rs->w + eCfg->PadRight);
                             break;
                     }
                     break;
                 case NEUIK_HJUSTIFY_LEFT:
-                    rect.x = xPos + eCfg->PadLeft;
+                    rect.x = (int)(xPos) + eCfg->PadLeft;
                     break;
                 case NEUIK_HJUSTIFY_CENTER:
-                    rect.x = (xPos + squarePadW/2 + rendColW[colCtr]/2) 
+                    rect.x = ((int)(xPos) + squarePadW/2 + rendColW[colCtr]/2) 
                         - (tempW/2);
                     break;
                 case NEUIK_HJUSTIFY_RIGHT:
-                    rect.x = (xPos + squarePadW + rendColW[colCtr]) - 
+                    rect.x = ((int)(xPos) + squarePadW + rendColW[colCtr]) - 
                         (rs->w + eCfg->PadRight);
                     break;
             }
@@ -2309,28 +2337,28 @@ int neuik_Element_Render__GridLayout(
                     switch (cont->VJustify)
                     {
                         case NEUIK_VJUSTIFY_TOP:
-                            rect.y = yPos + eCfg->PadTop;
+                            rect.y = (int)(yPos) + eCfg->PadTop;
                             break;
                         case NEUIK_VJUSTIFY_CENTER:
                         case NEUIK_VJUSTIFY_DEFAULT:
-                            rect.y = (yPos + squarePadH/2 + rendRowH[rowCtr]/2)
-                                - (tempH/2);
+                            rect.y = ((int)(yPos) + squarePadH/2 
+                                + rendRowH[rowCtr]/2) - (tempH/2);
                             break;
                         case NEUIK_VJUSTIFY_BOTTOM:
-                            rect.y = (yPos + squarePadH + rendRowH[rowCtr]) - 
-                                (rs->h + eCfg->PadBottom);
+                            rect.y = ((int)(yPos) + squarePadH 
+                                + rendRowH[rowCtr]) - (rs->h + eCfg->PadBottom);
                             break;
                     }
                     break;
                 case NEUIK_VJUSTIFY_TOP:
-                    rect.y = yPos + eCfg->PadTop;
+                    rect.y = (int)(yPos) + eCfg->PadTop;
                     break;
                 case NEUIK_VJUSTIFY_CENTER:
-                    rect.y = (yPos + squarePadH/2 + rendRowH[rowCtr]/2) 
+                    rect.y = ((int)(yPos) + squarePadH/2 + rendRowH[rowCtr]/2) 
                         - (tempH/2);
                     break;
                 case NEUIK_VJUSTIFY_BOTTOM:
-                    rect.y = (yPos + squarePadH + rendRowH[rowCtr]) - 
+                    rect.y = ((int)(yPos) + squarePadH + rendRowH[rowCtr]) - 
                         (rs->h + eCfg->PadBottom);
                     break;
             }
