@@ -1710,6 +1710,7 @@ int NEUIK_Window_Redraw(
     int                   lastFrameH;           /* height of Texture from last frame */
     unsigned int          timeBeforeRedraw = 0; /* for calculating frame time */
     unsigned int          frameTime;            /* time required to redraw elem */
+    float                 equivFPS   = 0.0;     /* equivalent FPS (for frametime) */
     NEUIK_WindowConfig  * aCfg       = NULL;
     NEUIK_ElementConfig * eCfg       = NULL;
     // NEUIK_PopUp         * popup      = NULL;
@@ -2030,7 +2031,21 @@ int NEUIK_Window_Redraw(
         if (neuik__Report_Frametime)
         {
             frameTime = SDL_GetTicks() - timeBeforeRedraw;
-            printf("NEUIK_Window_Redraw() : frameTime = %d ms\n", frameTime);
+            equivFPS  = -1.0;
+            if (frameTime > 0)
+            {
+                equivFPS = 1000.0/(float)(frameTime);
+            }
+            if (equivFPS > 0.0)
+            {
+                printf("NEUIK_Window_Redraw() : frameTime = %d ms (%5.1f FPS)\n", 
+                    frameTime, equivFPS);
+            }
+            else
+            {
+                printf("NEUIK_Window_Redraw() : frameTime = %d ms\n", 
+                    frameTime);
+            }
         }
     }
 
