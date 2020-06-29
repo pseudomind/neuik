@@ -182,15 +182,15 @@ int NEUIK_NewWindow(
     w->redrawMask  = NULL;
 
     /* set default values */
-    w->redrawAll   = 1;
-    w->posX        = -1;
-    w->posY        = -1;
+    w->redrawAll   = TRUE;
+    w->posX        = UNDEFINED;
+    w->posY        = UNDEFINED;
     w->sizeW       = (int)(320.0*neuik__HighDPI_Scaling);
     w->sizeH       = (int)(320.0*neuik__HighDPI_Scaling);
-    w->shown       = 1;
-    w->updateTitle = 0;
-    w->updateIcon  = 0;
-    w->doRedraw    = 1;
+    w->shown       = TRUE;
+    w->updateTitle = FALSE;
+    w->updateIcon  = FALSE;
+    w->doRedraw    = TRUE;
 
     w->eHT = NEUIK_NewEventHandlerTable();
     w->eCT = NEUIK_NewCallbackTable();
@@ -810,15 +810,15 @@ int NEUIK_Window_Free(
     }
     if (w->redrawMask != NULL)
     {
-        neuik_Object_Free(&w->redrawMask);
+        neuik_Object_Free(w->redrawMask);
     }
     if (w->icon != NULL)
     {
-        neuik_Object_Free(&w->icon);
+        neuik_Object_Free(w->icon);
     }
     if (w->cfg != NULL)
     {
-        neuik_Object_Free(&w->cfg);
+        neuik_Object_Free(w->cfg);
     }
 
     free(w);
@@ -1285,27 +1285,50 @@ int NEUIK_Window_CaptureEvent(
     NEUIK_Window * w, 
     SDL_Event    * ev)
 {
-    int                   evCaputred = 0;
-    int                   tempX;
-    int                   tempY;
-    int                   oldW;  /* old window width (px) */
-    int                   oldH;  /* old window height (px) */
-    int                   newW;  /* new window width (px) */
-    int                   newH;  /* new window height (px) */
-    SDL_Event           * e;
-    SDL_KeyboardEvent   * keyEv;
-    NEUIK_WindowConfig  * wCfg      = NULL;
+    int                   evCaputred = FALSE;
+    int                   tempX      = 0;
+    int                   tempY      = 0;
+    int                   oldW       = 0; /* old window width (px) */
+    int                   oldH       = 0; /* old window height (px) */
+    int                   newW       = 0; /* new window width (px) */
+    int                   newH       = 0; /* new window height (px) */
+    Uint32                sdlWinID   = 0;
+    SDL_Event           * e          = NULL;
+    SDL_KeyboardEvent   * keyEv      = NULL;
+    NEUIK_WindowConfig  * wCfg       = NULL;
 
     e = (SDL_Event*)(ev);
 
     wCfg = neuik_Window_GetConfig(w);
 
+    if (e->type == SDL_QUIT)
+    {
+        /*--------------------------------------------------------------------*/
+        /* The SDL_QUIT event is only sent out when the final open window is  */
+        /* being requested to close. This event does not specify the window   */
+        /* and as such must be handled first.                                 */
+        /*--------------------------------------------------------------------*/
+        neuik_FreeWindow(w);
+        goto out;
+    }
+
     /*------------------------------------------------------------------------*/
     /* Check if the event belongs to this window                              */
     /*------------------------------------------------------------------------*/
+    sdlWinID = SDL_GetWindowID((SDL_Window*)(w->win));
+    if (!sdlWinID)
+    {
+        /* This is a failure... */
+        goto out;
+    }
+    if (sdlWinID != e->window.windowID)
+    {
+        /* This event targets a different window... */
+        goto out;
+    }
+
     if (e->type == SDL_WINDOWEVENT)
     {
-        // printf("Event for WindowID: %d\n", e->window.windowID);
         switch (e->window.event)
         {
             case SDL_WINDOWEVENT_MAXIMIZED:

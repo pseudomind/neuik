@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,10 @@
 int 
 	neuik_RegisterWindow(
 			NEUIK_Window *w);
+
+int
+	neuik_FreeWindow(
+			NEUIK_Window * win);
 
 int neuik_FreeAllWindows();
 
