@@ -47,4 +47,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
 	int                     ticZoneOffsetY,
 	neuik_MaskMap        ** lineMask);
 
+int neuik_Plot2D_UpdateAxesRanges(
+	NEUIK_Plot2D * plot2d);
+
 #endif /* NEUIK_PLOT2D_INTERNAL_H */

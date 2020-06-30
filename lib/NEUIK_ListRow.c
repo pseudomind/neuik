@@ -1428,6 +1428,7 @@ neuik_EventState neuik_Element_CaptureEvent__ListRow(
             {
             case SDLK_SPACE:
             case SDLK_RETURN:
+            case SDLK_KP_ENTER:
                 /* row was selected, activate the row */
                 neuik_Element_TriggerCallback(row, NEUIK_CALLBACK_ON_ACTIVATED);
                 evCaputred = NEUIK_EVENTSTATE_CAPTURED;

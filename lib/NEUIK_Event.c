@@ -436,6 +436,7 @@ void NEUIK_EventLoopNoErrHandling()
     int                ctr        = 0;
     int                checkCtr   = 0;
     int                checkMax   = 5;
+    int                activeWin  = FALSE;
     int                evCaptured = FALSE;
     int                didRedraw  = FALSE;
     static int         first      = TRUE;
@@ -444,7 +445,23 @@ void NEUIK_EventLoopNoErrHandling()
     SDL_Event          event;
 
     for (;;) {
+        didRedraw = FALSE;
         SDL_PumpEvents();
+
+        /*--------------------------------------------------------------------*/
+        /* Make sure there is at least one valid window; otherwise break the  */
+        /* event loop.                                                        */
+        /*--------------------------------------------------------------------*/
+        activeWin = FALSE;
+        for (ctr = 0; ctr < neuik_windows.cap; ctr++)
+        {
+            next = &(neuik_windows.slots[ctr]);
+            if (!next->inUse) continue;
+
+            activeWin = TRUE;
+        }
+        if (!activeWin) goto out;
+
         for (checkCtr = 0; checkCtr < checkMax; checkCtr++)
         {
             if (!SDL_PollEvent(&event))
@@ -458,11 +475,13 @@ void NEUIK_EventLoopNoErrHandling()
             /*----------------------------------------------------------------*/
             /* Check the windows to see if they can capture this event        */
             /*----------------------------------------------------------------*/
+            activeWin = FALSE;
             for (ctr = 0; ctr < neuik_windows.cap; ctr++)
             {
                 next = &(neuik_windows.slots[ctr]);
                 if (!next->inUse) continue;
 
+                activeWin = TRUE;
                 win = next->window;
 
                 evCaptured = NEUIK_Window_CaptureEvent(win, &event);
@@ -470,7 +489,8 @@ void NEUIK_EventLoopNoErrHandling()
                 {
                     break;
                 }
-            }           
+            }
+            if (!activeWin) goto out;
         }
 
         if (!first)
