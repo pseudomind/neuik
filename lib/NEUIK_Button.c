@@ -712,8 +712,6 @@ int NEUIK_Button_Configure(
         "FontSize"
         "FontColor",
         "FontColorSelect",
-        "BGColorGrad",
-        "BGColorGradSelect",
         NULL,
     };
     static char           funcName[] = "NEUIK_Button_Configure";
@@ -980,14 +978,6 @@ int NEUIK_Button_Configure(
                 }
                 cfg->fontSize = fontSize;
                 doRedraw = 1;
-            }
-            else if (!strcmp("BGColorGrad", name))
-            {
-                printf("TODO: NEUIK_Button_Configure(\"BGColorGrad=...\")\n");
-            }
-            else if (!strcmp("BGColorGradSelect", name))
-            {
-                printf("TODO: NEUIK_Button_Configure(\"BGColorGradSelect=...\")\n");
             }
             else
             {

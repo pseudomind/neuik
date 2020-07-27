@@ -1285,7 +1285,7 @@ int NEUIK_PlotData_WriteValuesToASCIIFile(
 
     if (writeHeader)
     {
-        fprintf(outFile, cmtBarLn);
+        fprintf(outFile, "%s", cmtBarLn);
         fprintf(outFile, "# NEUIK_PlotData -- ASCII\n");
         fprintf(outFile, "# uniqueName : `%s`\n", pd->uniqueName);
         fprintf(outFile, "# precision  : %d\n", pd->precision);
@@ -1311,7 +1311,7 @@ int NEUIK_PlotData_WriteValuesToASCIIFile(
                     pd->bounds_32.y_min);
                 fprintf(outFile, "# y_max      : % 16.10e\n",
                     pd->bounds_32.y_max);
-                fprintf(outFile, cmtBarLn);
+                fprintf(outFile, "%s", cmtBarLn);
             }
 
             for (ctr = 0; ctr < pd->nPoints; ctr++)
@@ -1338,7 +1338,7 @@ int NEUIK_PlotData_WriteValuesToASCIIFile(
                     pd->bounds_64.y_min);
                 fprintf(outFile, "# y_max      : % 18.12e\n",
                     pd->bounds_64.y_max);
-                fprintf(outFile, cmtBarLn);
+                fprintf(outFile, "%s", cmtBarLn);
             }
 
             for (ctr = 0; ctr < pd->nPoints; ctr++)
@@ -1350,7 +1350,7 @@ int NEUIK_PlotData_WriteValuesToASCIIFile(
             }
             break;
         default:
-            fprintf(outFile, cmtBarLn);
+            fprintf(outFile, "%s", cmtBarLn);
             break;
     }
     fflush(outFile);

@@ -715,8 +715,6 @@ int NEUIK_ToggleButton_Configure(
         "FontSize"
         "FontColor",
         "FontColorPressed",
-        "BGColorGrad",
-        "BGColorGradPressed",
         NULL,
     };
     static char           funcName[] = "NEUIK_ToggleButton_Configure";
@@ -985,14 +983,6 @@ int NEUIK_ToggleButton_Configure(
                 }
                 cfg->fontSize = fontSize;
                 doRedraw = 1;
-            }
-            else if (!strcmp("BGColorGrad", name))
-            {
-                #pragma message("TODO: NEUIK_ToggleButton_Configure(\"BGColorGrad=...\")")
-            }
-            else if (!strcmp("BGColorGradPressed", name))
-            {
-                #pragma message("TODO: NEUIK_ ToggleButton_Configure(\"BGColorGradPressed=...\")")
             }
             else
             {
