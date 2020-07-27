@@ -59,18 +59,15 @@ neuik_Class_BaseFuncs  neuik_Element_BaseFuncs = {
     neuik_Object_Free__Element,
 };
 
+#define NEUIK_DEFAULT_BACKGROUNDCONFIG {NEUIK_BGSTYLE_SOLID, COLOR_LLGRAY, 'v', NULL}
+
 NEUIK_ElementBackground neuik_default_ElementBackground = {
-    NEUIK_BGSTYLE_SOLID, /* style to use when element is unselected */
-    NEUIK_BGSTYLE_SOLID, /* style to use when element is selected */
-    NEUIK_BGSTYLE_SOLID, /* style to use when element is hovered */
-    COLOR_LLGRAY,        /* solid color to use under normal condtions */
-    COLOR_LLGRAY,        /* solid color to use when selected */
-    COLOR_LLGRAY,        /* solid color to use being hovered over */
-    'v',                 /* direction to use for the gradient (`v` or `h`) */
-    NULL,                /* color gradient to use under normal condtions */
-    NULL,                /* color gradient to use when selected */
-    NULL,                /* color gradient to use being hovered over */
+    NEUIK_DEFAULT_BACKGROUNDCONFIG, /* config for when element is unselected */
+    NEUIK_DEFAULT_BACKGROUNDCONFIG, /* config for when element is selected */
+    NEUIK_DEFAULT_BACKGROUNDCONFIG, /* config for when element is hovered */
 };
+
+#undef NEUIK_DEFAULT_BACKGROUNDCONFIG
 
 NEUIK_ElementConfig neuik_default_ElementConfig = {
      1.0,                   /* Scale Factor : 0 = Doesn't stretch; other value does */
@@ -1469,22 +1466,23 @@ int NEUIK_Element_SetBackgroundColorGradient(
     const char    * colorStop0,
     ...)
 {
-    int                   ns; /* number of items from sscanf */
-    int                   ctr;
-    int                   eNum       = 0;
-    int                   nStops     = 1;
-    NEUIK_Color           clr;
-    float                 frac;
-    char                  buf[4096];
-    RenderSize            rSize;
-    RenderLoc             rLoc;
-    va_list               args;
-    NEUIK_ElementBase   * eBase      = NULL;
-    NEUIK_ColorStop   *** cstops     = NULL; /* pointer to the active colorstops */
-    NEUIK_ColorStop     * cs;
-    const char          * cs_str     = NULL;
-    static char           funcName[] = "NEUIK_Element_SetBackgroundColorGradient";
-    static char         * errMsgs[]  = {"",                               // [ 0] no error
+    int                        ns; /* number of items from sscanf */
+    int                        ctr;
+    int                        eNum   = 0;
+    int                        nStops = 1;
+    NEUIK_Color                clr;
+    float                      frac;
+    RenderSize                 rSize;
+    RenderLoc                  rLoc;
+    va_list                    args;
+    neuik_BackgroundConfig   * bgCfg  = NULL;
+    NEUIK_ElementBase        * eBase  = NULL;
+    NEUIK_ColorStop        *** cstops = NULL; /* pointer to the active colorstops */
+    NEUIK_ColorStop          * cs     = NULL;
+    const char               * cs_str = NULL;
+    char          buf[4096];
+    static char   funcName[] = "NEUIK_Element_SetBackgroundColorGradient";
+    static char * errMsgs[]  = {"", // [ 0] no error
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.",  // [ 1]
         "Argument `styleName` is NULL.",                                  // [ 2]
         "Argument `styleName` is blank.",                                 // [ 3]
@@ -1520,24 +1518,23 @@ int NEUIK_Element_SetBackgroundColorGradient(
     }
     else if (!strcmp("normal", styleName))
     {
-        eBase->eBg.bgstyle_normal = NEUIK_BGSTYLE_GRADIENT;
-        cstops = &(eBase->eBg.gradient_normal);
+        bgCfg = &(eBase->eBg.modeNormal);
     }
     else if (!strcmp("selected", styleName))
     {
-        eBase->eBg.bgstyle_selected = NEUIK_BGSTYLE_GRADIENT;
-        cstops = &(eBase->eBg.gradient_selected);
+        bgCfg = &(eBase->eBg.modeSelected);
     }
     else if (!strcmp("hovered", styleName))
     {
-        eBase->eBg.bgstyle_hover = NEUIK_BGSTYLE_GRADIENT;
-        cstops = &(eBase->eBg.gradient_hover);
+        bgCfg = &(eBase->eBg.modeHover);
     }
     else
     {
         eNum = 4;
         goto out;
     }
+    bgCfg->style = NEUIK_BGSTYLE_GRADIENT;
+    cstops = &(bgCfg->grad_desc);
 
     /*------------------------------------------------------------------------*/
     /* Free and NULL out the currently allocated ColorStops (if allocated).   */
@@ -1563,7 +1560,7 @@ int NEUIK_Element_SetBackgroundColorGradient(
     {
         case 'h':
         case 'v':
-            eBase->eBg.gradient_dirn = direction;
+            bgCfg->grad_dirn = direction;
             break;
         default:
             /* Unsupported gradient direction */
@@ -1772,13 +1769,14 @@ int NEUIK_Element_SetBackgroundColorSolid(
     unsigned char   b,
     unsigned char   a)
 {
-    int                 eNum       = 0;
-    NEUIK_ElementBase * eBase      = NULL;
-    NEUIK_Color       * aClr       = NULL;
-    RenderSize          rSize;
-    RenderLoc           rLoc;
-    static char         funcName[] = "NEUIK_Element_SetBackgroundColorSolid";
-    static char       * errMsgs[]  = {"",                               // [0] no error
+    int                      eNum  = 0;
+    NEUIK_ElementBase      * eBase = NULL;
+    NEUIK_Color            * aClr  = NULL;
+    neuik_BackgroundConfig * bgCfg = NULL;
+    RenderSize               rSize;
+    RenderLoc                rLoc;
+    static char   funcName[] = "NEUIK_Element_SetBackgroundColorSolid";
+    static char * errMsgs[]  = {"",                               // [0] no error
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
         "Argument `styleName` is NULL.",                                 // [2]
         "Argument `styleName` is blank.",                                // [3]
@@ -1804,24 +1802,23 @@ int NEUIK_Element_SetBackgroundColorSolid(
     }
     else if (!strcmp("normal", styleName))
     {
-        eBase->eBg.bgstyle_normal = NEUIK_BGSTYLE_SOLID;
-        aClr = &(eBase->eBg.solid_normal);
+        bgCfg = &(eBase->eBg.modeNormal);
     }
     else if (!strcmp("selected", styleName))
     {
-        eBase->eBg.bgstyle_selected = NEUIK_BGSTYLE_SOLID;
-        aClr = &(eBase->eBg.solid_selected);
+        bgCfg = &(eBase->eBg.modeSelected);
     }
     else if (!strcmp("hovered", styleName))
     {
-        eBase->eBg.bgstyle_hover = NEUIK_BGSTYLE_SOLID;
-        aClr = &(eBase->eBg.solid_hover);
+        bgCfg = &(eBase->eBg.modeHover);
     }
     else
     {
         eNum = 4;
         goto out;
     }
+    bgCfg->style = NEUIK_BGSTYLE_SOLID;
+    aClr = &(bgCfg->solid_color);
 
     aClr->r = r;
     aClr->g = g;
@@ -1862,11 +1859,12 @@ int NEUIK_Element_SetBackgroundColorSolid_noRedraw(
     unsigned char   b,
     unsigned char   a)
 {
-    int                 eNum       = 0;
-    NEUIK_ElementBase * eBase      = NULL;
-    NEUIK_Color       * aClr       = NULL;
-    static char         funcName[] = "NEUIK_Element_SetBackgroundColorSolid_noRedraw";
-    static char       * errMsgs[]  = {"",                               // [0] no error
+    int                      eNum  = 0;
+    NEUIK_ElementBase      * eBase = NULL;
+    NEUIK_Color            * aClr  = NULL;
+    neuik_BackgroundConfig * bgCfg = NULL;
+    static char   funcName[] = "NEUIK_Element_SetBackgroundColorSolid_noRedraw";
+    static char * errMsgs[]  = {"", // [0] no error
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
         "Argument `styleName` is NULL.",                                 // [2]
         "Argument `styleName` is blank.",                                // [3]
@@ -1891,24 +1889,23 @@ int NEUIK_Element_SetBackgroundColorSolid_noRedraw(
     }
     else if (!strcmp("normal", styleName))
     {
-        eBase->eBg.bgstyle_normal = NEUIK_BGSTYLE_SOLID;
-        aClr = &(eBase->eBg.solid_normal);
+        bgCfg = &(eBase->eBg.modeNormal);
     }
     else if (!strcmp("selected", styleName))
     {
-        eBase->eBg.bgstyle_selected = NEUIK_BGSTYLE_SOLID;
-        aClr = &(eBase->eBg.solid_selected);
+        bgCfg = &(eBase->eBg.modeSelected);
     }
     else if (!strcmp("hovered", styleName))
     {
-        eBase->eBg.bgstyle_hover = NEUIK_BGSTYLE_SOLID;
-        aClr = &(eBase->eBg.solid_hover);
+        bgCfg = &(eBase->eBg.modeHover);
     }
     else
     {
         eNum = 4;
         goto out;
     }
+    bgCfg->style = NEUIK_BGSTYLE_SOLID;
+    aClr = &(bgCfg->solid_color);
 
     aClr->r = r;
     aClr->g = g;
@@ -1937,12 +1934,13 @@ int NEUIK_Element_SetBackgroundColorTransparent(
     NEUIK_Element   elem,
     const char    * styleName)
 {
-    int                 eNum       = 0;
-    NEUIK_ElementBase * eBase      = NULL;
+    int                      eNum  = 0;
+    NEUIK_ElementBase      * eBase = NULL;
+    neuik_BackgroundConfig * bgCfg = NULL;
     RenderSize          rSize;
     RenderLoc           rLoc;
-    static char         funcName[] = "NEUIK_Element_SetBackgroundColorTransparent";
-    static char       * errMsgs[]  = {"",                                // [0] no error
+    static char   funcName[] = "NEUIK_Element_SetBackgroundColorTransparent";
+    static char * errMsgs[]  = {"", // [0] no error
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
         "Argument `styleName` is NULL.",                                 // [2]
         "Argument `styleName` is blank.",                                // [3]
@@ -1968,50 +1966,32 @@ int NEUIK_Element_SetBackgroundColorTransparent(
     }
     else if (!strcmp("normal", styleName))
     {
-        if (eBase->eBg.bgstyle_normal != NEUIK_BGSTYLE_TRANSPARENT)
-        {
-            eBase->eBg.bgstyle_normal = NEUIK_BGSTYLE_TRANSPARENT;
-            rSize = eBase->eSt.rSize;
-            rLoc  = eBase->eSt.rLoc;
-            if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
-            {
-                eNum = 5;
-                goto out;
-            }
-        }
+        bgCfg = &(eBase->eBg.modeNormal);
     }
     else if (!strcmp("selected", styleName))
     {
-        if (eBase->eBg.bgstyle_selected != NEUIK_BGSTYLE_TRANSPARENT)
-        {
-            eBase->eBg.bgstyle_selected = NEUIK_BGSTYLE_TRANSPARENT;
-            rSize = eBase->eSt.rSize;
-            rLoc  = eBase->eSt.rLoc;
-            if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
-            {
-                eNum = 5;
-                goto out;
-            }
-        }
+        bgCfg = &(eBase->eBg.modeSelected);
     }
     else if (!strcmp("hovered", styleName))
     {
-        if (eBase->eBg.bgstyle_hover != NEUIK_BGSTYLE_TRANSPARENT)
-        {
-            eBase->eBg.bgstyle_hover = NEUIK_BGSTYLE_TRANSPARENT;
-            rSize = eBase->eSt.rSize;
-            rLoc  = eBase->eSt.rLoc;
-            if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
-            {
-                eNum = 5;
-                goto out;
-            }
-        }
+        bgCfg = &(eBase->eBg.modeHover);
     }
     else
     {
         eNum = 4;
         goto out;
+    }
+
+    if (bgCfg->style != NEUIK_BGSTYLE_TRANSPARENT)
+    {
+        bgCfg->style = NEUIK_BGSTYLE_TRANSPARENT;
+        rSize = eBase->eSt.rSize;
+        rLoc  = eBase->eSt.rLoc;
+        if (neuik_Element_RequestRedraw(elem, rLoc, rSize))
+        {
+            eNum = 5;
+            goto out;
+        }
     }
 out:
     if (eNum > 0)
@@ -2787,7 +2767,8 @@ int neuik_Element_RedrawBackgroundGradient(
     NEUIK_Element      elem,
     NEUIK_ColorStop ** cs,
     RenderLoc        * rlMod,   /* A relative location modifier (for rendering) */
-    neuik_MaskMap    * maskMap) /* Identifies regions of background to not draw */
+    neuik_MaskMap    * maskMap, /* Identifies regions of background to not draw */
+    char               dirn)    /* Direction of the gradient 'v' or 'h' */
 {
     int                 ctr;
     int                 gCtr;             /* gradient counter */
@@ -2802,7 +2783,8 @@ int neuik_Element_RedrawBackgroundGradient(
     int                 maskRegions;      /* number of regions in maskMap */
     const int         * regionX0;         /* Array of region X0 values */
     const int         * regionXf;         /* Array of region Xf values */
-    char                dirn;             /* Direction of the gradient 'v' or 'h' */
+    const int         * regionY0;         /* Array of region Y0 values */
+    const int         * regionYf;         /* Array of region Yf values */
     float               lastFrac  = -1.0;
     float               frac;
     float               fracDelta;        /* fraction between ColorStop 1 & 2 */
@@ -2816,8 +2798,8 @@ int neuik_Element_RedrawBackgroundGradient(
     colorDeltas       * deltaPP   = NULL;
     colorDeltas       * clrDelta;
     NEUIK_Color       * clr;
-    static char         funcName[] = "neuik_Element_RedawBackgroundGradient";
-    static char       * errMsgs[] = {"", // [0] no error
+    static char   funcName[] = "neuik_Element_RedawBackgroundGradient";
+    static char * errMsgs[] = {"", // [0] no error
         "Pointer to ColorStops is NULL.",                                // [1]
         "Unsupported gradient direction.",                               // [2]
         "Invalid RenderSize supplied.",                                  // [3]
@@ -2830,6 +2812,7 @@ int neuik_Element_RedrawBackgroundGradient(
         "Failed to create software renderer.",                           // [10]
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [11]
         "Failure in `neuik_MaskMap_GetUnmaskedRegionsOnHLine`.",         // [12]
+        "Failure in `neuik_MaskMap_GetUnmaskedRegionsOnVLine`.",         // [13]
     };
 
     if (neuik_Object_GetClassObject(elem, neuik__Class_Element, (void**)&eBase))
@@ -2841,7 +2824,6 @@ int neuik_Element_RedrawBackgroundGradient(
     rl    = eBase->eSt.rLoc;
     rSize = eBase->eSt.rSize;
     rend  = eBase->eSt.rend;
-    dirn  = eBase->eBg.gradient_dirn;
 
     /*------------------------------------------------------------------------*/
     /* Check for easily issues before attempting to render the gradient       */
@@ -3018,7 +3000,84 @@ int neuik_Element_RedrawBackgroundGradient(
         /*--------------------------------------------------------------------*/
         /* Draw a horizontal gradient                                         */
         /*--------------------------------------------------------------------*/
-        #pragma message("TODO/FIXME: Implement horizontal gradient")
+        for (gCtr = 0; gCtr < rSize.w; gCtr++)
+        {
+            /* calculate the fractional position within the gradient */
+            frac = (float)(gCtr+1)/(float)(rSize.w);
+
+            /* determine which ColorStops/colorDeltas should be used */
+            fracStart = cs[0]->frac;
+            clr       = &(cs[0]->color);
+            clrDelta  = NULL;
+            clrFound  = 0;
+            for (ctr = 0;;ctr++)
+            {
+                if (cs[ctr] == NULL) break;
+
+                if (frac < cs[ctr]->frac)
+                {
+                    /* apply delta from this clr */
+                    fracEnd  = cs[ctr]->frac;
+                    clrFound = 1;
+                    break;
+                }
+
+                clr      = &(cs[ctr]->color);
+                clrDelta = &(deltaPP[ctr]);
+            }
+
+            if (!clrFound)
+            {
+                /* line is beyond the final ColorStop; use that color */
+                clrDelta = NULL;
+            }
+
+            /* calculate and set the color for this gradient line */
+            if (clrDelta != NULL)
+            {
+                /* between two ColorStops, blend the color */
+                fracDelta = (frac - fracStart)/(fracEnd - fracStart);
+                clrR = clr->r + (int)((clrDelta->r)*fracDelta);
+                clrG = clr->g + (int)((clrDelta->g)*fracDelta);
+                clrB = clr->b + (int)((clrDelta->b)*fracDelta);
+                clrA = clr->a + (int)((clrDelta->a)*fracDelta);
+                SDL_SetRenderDrawColor(rend, clrR, clrG, clrB, clrA);
+            }
+            else
+            {
+                /* not between two ColorStops, use a single color */
+                SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, clr->a);
+            }
+
+            if (maskMap != NULL)
+            {
+                /*------------------------------------------------------------*/
+                /* A transparency mask is included, draw unmasked regions.    */
+                /*------------------------------------------------------------*/
+                if (neuik_MaskMap_GetUnmaskedRegionsOnVLine(
+                        maskMap, gCtr, &maskRegions, &regionY0, &regionYf))
+                {
+                    eNum = 13;
+                    goto out;
+                }
+
+                for (maskCtr = 0; maskCtr < maskRegions; maskCtr++)
+                {
+                    SDL_RenderDrawLine(rend,
+                        rl.x + gCtr, rl.y + regionY0[maskCtr],
+                        rl.x + gCtr, rl.y + regionYf[maskCtr]);
+                }
+            }
+            else
+            {
+                /*------------------------------------------------------------*/
+                /* There are no masked off (transparent areas) draw full line */
+                /*------------------------------------------------------------*/
+                SDL_RenderDrawLine(rend,
+                    rl.x + gCtr, rl.y,
+                    rl.x + gCtr, rl.y + (rSize.h - 1));
+            }
+        }
     }
 out:
     if (eNum > 0)
@@ -3045,10 +3104,10 @@ int neuik_Element_GetCurrentBGStyle(
     NEUIK_Element        elem,
     enum neuik_bgstyle * bgStyle) /* The current BGStyle is stored here */
 {
-    int                 eNum       = 0;    /* which error to report (if any) */
-    NEUIK_ElementBase * eBase      = NULL;
-    static char         funcName[] = "neuik_Element_GetCurrentBGStyle";
-    static char       * errMsgs[]  = {"", // [0] no error
+    int                 eNum  = 0;    /* which error to report (if any) */
+    NEUIK_ElementBase * eBase = NULL;
+    static char   funcName[] = "neuik_Element_GetCurrentBGStyle";
+    static char * errMsgs[]  = {"", // [0] no error
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
         "Ouput Argument `bgStyle` is NULL.",                             // [2]
     };
@@ -3067,13 +3126,13 @@ int neuik_Element_GetCurrentBGStyle(
     switch (eBase->eSt.focusstate)
     {
         case NEUIK_FOCUSSTATE_NORMAL:
-            *bgStyle = eBase->eBg.bgstyle_normal;
+            *bgStyle = eBase->eBg.modeNormal.style;
             break;
         case NEUIK_FOCUSSTATE_SELECTED:
-            *bgStyle = eBase->eBg.bgstyle_selected;
+            *bgStyle = eBase->eBg.modeSelected.style;
             break;
         case NEUIK_FOCUSSTATE_HOVERED:
-            *bgStyle = eBase->eBg.bgstyle_hover;
+            *bgStyle = eBase->eBg.modeHover.style;
             break;
     }
 out:
@@ -3101,25 +3160,23 @@ int neuik_Element_RedrawBackground(
     RenderLoc     * rlMod,   /* A relative location modifier (for rendering) */
     neuik_MaskMap * maskMap) /* Identifies regions of background to not draw */
 {
-    int                    y              = 0;    /* current y-position */
-    int                    y0             = 0;    /* first y-position to draw */
-    int                    yf             = 0;    /* final y-position to draw */
-    int                    eNum           = 0;    /* which error to report (if any) */
-    int                    maskCtr;               /* maskMap counter */
-    int                    maskRegions;           /* number of regions in maskMap */
-    const int            * regionX0;              /* Array of region X0 values */
-    const int            * regionXf;              /* Array of region Xf values */
-    NEUIK_ElementBase    * eBase          = NULL;
-    SDL_Renderer         * rend           = NULL;
-    SDL_Texture          * tex            = NULL;
-    SDL_Rect               srcRect;
-    enum neuik_bgstyle     bgstyle;               /* active background style */
-    NEUIK_Color          * color_solid    = NULL; /* pointer to active solid color */
-    NEUIK_ColorStop    *** color_gradient = NULL; /* color gradient to use under normal condtions */
-    RenderLoc              rl;                    /* Location of element background */
-    RenderSize             rSize;                 /* Size of the element background to fill */
-    static char            funcName[] = "neuik_Element_RedrawBackground";
-    static char          * errMsgs[]  = {"", // [0] no error
+    int                      y           = 0;    /* current y-position */
+    int                      y0          = 0;    /* first y-position to draw */
+    int                      yf          = 0;    /* final y-position to draw */
+    int                      eNum        = 0;    /* which error to report (if any) */
+    int                      maskCtr;            /* maskMap counter */
+    int                      maskRegions;        /* number of regions in maskMap */
+    const int              * regionX0;           /* Array of region X0 values */
+    const int              * regionXf;           /* Array of region Xf values */
+    neuik_BackgroundConfig * bgCfg       = NULL;
+    NEUIK_ElementBase      * eBase       = NULL;
+    SDL_Renderer           * rend        = NULL;
+    SDL_Texture            * tex         = NULL;
+    SDL_Rect                 srcRect;
+    RenderLoc                rl;                 /* Location of element background */
+    RenderSize               rSize;              /* Size of the element background to fill */
+    static char   funcName[] = "neuik_Element_RedrawBackground";
+    static char * errMsgs[]  = {"", // [0] no error
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [1]
         "Failure in `neuik_MaskMap_GetUnmaskedRegionsOnHLine`.",         // [2]
         "Unhandled Element FOCUSSTATE.",                                 // [3]
@@ -3142,46 +3199,13 @@ int neuik_Element_RedrawBackground(
     switch (eBase->eSt.focusstate)
     {
         case NEUIK_FOCUSSTATE_NORMAL:
-            bgstyle = eBase->eBg.bgstyle_normal;
-            switch (bgstyle)
-            {
-                case NEUIK_BGSTYLE_SOLID:
-                    color_solid = &(eBase->eBg.solid_normal);
-                    break;
-                case NEUIK_BGSTYLE_GRADIENT:
-                    color_gradient = &(eBase->eBg.gradient_normal);
-                    break;
-                case NEUIK_BGSTYLE_TRANSPARENT:
-                    break;
-            }
+            bgCfg = &(eBase->eBg.modeNormal);
             break;
         case NEUIK_FOCUSSTATE_SELECTED:
-            bgstyle = eBase->eBg.bgstyle_selected;
-            switch (bgstyle)
-            {
-                case NEUIK_BGSTYLE_SOLID:
-                    color_solid = &(eBase->eBg.solid_selected);
-                    break;
-                case NEUIK_BGSTYLE_GRADIENT:
-                    color_gradient = &(eBase->eBg.gradient_selected);
-                    break;
-                case NEUIK_BGSTYLE_TRANSPARENT:
-                    break;
-            }
+            bgCfg = &(eBase->eBg.modeSelected);
             break;
         case NEUIK_FOCUSSTATE_HOVERED:
-            bgstyle = eBase->eBg.bgstyle_hover;
-            switch (bgstyle)
-            {
-                case NEUIK_BGSTYLE_SOLID:
-                    color_solid = &(eBase->eBg.solid_hover);
-                    break;
-                case NEUIK_BGSTYLE_GRADIENT:
-                    color_gradient = &(eBase->eBg.gradient_hover);
-                    break;
-                case NEUIK_BGSTYLE_TRANSPARENT:
-                    break;
-            }
+            bgCfg = &(eBase->eBg.modeHover);
             break;
         default:
             /*----------------------------------------------------------------*/
@@ -3194,14 +3218,17 @@ int neuik_Element_RedrawBackground(
     /*------------------------------------------------------------------------*/
     /* Render the background.                                                 */
     /*------------------------------------------------------------------------*/
-    switch (bgstyle)
+    switch (bgCfg->style)
     {
         case NEUIK_BGSTYLE_SOLID:
             /*----------------------------------------------------------------*/
             /* Fill the entire surface background with a solid color.         */
             /*----------------------------------------------------------------*/
             SDL_SetRenderDrawColor(rend,
-                color_solid->r, color_solid->g, color_solid->b, color_solid->a);
+                bgCfg->solid_color.r,
+                bgCfg->solid_color.g,
+                bgCfg->solid_color.b,
+                bgCfg->solid_color.a);
 
             if (maskMap != NULL)
             {
@@ -3243,7 +3270,7 @@ int neuik_Element_RedrawBackground(
             break;
         case NEUIK_BGSTYLE_GRADIENT:
             neuik_Element_RedrawBackgroundGradient(
-                elem, *color_gradient, rlMod, maskMap);
+                elem, bgCfg->grad_desc, rlMod, maskMap, bgCfg->grad_dirn);
             break;
         case NEUIK_BGSTYLE_TRANSPARENT:
             /*----------------------------------------------------------------*/

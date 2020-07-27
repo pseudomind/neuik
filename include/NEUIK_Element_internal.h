@@ -65,17 +65,19 @@ enum neuik_minsize {
 
 
 typedef struct {
-	enum neuik_bgstyle    bgstyle_normal;    /* style to use when element is unselected */
-	enum neuik_bgstyle    bgstyle_selected;  /* style to use when element is selected */
-	enum neuik_bgstyle    bgstyle_hover;     /* style to use when element is hovered */
-	NEUIK_Color           solid_normal;      /* solid color to use under normal condtions */
-	NEUIK_Color           solid_selected;    /* solid color to use when selected */
-	NEUIK_Color           solid_hover;       /* solid color to use being hovered over */
-	char                  gradient_dirn;     /* direction to use for the gradient (`v` or `h`) */
-	NEUIK_ColorStop    ** gradient_normal;   /* color gradient to use under normal condtions */
-	NEUIK_ColorStop    ** gradient_selected; /* color gradient to use when selected */
-	NEUIK_ColorStop    ** gradient_hover;    /* color gradient to use being hovered over */
+	enum neuik_bgstyle    style;       /* style in use within this config. */
+	NEUIK_Color           solid_color; /* solid color to use under normal condtions */
+	char                  grad_dirn;   /* direction to use for a gradient (`v` or `h`) */
+	NEUIK_ColorStop    ** grad_desc;   /* description of a color gradient */
+} neuik_BackgroundConfig;
+
+
+typedef struct {
+	neuik_BackgroundConfig modeNormal;   /* config for when element is unselected */
+	neuik_BackgroundConfig modeSelected; /* config for when element is selected */
+	neuik_BackgroundConfig modeHover;    /* config for when element is hovered */
 } NEUIK_ElementBackground;
+
 
 typedef struct {
 	int                     doRedraw;   /* if this element needs to be redrawn */
