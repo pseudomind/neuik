@@ -63,6 +63,7 @@ extern neuik_Class * neuik__Class_Stack;
 /* Registered class implementations : Internal Objects                        */
 /*----------------------------------------------------------------------------*/
 extern neuik_Class * neuik__Class_MaskMap;
+extern neuik_Class * neuik__Class_TextBlock;
 
 /*----------------------------------------------------------------------------*/
 /* Registerd Virtual Functions                                                */
@@ -115,5 +116,6 @@ int neuik_RegisterClass_Stack();
 
 
 int neuik_RegisterClass_MaskMap();
+int neuik_RegisterClass_TextBlock();
 
 #endif /* NEUIK_CLASSES_H */

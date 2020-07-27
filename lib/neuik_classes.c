@@ -61,6 +61,7 @@ neuik_Class * neuik__Class_Stack              = NULL;
 /* Registered class implementations : Internal Objects                        */
 /*----------------------------------------------------------------------------*/
 neuik_Class * neuik__Class_MaskMap            = NULL;
+neuik_Class * neuik__Class_TextBlock          = NULL;
 
 
 /*----------------------------------------------------------------------------*/

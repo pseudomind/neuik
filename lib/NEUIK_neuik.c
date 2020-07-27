@@ -130,6 +130,7 @@ int NEUIK_Init()
 
 
         neuik_RegisterClass_MaskMap();
+        neuik_RegisterClass_TextBlock();
 
         /*--------------------------------------------------------------------*/
         /* Check for diagnostic environment settings                          */

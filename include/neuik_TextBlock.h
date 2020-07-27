@@ -16,6 +16,8 @@
 #ifndef NEUIK_TEXTBLOCK_H
 #define NEUIK_TEXTBLOCK_H
 
+#include "NEUIK_Element.h"
+
 typedef struct {
 	size_t   firstLineNo;    /* 0 = start of */
 	size_t   nLines;         /* number of actual lines in block */
@@ -27,6 +29,7 @@ typedef struct {
 } neuik_TextBlockData;
 
 typedef struct {
+	neuik_Object           objBase;           /* this structure is requied to be an neuik object */
 	size_t                 blockSize;         /* the number of blocks per chapter */
 	size_t                 chapterSize;       /* the number of blocks per chapter */
 	size_t                 nDataBlocks;       /* the number of data blocks in the TextBlock */

@@ -20,12 +20,33 @@
 
 #include "NEUIK_error.h"
 #include "neuik_TextBlock.h"
-// #include "NEUIK_defs.h"
+#include "neuik_TextBlock_internal.h"
+#include "neuik_internal.h"
+#include "neuik_classes.h"
+
+extern int neuik__isInitialized;
+
 
 const unsigned int DefaultBlockSize         = 2048;
 const unsigned int DefaultChapterSize       = 10;
 const unsigned int DefaultChaptersAllocated = 20;
 const unsigned int DefaultOverProvisionPct  = 5; /* 5% */
+
+
+/*----------------------------------------------------------------------------*/
+/* neuik_Object    Function Table                                             */
+/*----------------------------------------------------------------------------*/
+neuik_Class_BaseFuncs  neuik_TextBlock_BaseFuncs = {
+    /* Init(): Class initialization (in most cases will not be needed) */
+    NULL, /* (unused) */
+    /* New(): Allocate and Initialize the object */
+    NULL,
+    /* Copy(): Copy the contents of one object into another */
+    NULL,
+    /* Free(): Free the allocated memory of an object */
+    neuik_Object_Free__TextBlock,
+};
+
 
 // typedef struct {
 //  unsigned int   firstLineNo;    /* 0 = start of */
@@ -48,6 +69,55 @@ const unsigned int DefaultOverProvisionPct  = 5; /* 5% */
 //  neuik_TextBlockData *  lastBlock;
 //  neuik_TextBlockData ** chapters;      /*  */
 // } neuik_TextBlock;
+
+/*******************************************************************************
+ *
+ *  Name:          neuik_RegisterClass_TextBlock
+ *
+ *  Description:   Register this class with the NEUIK runtime.
+ *
+ *  Returns:       Non-zero if an error occurs.
+ *
+ ******************************************************************************/
+int neuik_RegisterClass_TextBlock()
+{
+    int           eNum       = 0; /* which error to report (if any) */
+    static char   funcName[] = "neuik_RegisterClass_TextBlock";
+    static char * errMsgs[]  = {"", // [0] no error
+        "NEUIK library must be initialized first.",      // [1]
+        "Failed to register `TextBlock` object class .", // [2]
+    };
+
+    if (!neuik__isInitialized)
+    {
+        eNum = 1;
+        goto out;
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Otherwise, register the object                                         */
+    /*------------------------------------------------------------------------*/
+    if (neuik_RegisterClass(
+        "TextBlock",                                   // className
+        "Stores a (potentially) large block of text.", // classDescription
+        neuik__Set_NEUIK,                              // classSet
+        NULL,                                          // superClass
+        &neuik_TextBlock_BaseFuncs,                    // baseFuncs
+        NULL,                                          // classFuncs
+        &neuik__Class_TextBlock))                      // newClass
+    {
+        eNum = 2;
+        goto out;
+    }
+out:
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
+
+    return eNum;
+}
 
 
 int neuik_NewTextBlockData(
@@ -106,18 +176,18 @@ out:
 
 /*******************************************************************************
  *
- *  Name:          neuik_FreeTextBlockData
+ *  Name:          neuik_TextBlockData_Free
  *
  *  Description:   Free memory associated with a neuik_TextBlockData object.
  *
  *  Returns:       1 if there is an error; 0 otherwise.
  *
  ******************************************************************************/
-int neuik_FreeTextBlockData(
+int neuik_TextBlockData_Free(
     neuik_TextBlockData * dataPtr)
 {
     int           eNum       = 0; /* which error to report (if any) */
-    static char   funcName[] = "neuik_FreeTextBlockData";
+    static char   funcName[] = "neuik_TextBlockData_Free";
     static char * errMsgs[]  = {"", // [0] no error
         "Output argument `dataPtr` is NULL.", // [1]
     };
@@ -283,6 +353,15 @@ int neuik_NewTextBlock(
     }
 
     /*------------------------------------------------------------------------*/
+    /* Set the object base to that of a TextBlock                             */
+    /*------------------------------------------------------------------------*/
+    neuik_GetObjectBaseOfClass(
+        neuik__Set_NEUIK, 
+        neuik__Class_TextBlock, 
+        NULL,
+        &(tblk->objBase));
+
+    /*------------------------------------------------------------------------*/
     /* Set initial/default values                                             */
     /*------------------------------------------------------------------------*/
     tblk->blockSize         = DefaultBlockSize;
@@ -337,6 +416,71 @@ int neuik_NewTextBlock(
         goto out;
     }
     tblk->chapters[0] = tblk->firstBlock;
+out:
+    if (eNum > 0)
+    {
+        NEUIK_RaiseError(funcName, errMsgs[eNum]);
+        eNum = 1;
+    }
+    return eNum;
+}
+
+
+int neuik_Object_Free__TextBlock(
+    void * ptr)
+{
+    int                   eNum     = 0; /* which error to report (if any) */
+    neuik_TextBlock     * tblk     = NULL;
+    neuik_TextBlockData * thisData = NULL;
+    neuik_TextBlockData * nextData = NULL;
+    static char   funcName[] = "neuik_Object_Free__TextBlock";
+    static char * errMsgs[]  = {"", // [0] no error
+        "Argument `ptr` is NULL.",                         // [1]
+        "Argument `ptr` is not of TextBlock class.",       // [2]
+        "Failure in function `neuik_TextBlockData_Free`.", // [3]
+    };
+
+    if (ptr == NULL)
+    {
+        eNum = 1;
+        goto out;
+    }
+
+    if (!neuik_Object_IsClass(ptr, neuik__Class_TextBlock))
+    {
+        eNum = 2;
+        goto out;
+    }
+    tblk = (neuik_TextBlock*)(ptr);
+
+    /*------------------------------------------------------------------------*/
+    /* Free all of the allocated data blocks within the object.               */
+    /*------------------------------------------------------------------------*/
+    nextData = tblk->firstBlock;
+
+    for (;;)
+    {
+        if (nextData == NULL) break;
+
+        thisData = nextData;
+        nextData = (neuik_TextBlockData*)thisData->nextBlock;
+
+        if (neuik_TextBlockData_Free(thisData))
+        {
+            eNum = 3;
+            goto out;
+        }
+    }
+
+    /*------------------------------------------------------------------------*/
+    /* Free the list of pointers to chapters.                                 */
+    /*------------------------------------------------------------------------*/
+    if (tblk->chapters != NULL) free(tblk->chapters);
+
+    /*------------------------------------------------------------------------*/
+    /* Free the memory used for the object structure itself.                  */
+    /*------------------------------------------------------------------------*/
+    free(tblk);
 out:
     if (eNum > 0)
     {
@@ -2712,7 +2856,7 @@ int neuik_TextBlock_DeleteSection(
 
             rmBlock = aBlock;
             aBlock  = rmBlock->previousBlock;
-            neuik_FreeTextBlockData(rmBlock);
+            neuik_TextBlockData_Free(rmBlock);
         }
 
         /*--------------------------------------------------------------------*/

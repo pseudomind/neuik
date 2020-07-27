@@ -178,6 +178,7 @@ int neuik_Object_New__TextEdit(
         eNum = 1;
         goto out;
     }
+    memset(te, 0, sizeof(NEUIK_TextEdit));
 
     /*------------------------------------------------------------------------*/
     /* Successful allocation of Memory -- Create Base Class Object            */
@@ -283,8 +284,7 @@ out:
         /* free any dynamically allocated memory */
         if (te != NULL)
         {
-            #pragma message("TODO: Free TextBlock (on error)")
-            free(te);
+            neuik_Object_Free(te);
         }
         te = NULL;
         eNum = 1;
@@ -373,40 +373,45 @@ int neuik_Object_Free__TextEdit(
     NEUIK_TextEdit * te         = NULL;
     static char      funcName[] = "neuik_Object_Free__TextEdit";
     static char    * errMsgs[]  = {"", // [0] no error
-        "Argument `tePtr` is not of Button class.", // [1]
-        "Failure in function `neuik_Object_Free`.", // [2]
-        "Argument `tePtr` is NULL.",                // [3]
+        "Argument `tePtr` is NULL.",                  // [1]
+        "Argument `tePtr` is not of TextEdit class.", // [2]
+        "Failure in function `neuik_Object_Free`.",   // [3]
     };
 
     if (tePtr == NULL)
     {
-        eNum = 3;
+        eNum = 1;
         goto out;
     }
     te = (NEUIK_TextEdit*)tePtr;
 
     if (!neuik_Object_IsClass(te, neuik__Class_TextEdit))
     {
-        eNum = 1;
+        eNum = 2;
         goto out;
     }
 
     /*------------------------------------------------------------------------*/
     /* The object is what it says it is and it is still allocated.            */
     /*------------------------------------------------------------------------*/
-    if(neuik_Object_Free(te->objBase.superClassObj))
+    if (neuik_Object_Free(te->objBase.superClassObj))
     {
-        eNum = 2;
+        eNum = 3;
         goto out;
     }
-    #pragma message("TODO: Free TextBlock Data")
+
     if (te->textSurf != NULL) SDL_FreeSurface(te->textSurf);
     if (te->textTex  != NULL) SDL_DestroyTexture(te->textTex);
     if (te->textRend != NULL) SDL_DestroyRenderer(te->textRend);
 
-    if(neuik_Object_Free(te->cfg))
+    if (neuik_Object_Free(te->cfg))
     {
-        eNum = 2;
+        eNum = 3;
+        goto out;
+    }
+    if (neuik_Object_Free(te->textBlk))
+    {
+        eNum = 3;
         goto out;
     }
 
