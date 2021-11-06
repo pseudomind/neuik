@@ -653,9 +653,13 @@ out:
 void neuik_Button_Configure_capture_segv(
     int sig_num)
 {
+    int         unused = 0;
     static char funcName[] = "NEUIK_Button_Configure";
     static char errMsg[] = 
         "SIGSEGV (segmentation fault) captured; is call `NULL` terminated?";
+
+    if (sig_num) { unused++; }
+    if (unused) { unused++; }
 
     NEUIK_RaiseError(funcName, errMsg);
     NEUIK_BacktraceErrors();

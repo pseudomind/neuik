@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -247,7 +247,7 @@ int neuik_Object_Copy__PlotData(
     void       * dst_ptr,
     const void * src_ptr)
 {
-    int              ctr        = 0;
+    unsigned int     ctr        = 0;
     NEUIK_PlotData * dst        = NULL;
     NEUIK_PlotData * src        = NULL;
     int              eNum       = 0; /* which error to report (if any) */
@@ -1230,9 +1230,9 @@ int NEUIK_PlotData_WriteValuesToASCIIFile(
     const char     * fileName,
     int              writeHeader) /* If a PlotData header should be written. */
 {
-    int    ctr     = 0;
-    int    posCtr  = 0;
-    FILE * outFile = NULL;
+    unsigned int   ctr     = 0;
+    int            posCtr  = 0;
+    FILE         * outFile = NULL;
     static char cmtBarLn[] =
         "#------------------------------------------------------------------------------#\n";
 

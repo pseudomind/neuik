@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2019, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +29,8 @@ extern int neuik__isInitialized;
 #define CURSORPAN_TEXT_ADD_REMOVE 2
 #define CURSORPAN_MOVE_BACK       3
 #define CURSORPAN_MOVE_FORWARD    4
+
+#define TEXTENTRY_UNSET_POS (unsigned int)(-1)
 
 /*----------------------------------------------------------------------------*/
 /* Internal Function Prototypes                                               */

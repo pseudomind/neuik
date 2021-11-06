@@ -342,8 +342,8 @@ int NEUIK_GridLayout_SetDimensions(
     unsigned int       yDim)
 {
     int               eNum       = 0;
-    int               ctr        = 0;
-    int               finalInd   = 0;
+    unsigned int      ctr        = 0;
+    unsigned int      finalInd   = 0;
     NEUIK_Element     elem       = NULL;
     NEUIK_Container * cBase      = NULL;
     static char       funcName[] = "NEUIK_GridLayout_SetDimensions";
@@ -939,9 +939,13 @@ out:
 void neuik_GridLayout_Configure_capture_segv(
     int sig_num)
 {
+    int         unused = 0;
     static char funcName[] = "NEUIK_GridLayout_Configure";
     static char errMsg[] = 
         "SIGSEGV (segmentation fault) captured; is call `NULL` terminated?";
+
+    if (sig_num) { unused++; }
+    if (unused) { unused++; }
 
     NEUIK_RaiseError(funcName, errMsg);
     NEUIK_BacktraceErrors();
@@ -1289,14 +1293,14 @@ int neuik_Element_GetMinSize__GridLayout(
     NEUIK_Element   gridElem,
     RenderSize    * rSize)
 {
+    unsigned int           ctr           = 0;
+    unsigned int           colCtr        = 0;
+    unsigned int           rowCtr        = 0;
+    unsigned int           nAlloc        = 0;
     int                    eNum          = 0; /* which error to report (if any) */
     int                    tempH;
     int                    tempW;
-    int                    nAlloc        = 0;
-    int                    rowCtr        = 0;
-    int                    colCtr        = 0;
     int                    offset        = 0;
-    int                    ctr           = 0;
     int                    maxMin        = 0;    // Max Min (of widths and heights)
     float                  fltH          = 0.0;  // Floating point elem height
     float                  fltW          = 0.0;  // Floating point elem width
@@ -1608,13 +1612,13 @@ int neuik_Element_Render__GridLayout(
     SDL_Renderer  * xRend,    /* the external renderer to prepare the texture for */
     int             mock)     /* If true; calculate sizes/locations but don't draw */
 {
-    int                    nAlloc        = 0;
+    unsigned int           ctr           = 0;
+    unsigned int           nAlloc        = 0;
+    unsigned int           colCtr        = 0;
+    unsigned int           rowCtr        = 0;
     int                    tempH         = 0;
     int                    tempW         = 0;
-    int                    rowCtr        = 0;
-    int                    colCtr        = 0;
     int                    offset        = 0;
-    int                    ctr           = 0;
     int                    squarePadH    = 0; // px of height lost to keep aspect
     int                    squarePadW    = 0; // px of width lost to keep aspect
     int                    xFree         = 0; // px of space free for hFill elems

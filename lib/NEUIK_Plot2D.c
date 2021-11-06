@@ -143,7 +143,7 @@ int neuik_Object_New__Plot2D(
     void ** pltPtr)
 {
     int                    eNum       = 0;
-    int                    ctr        = 0;
+    unsigned int           ctr        = 0;
     NEUIK_Plot           * plot       = NULL;
     NEUIK_Plot2D         * plot2d     = NULL;
     neuik_PlotDataConfig * dataCfg    = NULL;

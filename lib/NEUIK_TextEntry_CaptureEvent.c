@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -495,9 +495,9 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_MouseEvent(
             /* If continuing, this textEntry contains text and so the cursor  */
             /* placement could have been changed.                             */
             /*----------------------------------------------------------------*/
-            if (te->clickOrigin == -1)
+            if (te->clickOrigin == TEXTENTRY_UNSET_POS)
             {
-                if (te->highlightBegin == -1)
+                if (te->highlightBegin == TEXTENTRY_UNSET_POS)
                 {
                     te->clickOrigin = te->cursorPos;
                 }
@@ -871,7 +871,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
     }
     textInpEv = (SDL_TextInputEvent*)(ev);
 
-    if (te->highlightBegin != -1)
+    if (te->highlightBegin != TEXTENTRY_UNSET_POS)
     {
         /*--------------------------------------------------------------------*/
         /* Existing text was highlighted when text input was received.        */
@@ -931,7 +931,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_TextInputEvent(
         }
 
         te->cursorPos = te->highlightStart;
-        te->highlightBegin = -1;
+        te->highlightBegin = TEXTENTRY_UNSET_POS;
     }
 
     inpLen = strlen(textInpEv->text);
@@ -1080,7 +1080,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
             if (!(keyMod & KMOD_SHIFT))
             {
                 /* SHIFT key is not being held down */
-                if (te->highlightBegin != -1)
+                if (te->highlightBegin != TEXTENTRY_UNSET_POS)
                 {
                     /* breaking out of a highlight selection */
                     if (te->cursorPos > te->highlightBegin)
@@ -1088,14 +1088,14 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                         /* break out at leftmost side of highlight */
                         te->cursorPos = te->highlightBegin;
                     }
-                    te->highlightBegin = -1;
+                    te->highlightBegin = TEXTENTRY_UNSET_POS;
                 }
                 else if (te->cursorPos > 0)
                 {
                     te->cursorPos--;
                 }
                 doRedraw        = 1;
-                te->clickOrigin = -1;
+                te->clickOrigin = TEXTENTRY_UNSET_POS;
             }
             else
             {
@@ -1106,7 +1106,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                 {
                     doRedraw = 1;
 
-                    if (te->highlightBegin == -1)
+                    if (te->highlightBegin == TEXTENTRY_UNSET_POS)
                     {
                         te->highlightBegin = te->cursorPos;
                     }
@@ -1133,7 +1133,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
             {
                 /* SHIFT key is not being held down */
 
-                if (te->highlightBegin != -1)
+                if (te->highlightBegin != TEXTENTRY_UNSET_POS)
                 {
                     /* breaking out of a highlight selection */
                     if (te->cursorPos < te->highlightBegin)
@@ -1148,7 +1148,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                     te->cursorPos++;
                 }
                 doRedraw        = 1;
-                te->clickOrigin = -1;
+                te->clickOrigin = TEXTENTRY_UNSET_POS;
             }
             else
             {
@@ -1157,7 +1157,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                 /* Start highlight selection process */
                 if (te->cursorPos < te->textLen)
                 {
-                    if (te->highlightBegin == -1)
+                    if (te->highlightBegin == TEXTENTRY_UNSET_POS)
                     {
                         te->highlightBegin = te->cursorPos;
                     }
@@ -1182,7 +1182,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
             break;
 
         case SDLK_BACKSPACE:
-            if (te->highlightBegin == -1)
+            if (te->highlightBegin == TEXTENTRY_UNSET_POS)
             {
                 /*------------------------------------------------------------*/
                 /* There is no current text highlighting                      */
@@ -1267,7 +1267,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
             break;
 
         case SDLK_DELETE:
-            if (te->highlightBegin == -1)
+            if (te->highlightBegin == TEXTENTRY_UNSET_POS)
             {
                 /*------------------------------------------------------------*/
                 /* There is no current text highlighting                      */
@@ -1343,7 +1343,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                     te->textLen = strlen(te->text);
                 }
 
-                te->highlightBegin = -1;
+                te->highlightBegin = TEXTENTRY_UNSET_POS;
                 doRedraw           = 1;
             }
             // neuik_TextEntry_UpdateCursorX(te);
@@ -1366,7 +1366,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                 else
                 {
                     /* SHIFT key IS being held down */
-                    if (te->highlightBegin == -1)
+                    if (te->highlightBegin == TEXTENTRY_UNSET_POS)
                     {
                         te->highlightBegin = te->cursorPos;
                     }
@@ -1404,7 +1404,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                 }
                 else
                 {
-                    if (te->highlightBegin == -1)
+                    if (te->highlightBegin == TEXTENTRY_UNSET_POS)
                     {
                         te->highlightBegin = te->cursorPos;
                     }
@@ -1436,7 +1436,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
 
     if (neuik_KeyShortcut_Copy(keyEv, keyMod))
     {
-        if (te->highlightBegin != -1)
+        if (te->highlightBegin != TEXTENTRY_UNSET_POS)
         {
             aChar = te->text[te->highlightEnd + 1];
             te->text[te->highlightEnd + 1] = '\0';
@@ -1447,7 +1447,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
     }
     else if (neuik_KeyShortcut_Cut(keyEv, keyMod))
     {
-        if (te->highlightBegin != -1)
+        if (te->highlightBegin != TEXTENTRY_UNSET_POS)
         {
             aChar = te->text[te->highlightEnd + 1];
             te->text[te->highlightEnd + 1] = '\0';
@@ -1519,7 +1519,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
     }
     else if (neuik_KeyShortcut_Paste(keyEv, keyMod) && SDL_HasClipboardText())
     {
-        if (te->highlightBegin != -1)
+        if (te->highlightBegin != TEXTENTRY_UNSET_POS)
         {
             /*----------------------------------------------------------------*/
             /* There is text highlighting within the line                     */
@@ -1548,7 +1548,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                     te->textLen = 0;
                     te->text[0] = '\0';
                 }
-                te->cursorPos      = 0;
+                te->cursorPos = 0;
             }
             else if (te->highlightEnd + 1 == te->textLen)
             {
@@ -1577,7 +1577,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEntry_KeyDownEvent(
                 te->textLen = strlen(te->text);
             }
 
-            te->highlightBegin = -1;
+            te->highlightBegin = TEXTENTRY_UNSET_POS;
         }
 
         clipText = SDL_GetClipboardText();

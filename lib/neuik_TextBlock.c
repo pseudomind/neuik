@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -218,7 +218,7 @@ int neuik_TextBlock_debugDump(
     neuik_TextBlock * tblk)
 {
     int                   blkCtr   = 0;
-    int                   dbgCtr   = 0;
+    size_t                dbgCtr   = 0;
     char                  dbgByte  = 0;
     char                * dbgLine  = NULL;
     FILE                * dbgFileA = NULL;
@@ -252,7 +252,7 @@ int neuik_TextBlock_debugDump(
         }
 
         fprintf(dbgFileA, "%s\n", dbgLine);
-        fprintf(dbgFileB, "[%4d]%s\n", dbgCtr+1, dbgLine);
+        fprintf(dbgFileB, "[%4ld]%s\n", dbgCtr+1, dbgLine);
         // if (dbgCtr == 24)
         // {
         //  size_t position;
@@ -570,7 +570,6 @@ int neuik_TextBlock_SetText(
     neuik_TextBlock * tblk,
     const char      * text)
 {
-    int                   ctr              = 0;
     int                   firstLineNo      = 0;
     int                   writeBufferBytes = 0; /* Num. of bytes in w buffer. */
     size_t                dataLen          = 0;
@@ -581,6 +580,7 @@ int neuik_TextBlock_SetText(
     size_t                blockLines       = 0;
     size_t                lineCtr          = 1;
     size_t                nBlocksRequried  = 0;
+    unsigned int          ctr              = 0;
     unsigned int          maxInitBlockFill = 0;
     unsigned int          remainingBytes   = 0;
     char                  writeBuffer[3];
@@ -2609,8 +2609,8 @@ int neuik_TextBlock_DeleteSection(
     size_t                endLineLen;
     size_t                startPosition;
     size_t                endPosition;
+    size_t                zeroCtr;        /* counter for zeroing out trailing values */
     char                  remChar;
-    int                   zeroCtr;        /* counter for zeroing out trailing values */
     int                   nLineMod   = 0; /* modifier for number of lines */
     int                   eNum       = 0; /* which error to report (if any) */
     static char           funcName[] = "neuik_TextBlock_DeleteSection";

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,7 +37,7 @@ typedef struct {
 		double                 viewPct;       /* percent of total TextEdit lines currently viewed */
 		size_t                 cursorLine;    /* line on which the cursor is */
 		size_t                 cursorPos;     /* position of cursor within line */
-		long long              vertMovePos;   /* desired position of vertical movement (-1=unset) */
+		size_t                 vertMovePos;   /* desired position of vertical movement (-1=unset) */
 		unsigned long long     vertPanLn;     /* Vertical number of lines the view is panned */
 		unsigned int           vertPanPx;     /* Additional pixels of vertical view panning */
 		int                    cursorX;       /* px pos of cursor (not considering pan) */

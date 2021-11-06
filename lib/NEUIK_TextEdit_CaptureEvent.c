@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1780,7 +1780,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
     {
         case SDLK_LEFT:
 
-            te->vertMovePos = UNDEFINED;
+            te->vertMovePos = TEXTEDIT_UNDEFINED;
             if (!(keyMod & KMOD_SHIFT))
             {
                 /* SHIFT key is not being held down */
@@ -1902,7 +1902,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
         case SDLK_RIGHT:
 
-            te->vertMovePos = UNDEFINED;
+            te->vertMovePos = TEXTEDIT_UNDEFINED;
             if (!(keyMod & KMOD_SHIFT))
             {
                 /* SHIFT key is not being held down */
@@ -2215,10 +2215,10 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
                     /* SHIFT key is not being held down */
 
                     te->highlightIsSet = FALSE;
-                    te->clickOrigin    = UNDEFINED;
+                    te->clickOrigin    = TEXTEDIT_UNDEFINED;
                     te->cursorLine--;
 
-                    if (te->vertMovePos == UNDEFINED)
+                    if (te->vertMovePos == TEXTEDIT_UNDEFINED)
                     {
                         /*----------------------------------------------------*/
                         /* Initial x position for vertical movement not set.  */
@@ -2253,7 +2253,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
                     }
 
                     te->cursorLine--;
-                    if (te->vertMovePos == UNDEFINED)
+                    if (te->vertMovePos == TEXTEDIT_UNDEFINED)
                     {
                         /*----------------------------------------------------*/
                         /* Initial x position for vertical movement not set.  */
@@ -2311,7 +2311,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
                     {
                         /* SHIFT key is not being held down */
                         te->highlightIsSet = 0;
-                        te->clickOrigin    = UNDEFINED;
+                        te->clickOrigin    = TEXTEDIT_UNDEFINED;
                         te->cursorPos      = 0;
                     }
                     else
@@ -2368,11 +2368,11 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
                 {
                     /* SHIFT key is not being held down */
                     te->highlightIsSet = FALSE;
-                    te->clickOrigin    = UNDEFINED;
+                    te->clickOrigin    = TEXTEDIT_UNDEFINED;
 
                     te->cursorLine++;
 
-                    if (te->vertMovePos == UNDEFINED)
+                    if (te->vertMovePos == TEXTEDIT_UNDEFINED)
                     {
                         /*----------------------------------------------------*/
                         /* Initial x position for vertical movement not set.  */
@@ -2407,7 +2407,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
                     te->cursorLine++;
 
-                    if (te->vertMovePos == UNDEFINED)
+                    if (te->vertMovePos == TEXTEDIT_UNDEFINED)
                     {
                         /*----------------------------------------------------*/
                         /* Initial x position for vertical movement not set.  */
@@ -2472,7 +2472,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
                     {
                         /* SHIFT key is not being held down */
                         te->highlightIsSet = 0;
-                        te->clickOrigin    = UNDEFINED;
+                        te->clickOrigin    = TEXTEDIT_UNDEFINED;
                         te->cursorPos      = lineLen;
                     }
                     else
@@ -2566,7 +2566,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
         case SDLK_HOME:
 
-            te->vertMovePos = UNDEFINED;
+            te->vertMovePos = TEXTEDIT_UNDEFINED;
             if (!(keyMod & KMOD_SHIFT))
             {
                 /* SHIFT key is not being held down */
@@ -2625,7 +2625,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_KeyDownEvent(
 
         case SDLK_END:
 
-            te->vertMovePos = UNDEFINED;
+            te->vertMovePos = TEXTEDIT_UNDEFINED;
             if (neuik_TextBlock_GetLineLength(te->textBlk,
                 te->cursorLine, &lineLen))
             {

@@ -1059,7 +1059,7 @@ int neuik_Element_Render__TextEntry(
             /*----------------------------------------------------------------*/
             /* Check for and fill in highlight text selection background      */
             /*----------------------------------------------------------------*/
-            if (eBase->eSt.hasFocus && te->highlightBegin != -1)
+            if (eBase->eSt.hasFocus && te->highlightBegin != TEXTENTRY_UNSET_POS)
             {
                 rect.x = 0;
                 rect.y = (int) ((float)(rSize->h - textH)/2.0);

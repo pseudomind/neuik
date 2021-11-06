@@ -422,8 +422,8 @@ int neuik_Element_Render__Canvas(
     SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
     int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
+    unsigned int        ctr;            /* loop iteration counter */
     int                 eNum       = 0; /* which error to report (if any) */
-    int                 ctr;            /* loop iteration counter */
     int                 textW;
     int                 textH;
     SDL_Texture       * tTex       = NULL; /* text texture */
@@ -586,14 +586,6 @@ int neuik_Element_Render__Canvas(
                     rect.h = textH;
                     SDL_RenderCopy(rend, tTex, NULL, &rect);
                     ConditionallyDestroyTexture(&tTex);
-                    break;
-                    //
-                case NEUIK_CANVAS_OP_DRAWTEXTLARGE:
-                    #pragma message("Implement NEUIK_CANVAS_OP_DRAWTEXTLARGE")
-                    color.r = cnvs->draw_clr_r;
-                    color.g = cnvs->draw_clr_g;
-                    color.b = cnvs->draw_clr_b;
-                    color.a = cnvs->draw_clr_a;
                     break;
                     //
                 case NEUIK_CANVAS_OP_SETTEXTSIZE:
@@ -1003,10 +995,6 @@ int NEUIK_Canvas_DrawText(
     {
         op.op = NEUIK_CANVAS_OP_DRAWTEXT;
         strcpy(op.op_drawtext.text, text);
-    }
-    else
-    {
-        op.op = NEUIK_CANVAS_OP_DRAWTEXTLARGE;
     }
 
     if (cnvs->ops_used >= cnvs->ops_allocated)

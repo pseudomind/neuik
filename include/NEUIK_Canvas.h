@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2017, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,7 +26,6 @@ enum e_neuik_canvas_op
 	NEUIK_CANVAS_OP_DRAWPOINT,
 	NEUIK_CANVAS_OP_DRAWLINE,
 	NEUIK_CANVAS_OP_DRAWTEXT,
-	NEUIK_CANVAS_OP_DRAWTEXTLARGE,
 	NEUIK_CANVAS_OP_SETTEXTSIZE,
 	NEUIK_CANVAS_OP_FILL,
 };

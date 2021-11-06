@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -547,6 +547,11 @@ int NEUIK_Object_Free(
     void neuik_Object_IsNEUIKObject_capture_segv(
         int sig_num)
     {
+        int unused = 0;
+
+        if (sig_num) { unused++; }
+        if (unused) { unused++; }
+
         siglongjmp(sigjmp_buffer, 1);
     }
 #endif /* WIN32 */

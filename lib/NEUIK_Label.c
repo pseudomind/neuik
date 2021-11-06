@@ -791,9 +791,13 @@ out:
 void neuik_Label_Configure_capture_segv(
     int sig_num)
 {
+    int         unused = 0;
     static char funcName[] = "NEUIK_Label_Configure";
     static char errMsg[] = 
         "SIGSEGV (segmentation fault) captured; is call `NULL` terminated?";
+
+    if (sig_num) { unused++; }
+    if (unused) { unused++; }
 
     NEUIK_RaiseError(funcName, errMsg);
     NEUIK_BacktraceErrors();
