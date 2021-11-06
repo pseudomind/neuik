@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -72,6 +72,9 @@ NEUIK_Element_FuncTable neuik_ListRow_FuncTable = {
 
     /* Defocus(): This function will be called when an element looses focus */
     neuik_Element_Defocus__ListRow,
+
+    /* RequestRedraw(): This function will be called when redraw is requested */
+    NULL,
 };
 
 

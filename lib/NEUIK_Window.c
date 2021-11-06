@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -218,9 +218,13 @@ out:
 void neuik_Window_Configure_capture_segv(
     int sig_num)
 {
+    int unused = 0;
     static char funcName[] = "NEUIK_Window_Configure";
     static char errMsg[] = 
         "SIGSEGV (segmentation fault) captured; is call `NULL` terminated?";
+
+    if (sig_num) { unused++; }
+    if (unused) { unused++; }
 
     NEUIK_RaiseError(funcName, errMsg);
     NEUIK_BacktraceErrors();
