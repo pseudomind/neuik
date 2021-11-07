@@ -442,6 +442,7 @@ int neuik_Element_Render__Fill(
     SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
     int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
+    int                 unused     = 0;
     int                 eNum       = 0; /* which error to report (if any) */
     NEUIK_Fill        * fill       = NULL;
     NEUIK_ElementBase * eBase      = NULL;
@@ -449,9 +450,8 @@ int neuik_Element_Render__Fill(
     static char       * errMsgs[]  = {"", // [0] no error
         "Argument `elem` is not of NEUIK_Fill class.",                   // [1]
         "Argument `elem` caused `neuik_Object_GetClassObject` to fail.", // [2]
-        "", // [3]
-        "Invalid specified `rSize` (negative values).",                  // [4]
-        "Failure in `neuik_Element_RedrawBackground`.",                  // [6]
+        "Invalid specified `rSize` (negative values).",                  // [3]
+        "Failure in `neuik_Element_RedrawBackground`.",                  // [4]
     };
 
     if (!neuik_Object_IsClass(elem, neuik__Class_Fill))
@@ -469,7 +469,7 @@ int neuik_Element_Render__Fill(
 
     if (rSize->w < 0 || rSize->h < 0)
     {
-        eNum = 4;
+        eNum = 3;
         goto out;
     }
     if (mock)
@@ -477,15 +477,19 @@ int neuik_Element_Render__Fill(
         /*--------------------------------------------------------------------*/
         /* This is a mock render operation; don't draw anything...            */
         /*--------------------------------------------------------------------*/
+        if (xRend) { unused++; }
+        if (unused) { unused++; }
+
         goto out;
     }
+
 
     /*------------------------------------------------------------------------*/
     /* Redraw the background surface before continuing.                       */
     /*------------------------------------------------------------------------*/
     if (neuik_Element_RedrawBackground(elem, rlMod, NULL))
     {
-        eNum = 5;
+        eNum = 4;
         goto out;
     }
 

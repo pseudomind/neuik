@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,7 +36,6 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
     NEUIK_Plot2D          * plot2d,
     NEUIK_PlotData        * data,
     neuik_PlotDataConfig  * dataCfg,
-    int                     thickness,
     int                     maskW,
     int                     maskH,
     int                     ticZoneW,
@@ -74,16 +73,16 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
     int           eNum       = 0; /* which error to report (if any) */
     static char   funcName[] = "neuik_Plot2D_Render64_SimpleLineToMask";
     static char * errMsgs[]  = {"", // [0] no error
-        "Argument `plot2d` is not of Plot2D class.",                           // [1]
-        "Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.",     // [2]
-        "Output Argument `lineMask` is NULL.",                                 // [3]
-        "Failure in `neuik_MakeMaskMap()`.",                                   // [4]
-        "Failure in `neuik_MaskAll()`.",                                       // [5]
-        "Failure in `neuik_MaskMap_UnmaskUnboundedPoint()`.",                  // [6]
-        "Failure in `neuik_MaskMap_UnmaskLine()`.",                            // [7]
-        "Argument `data` has an unsupported value for precision.",             // [8]
-        "Argument `thickness` has an invalid value (values `1-4` are valid).", // [9]
-        "Failure in `neuik_MaskMap_UnmaskUnboundedLine()`.",                   // [10]
+        "Argument `plot2d` is not of Plot2D class.",                       // [1]
+        "Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.", // [2]
+        "Output Argument `lineMask` is NULL.",                             // [3]
+        "Failure in `neuik_MakeMaskMap()`.",                               // [4]
+        "Failure in `neuik_MaskAll()`.",                                   // [5]
+        "Failure in `neuik_MaskMap_UnmaskUnboundedPoint()`.",              // [6]
+        "Failure in `neuik_MaskMap_UnmaskLine()`.",                        // [7]
+        "Argument `data` has an unsupported value for precision.",         // [8]
+        "Argument `dataCfg` has an invalid value for lineThickness.",      // [9]
+        "Failure in `neuik_MaskMap_UnmaskUnboundedLine()`.",               // [10]
     };
 
     if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
@@ -107,7 +106,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
         eNum = 8;
         goto out;
     }
-    if (thickness < 1 || thickness > 4)
+    if (dataCfg->lineThickness < 1 || dataCfg->lineThickness > 4)
     {
         eNum = 9;
         goto out;
@@ -271,7 +270,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                         (int)((lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
                 }
 
-                switch (thickness)
+                switch (dataCfg->lineThickness)
                 {
                 case 1:
                     if (neuik_MaskMap_UnmaskLine(*lineMask,
@@ -691,7 +690,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                             (lst_ptY_64 + dY_64 - yRangeMin)/pxDeltaY);
                     }
 
-                    switch (thickness)
+                    switch (dataCfg->lineThickness)
                     {
                     case 1:
                         if (neuik_MaskMap_UnmaskUnboundedLine(*lineMask,
@@ -992,7 +991,7 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
                 maskPtX2 = maskPtX;
                 maskPtY2 = maskPtY;
 
-                switch (thickness)
+                switch (dataCfg->lineThickness)
                 {
                 case 1:
                     if (neuik_MaskMap_UnmaskUnboundedPoint(*lineMask, 

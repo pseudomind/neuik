@@ -382,6 +382,7 @@ int neuik_RegisterClass(
     thisClass->Set        = classSet;
     thisClass->SuperClass = superClass;
     thisClass->baseFuncs  = baseFuncs;
+    thisClass->classFuncs  = classFuncs;
 
     (*newClass) = thisClass;
 out:

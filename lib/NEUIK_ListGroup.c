@@ -346,6 +346,11 @@ int neuik_Element_GetMinSize__ListGroup(
     NEUIK_Element    lgElem,
     RenderSize     * rSize)
 {
+    int unused = 0;
+
+    if (lgElem) { unused++; }
+    if (unused) { unused++; }
+
     if (rSize != NULL)
     {
         rSize->w = 1;

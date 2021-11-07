@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -206,12 +206,11 @@ out:
  *
  ******************************************************************************/
 SDL_Surface * NEUIK_RenderTextAsSurface(
-    const char    *textStr, 
-    TTF_Font      *font, 
-    NEUIK_Color    textColor,
-    SDL_Renderer  *renderer, 
-    int           *rvW,      /* [out] best width for resulting surface */
-    int           *rvH)      /* [out] best height for resulting surface */
+    const char  * textStr, 
+    TTF_Font    * font, 
+    NEUIK_Color   textColor,
+    int         * rvW,      /* [out] best width for resulting surface */
+    int         * rvH)      /* [out] best height for resulting surface */
 {
     SDL_Color      color;
     SDL_Surface  * surf  = NULL;

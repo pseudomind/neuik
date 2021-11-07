@@ -321,6 +321,11 @@ int neuik_Element_GetMinSize__FlowGroup(
     NEUIK_Element    fgElem,
     RenderSize     * rSize)
 {
+    int unused = 0;
+
+    if (fgElem) { unused++; }
+    if (unused) { unused++; }
+
     if (rSize != NULL)
     {
         rSize->w = 1;

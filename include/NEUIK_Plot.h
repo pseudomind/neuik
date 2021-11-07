@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,7 +29,7 @@ neuik_PlotRangeConfig;
 typedef struct {
 	char        * uniqueName;
 	char        * label;
-	float         lineThickness;
+	int           lineThickness;
 	int           lineColorSpecified;
 	NEUIK_Color   lineColor;
 } neuik_PlotDataConfig;

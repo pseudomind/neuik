@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2014-2020, Michael Leimon <leimon@gmail.com>
+ * Copyright (c) 2014-2021, Michael Leimon <mike@leimon.net>
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,7 +25,6 @@ int neuik_Plot2D_Render32_SimpleLineToMask(
 	NEUIK_Plot2D          * plot2d,
 	NEUIK_PlotData        * data,
 	neuik_PlotDataConfig  * dataCfg,
-	int                     thickness,
 	int                     maskW,
 	int                     maskH,
 	int                     ticZoneW,
@@ -38,7 +37,6 @@ int neuik_Plot2D_Render64_SimpleLineToMask(
 	NEUIK_Plot2D          * plot2d,
 	NEUIK_PlotData        * data,
 	neuik_PlotDataConfig  * dataCfg,
-	int                     thickness,
 	int                     maskW,
 	int                     maskH,
 	int                     ticZoneW,

@@ -577,7 +577,6 @@ int neuik_Plot2D_RenderSimpleLineToMask(
     NEUIK_Plot2D          * plot2d,
     NEUIK_PlotData        * data,
     neuik_PlotDataConfig  * dataCfg,
-    int                     thickness,
     int                     maskW,
     int                     maskH,
     int                     ticZoneW,
@@ -590,13 +589,12 @@ int neuik_Plot2D_RenderSimpleLineToMask(
     int           eNum       = 0; /* which error to report (if any) */
     static char   funcName[] = "neuik_Plot2D_RenderSimpleLineToMask";
     static char * errMsgs[]  = {"", // [0] no error
-        "Argument `plot2d` is not of Plot2D class.",                           // [1]
-        "Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.",     // [2]
-        "Output Argument `lineMask` is NULL.",                                 // [3]
-        "Argument `data` has an unsupported value for precision.",             // [4]
-        "Argument `thickness` has an invalid value (values `1-4` are valid).", // [5]
-        "Failure in `neuik_Plot2D_Render32_SimpleLineToMask()`.",              // [6]
-        "Failure in `neuik_Plot2D_Render64_SimpleLineToMask()`.",              // [7]
+        "Argument `plot2d` is not of Plot2D class.",                       // [1]
+        "Argument `plot2d` caused `neuik_Object_GetClassObject` to fail.", // [2]
+        "Output Argument `lineMask` is NULL.",                             // [3]
+        "Argument `data` has an unsupported value for precision.",         // [4]
+        "Failure in `neuik_Plot2D_Render32_SimpleLineToMask()`.",          // [5]
+        "Failure in `neuik_Plot2D_Render64_SimpleLineToMask()`.",          // [6]
     };
 
     if (!neuik_Object_IsClass(plot2d, neuik__Class_Plot2D))
@@ -620,29 +618,25 @@ int neuik_Plot2D_RenderSimpleLineToMask(
         eNum = 4;
         goto out;
     }
-    if (thickness < 1 || thickness > 4)
-    {
-        eNum = 5;
-        goto out;
-    }
+
 
     if (data->precision == 32)
     {
         if (neuik_Plot2D_Render32_SimpleLineToMask(
-            plot2d, data, dataCfg, thickness, maskW, maskH, 
+            plot2d, data, dataCfg, maskW, maskH, 
             ticZoneW, ticZoneH, ticZoneOffsetX, ticZoneOffsetY, lineMask))
         {
-            eNum = 6;
+            eNum = 5;
             goto out;
         }
     }
     else if (data->precision == 64)
     {
         if (neuik_Plot2D_Render64_SimpleLineToMask(
-            plot2d, data, dataCfg, thickness, maskW, maskH, 
+            plot2d, data, dataCfg, maskW, maskH, 
             ticZoneW, ticZoneH, ticZoneOffsetX, ticZoneOffsetY, lineMask))
         {
-            eNum = 7;
+            eNum = 6;
             goto out;
         }
     }
@@ -673,32 +667,31 @@ int neuik_Element_Render__Plot2D(
     SDL_Renderer  * xRend, /* the external renderer to prepare the texture for */
     int             mock)  /* If true; calculate sizes/locations but don't draw */
 {
-    unsigned int           uCtr         = 0;
-    int                    ctr          = 0;
-    int                    eNum         = 0; /* which error to report (if any) */
-    int                    lnThickness  = 0;
-    int                    maskCtr      = 0; /* maskMap counter */
-    int                    maskW        = 0;
-    int                    maskH        = 0;
-    int                    maskRegions  = 0; /* number of regions in maskMap */
-    int                    pltOffsetX   = 0;
-    int                    pltOffsetY   = 0;
-    int                    tic_x_cl     = 0;
-    int                    tic_xmin     = 0;
-    int                    tic_xmax     = 0;
-    int                    tic_y_cl     = 0;
-    int                    tic_ymin     = 0;
-    int                    tic_ymax     = 0;
-    int                    ticMarkPos   = 0;
-    int                    ticZoneW     = 0;
-    int                    ticZoneH     = 0;
-    const int            * regionY0;         /* Array of region Y0 values */
-    const int            * regionYf;         /* Array of region Yf values */
-    double                 tic_x_offset = 0.0;
-    double                 tic_x_adj    = 0.0;
-    double                 tic_y_offset = 0.0;
-    double                 tic_y_adj    = 0.0;
-    static NEUIK_Color     autoColors[] = {
+    unsigned int         uCtr         = 0;
+    int                  ctr          = 0;
+    int                  eNum         = 0; /* which error to report (if any) */
+    int                  maskCtr      = 0; /* maskMap counter */
+    int                  maskW        = 0;
+    int                  maskH        = 0;
+    int                  maskRegions  = 0; /* number of regions in maskMap */
+    int                  pltOffsetX   = 0;
+    int                  pltOffsetY   = 0;
+    int                  tic_x_cl     = 0;
+    int                  tic_xmin     = 0;
+    int                  tic_xmax     = 0;
+    int                  tic_y_cl     = 0;
+    int                  tic_ymin     = 0;
+    int                  tic_ymax     = 0;
+    int                  ticMarkPos   = 0;
+    int                  ticZoneW     = 0;
+    int                  ticZoneH     = 0;
+    const int          * regionY0;         /* Array of region Y0 values */
+    const int          * regionYf;         /* Array of region Yf values */
+    double               tic_x_offset = 0.0;
+    double               tic_x_adj    = 0.0;
+    double               tic_y_offset = 0.0;
+    double               tic_y_adj    = 0.0;
+    static NEUIK_Color   autoColors[] = {
         COLOR_PLOTLINE_01,
         COLOR_PLOTLINE_02,
         COLOR_PLOTLINE_03,
@@ -1208,13 +1201,11 @@ int neuik_Element_Render__Plot2D(
         maskW = dwg_rs.w;
         maskH = dwg_rs.h; /* yMax value is at the top of the plot */
 
-        lnThickness = dataCfg->lineThickness;
-
         ticZoneW = tic_xmax - tic_xmin;
         ticZoneH = tic_ymin - tic_ymax; /* yMax value is at the top of the plot */
 
         if (neuik_Plot2D_RenderSimpleLineToMask(
-            plt, data, dataCfg, lnThickness, maskW, maskH, 
+            plt, data, dataCfg, maskW, maskH, 
             ticZoneW, ticZoneH, tic_xmin, tic_ymax, &maskMap))
         {
             eNum = 14;

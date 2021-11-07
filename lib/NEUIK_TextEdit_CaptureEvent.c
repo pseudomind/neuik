@@ -72,7 +72,7 @@ int neuik_TextEdit_UpdatePanCursor(
     int                    textW      = 0;
     int                    textH      = 0;
     int                    normWidth  = 0;
-    int                    lineLen    = 0;
+    size_t                 lineLen    = 0;
     size_t                 textLen    = 0;
     char                   tempChar;
     char                 * lineBytes  = NULL;
@@ -589,7 +589,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
     int                    evCaptured   = FALSE;
     int                    textW        = 0;
     int                    textH        = 0;
-    int                    blankH       = 0;
+    unsigned int           blankH       = 0;
     unsigned long long     oldVertPanLn = 0;
     unsigned int           oldVertPanPx = 0;
     int                    eNum         = 0; /* which error to report (if any) */
@@ -682,7 +682,7 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
     /* Calculate the height of a line of text at the specified font & size.   */
     /*------------------------------------------------------------------------*/
     TTF_SizeText(font, " ", &textW, &textH);
-    blankH = (int)(1.1*textH);
+    blankH = (unsigned int)(1.1*textH);
 
     oldVertPanLn = te->vertPanLn;
     oldVertPanPx = te->vertPanPx;
@@ -738,8 +738,8 @@ neuik_EventState neuik_Element_CaptureEvent__TextEdit_MouseWheelEvent(
             }
         }
 
-        if ((nLines < eBase->eSt.rSize.h - 2) && 
-            (nLines*blankH < eBase->eSt.rSize.h - 2))
+        if (((int)(nLines) < eBase->eSt.rSize.h - 2) && 
+            ((int)(nLines*blankH) < eBase->eSt.rSize.h - 2))
         {
             /*----------------------------------------------------------------*/
             /* All contents of the text should be visible without any need    */
